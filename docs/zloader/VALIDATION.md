@@ -35,9 +35,9 @@ App-Group changes can still result in a different iOS data container.
 ## Artifacts
 
 - `outputs/zLoader-0.7.1.ipa` / `zLoader-resignable.ipa`:
-  SHA-256 `47d2c87f0356cf3089a0346f3fce76cb069bfacc8aed8049048c615cb0108a9e`.
+  SHA-256 `f6d7dd20b5544a2d7a086eb7b7f67e09944765006aa7443b350f5dc60bd0ec9a`.
 - `outputs/zLoader-unsigned.ipa`:
-  SHA-256 `435a05b0798c3d6ae1ed4eaa9abbf55fd37b705f99c004a7f61f05025ed8885b`.
+  SHA-256 `20af14fbae676a21e18979f2ccb835236880f88d3afcf69181e2b0c0eb2825ff`.
 
 The resignable artifact uses local ad-hoc signatures to preserve capability
 requests for SideStore import. It is not Apple-authorized or directly installable.
