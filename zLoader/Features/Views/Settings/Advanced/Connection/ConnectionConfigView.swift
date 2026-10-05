@@ -77,6 +77,11 @@ struct ConnectionConfigView: View {
                 }
 
                 if draftUseLocalVPN {
+                    #if os(iOS)
+                    Section("Embedded zLoader VPN") {
+                        EmbeddedTunnelSetupView()
+                    }
+                    #endif
                     Section(header: Text("Auto Discovered from network")) {
                         Group {
                             networkConfigRow(label: "Tunnel IP", text: Binding<String?>(get: { config.formattedTunnelIface }, set: { _ in }), editable: false)

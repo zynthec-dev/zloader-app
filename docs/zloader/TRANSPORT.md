@@ -84,3 +84,25 @@ coverage is mandatory before publishing claims of automatic cellular refresh.
 
 LocalDevVPN/StosVPN design is credited; its complete license notices are bundled
 in the app. SideStore's AGPL-3.0 license and original copyright notices remain.
+
+## 0.7.7: embedded VPN setup
+
+Onboarding now offers zLoader's embedded VPN configuration before wireless pairing.
+The former LocalDevVPN step opened another app and checked generic utun interfaces;
+it never configured the embedded provider. That UI and its delayed status probes
+have been removed. The same setup action is available in Settings → Connection
+Config → Embedded zLoader VPN for existing installations.
+
+Setup validates that the installed host and provider have current profiles with
+packet-tunnel-provider authorization, then calls NETunnelProviderManager's save
+and reload APIs, allowing iOS to request VPN consent. Success means the
+configuration was saved, not that pairing, refresh or cellular transport has been
+verified. Errors include their NSError domain and code. Connection/disconnection
+remain owned by operation leases. Notifications now read their observed connection
+rather than a mutable singleton manager.
+
+The operating system also validates the actual signatures. Embedded profiles in
+an ad-hoc resignable IPA do not themselves authorize a VPN. An installer that
+replaces profiles or drops Network Extension entitlements can still make setup
+fail. [Apple's manager documentation](https://developer.apple.com/documentation/networkextension/netunnelprovidermanager)
+requires the Network Extension entitlement; zLoader cannot create that authorization.

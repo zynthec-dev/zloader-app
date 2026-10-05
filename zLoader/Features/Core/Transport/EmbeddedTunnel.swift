@@ -2,6 +2,8 @@ import Foundation
 import Minimuxer
 #if os(iOS)
 import NetworkExtension
+import SideSign
+import SwiftUI
 
 /// Uses only the provider embedded in this app; never stops another app's VPN.
 @MainActor
@@ -19,16 +21,33 @@ final class EmbeddedTunnel {
             .bundleIdentifier
     }
 
-    func start() async throws {
+    /// Saves the embedded provider configuration and requests iOS VPN consent.
+    /// Configuration persists; connecting remains owned by operation leases.
+    func configure() async throws {
+        _ = try await configuredManager()
+    }
+
+    private func configuredManager() async throws -> NETunnelProviderManager {
         guard let providerID else {
             throw OperationError.invalidVPN(reason: "ZLoaderTunnel is missing from this build.")
+        }
+        guard let host = ALTApplication(fileURL: Bundle.main.bundleURL),
+              let provider = host.appExtensions.first(where: { $0.bundleIdentifier == providerID }) else {
+            throw OperationError.invalidVPN(reason: "The installed zLoader tunnel extension cannot be read. Install the complete IPA including its extensions.")
+        }
+        for app in [host, provider] {
+            guard let profile = app.provisioningProfile,
+                  profile.expirationDate > Date(),
+                  PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) else {
+                throw OperationError.invalidVPN(reason: PacketTunnelProvisioning.failureMessage(for: app.bundleIdentifier))
+            }
         }
         let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
         let selected = configurations.first {
             ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == providerID
         } ?? NETunnelProviderManager()
         manager = selected
-        if selected.connection.status == .connected { return }
+        if selected.connection.status == .connected { return selected }
         let config = NETunnelProviderProtocol()
         config.providerBundleIdentifier = providerID
         config.serverAddress = "zLoader local device tunnel"
@@ -39,6 +58,12 @@ final class EmbeddedTunnel {
         try await selected.saveToPreferences()
         try await selected.loadFromPreferences()
         try Task.checkCancellation()
+        return selected
+    }
+
+    func start() async throws {
+        let selected = try await configuredManager()
+        if selected.connection.status == .connected { return }
         let statuses = statusChanges(selected.connection)
         startedHere = true
         try selected.connection.startVPNTunnel()
@@ -66,15 +91,54 @@ final class EmbeddedTunnel {
         }
     }
 
+    @MainActor
+    private final class ObservedConnection {
+        let connection: NEVPNConnection
+        init(_ connection: NEVPNConnection) { self.connection = connection }
+    }
+
     private func statusChanges(_ connection: NEVPNConnection) -> AsyncStream<NEVPNStatus> {
-        AsyncStream { continuation in
-            let token = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: connection, queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let status = self?.manager?.connection.status else { return }
-                    continuation.yield(status)
+        let observed = ObservedConnection(connection)
+        return AsyncStream { continuation in
+            let token = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: connection, queue: .main) { _ in
+                Task { @MainActor in
+                    continuation.yield(observed.connection.status)
                 }
             }
             continuation.onTermination = { _ in NotificationCenter.default.removeObserver(token) }
+        }
+    }
+}
+/// Shared by onboarding and connection settings; success means saved, not connected.
+struct EmbeddedTunnelSetupView: View {
+    @State private var configuring = false
+    @State private var configured = false
+    @State private var message: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("zLoader uses its embedded local VPN for device services. Allow the iOS VPN configuration prompt. The tunnel connects only while an operation needs it.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            SwiftUI.Button(configured ? "Configure zLoader VPN Again" : "Configure zLoader VPN") {
+                configuring = true
+                message = nil
+                Task { @MainActor in
+                    defer { configuring = false }
+                    do {
+                        try await EmbeddedTunnel.shared.configure()
+                        configured = true
+                        message = "zLoader VPN configuration saved. Pairing and refresh will start the tunnel when needed."
+                    } catch {
+                        configured = false
+                        let failure = error as NSError
+                        message = "\(error.localizedDescription) (\(failure.domain), \(failure.code))"
+                    }
+                }
+            }
+            .disabled(configuring)
+            if configuring { ProgressView() }
+            if let message { Text(message).font(.footnote).textSelection(.enabled) }
         }
     }
 }

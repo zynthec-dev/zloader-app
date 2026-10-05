@@ -32,10 +32,10 @@ struct OnboardingView: View {
                     WelcomeStep(onNext: { currentStep += 1 })
                         .tag(0)
 
-                    PairingFileStep(onNext: { currentStep += 1 })
+                    EmbeddedVPNStep(onNext: { currentStep += 1 })
                         .tag(1)
 
-                    LocalDevVPNStep(onNext: { currentStep += 1 })
+                    PairingFileStep(onNext: { currentStep += 1 })
                         .tag(2)
 
                     AppleIDStep(onNext: { currentStep += 1 })
@@ -355,204 +355,30 @@ private struct PairingFileStep: View {
     }
 }
 
-private struct LocalDevVPNStep: View {
+private struct EmbeddedVPNStep: View {
     let onNext: () -> Void
-    @State private var isConnected = false
-    @State private var errorMessage: String? = nil
-
-    private let vpnSchemeURL = URL(string: "localdevvpn://")!
-    private let vpnConnectURL = URL(string: "localdevvpn://enable?scheme=zloader")!
-    private let appStoreURL = URL(string: "https://apps.apple.com/app/localdevvpn/id6755608044")!
-
-    private var isInstalled: Bool {
-        UIApplication.shared.canOpenURL(vpnSchemeURL)
-    }
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ZStack(alignment: .bottomTrailing) {
-                if let uiImage = UIImage(named: "LocalDevVPN") {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 88, height: 88)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-                } else {
-                    Image(systemName: "network")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80)
-                        .foregroundColor(.accentColor)
-                }
-
-                if isConnected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                    #if !os(tvOS)
-                        .background(Circle().fill(Color(.systemBackground)))
-                    #else
-                        .background(Circle().fill(Color.black))
-                    #endif
-                        .offset(x: 4, y: 4)
-                        .transition(.scale.combined(with: .opacity))
-                }
+        ScrollView {
+            VStack(spacing: 24) {
+                Image(systemName: "network")
+                    .font(.system(size: 72))
+                    .foregroundStyle(Color.accentColor)
+                Text("zLoader VPN").font(.largeTitle.bold())
+                #if os(iOS)
+                EmbeddedTunnelSetupView()
+                #else
+                Text("Configure a supported connection to the device before pairing.")
+                #endif
+                SwiftUI.Button("Continue", action: onNext)
+                    .buttonStyle(.borderedProminent)
+                Text("You can also configure the VPN later in Settings → Connection Config.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            .animation(.easeInOut, value: isConnected)
-
-            VStack(spacing: 8) {
-                Text(NSLocalizedString("LocalDevVPN", comment: ""))
-                    .font(.system(size: 28, weight: .bold))
-
-                Text(NSLocalizedString("zLoader communicates with on-device services over a local loopback VPN. Enable LocalDevVPN before verifying.", comment: ""))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            if isConnected {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text(NSLocalizedString("LocalDevVPN is connected.", comment: ""))
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.vertical, 4)
-            }
-
-            VStack(spacing: 12) {
-                if !isConnected {
-                    SwiftUI.Button(action: verifyVPN) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "bolt.horizontal.fill")
-                            Text(NSLocalizedString("Verify VPN", comment: ""))
-                        }
-                        .font(.headline)
-                        .foregroundColor(.accentColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(12)
-                    }
-                }
-
-                if let errorMessage {
-                    VStack(spacing: 8) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                        }
-                        .multilineTextAlignment(.center)
-
-                        if !isInstalled {
-                            SwiftUI.Button(action: {
-                                UIApplication.shared.open(appStoreURL)
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.down.app")
-                                    Text(NSLocalizedString("Get LocalDevVPN on App Store", comment: ""))
-                                }
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-            }
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 32)
-
-            Spacer()
-
-            VStack(spacing: 12) {
-                SwiftUI.Button(action: onNext) {
-                    Text(NSLocalizedString("Continue", comment: ""))
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(isConnected ? Color.accentColor : Color.gray.opacity(0.4))
-                        .cornerRadius(14)
-                }
-                .disabled(!isConnected)
-
-                SwiftUI.Button(action: onNext) {
-                    Text(NSLocalizedString("Set Up Later", comment: ""))
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
-        }
-        .onAppear {
-            checkStatus()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            checkStatus()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                checkStatus()
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                checkStatus()
-            }
-        }
-    }
-
-    private func checkStatus() {
-        let interfaces = Minimuxer.shared.network.activeInterfaces
-        let hasVpnTunnel = interfaces.contains { info in
-            info.name.lowercased().hasPrefix("utun") && info.ip.hasPrefix("10.7.")
-        }
-
-        if hasVpnTunnel {
-            isConnected = true
-            errorMessage = nil
-            return
-        }
-
-        let targetIp = ConnectionConfig.shared.tunnelPeerIp ?? "10.7.0.1"
-        if !targetIp.isEmpty, Minimuxer.shared.core.testDeviceConnection(ifaddr: targetIp, timeout: 200) {
-            isConnected = true
-            errorMessage = nil
-        } else {
-            isConnected = false
-            if isInstalled, errorMessage == NSLocalizedString("LocalDevVPN is not installed on this device.", comment: "") {
-                errorMessage = nil
-            }
-        }
-    }
-
-    private func verifyVPN() {
-        checkStatus()
-        if isConnected {
-            errorMessage = nil
-            return
-        }
-
-        if isInstalled {
-            errorMessage = nil
-            UIApplication.shared.open(vpnConnectURL, options: [:]) { success in
-                if !success {
-                    errorMessage = NSLocalizedString("LocalDevVPN is not installed on this device.", comment: "")
-                }
-            }
-        } else {
-            UIApplication.shared.open(vpnConnectURL, options: [:]) { success in
-                if !success {
-                    errorMessage = NSLocalizedString("LocalDevVPN is not installed on this device.", comment: "")
-                }
-            }
+            .padding(32)
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
         }
     }
 }
