@@ -3,6 +3,7 @@
 Requires macOS codesign/security. Does not contact Apple or establish device launch.
 """
 import argparse
+from datetime import datetime, timezone
 import fnmatch
 import plistlib
 from pathlib import Path
@@ -30,6 +31,15 @@ def check_profile(bundle, requested):
     require(path.is_file(), f'{bundle.name}: missing Apple provisioning profile')
     result = subprocess.run(['security', 'cms', '-D', '-i', str(path)], capture_output=True, check=True)
     profile = plistlib.loads(result.stdout)
+    expiry = profile['ExpirationDate'].replace(tzinfo=timezone.utc)
+    require(expiry > datetime.now(timezone.utc), f'{bundle.name}: expired provisioning profile')
+    with tempfile.TemporaryDirectory() as certificates:
+        prefix = str(Path(certificates) / 'certificate-')
+        subprocess.run(['codesign', '-d', '--extract-certificates=' + prefix, str(bundle)],
+                       capture_output=True, check=True)
+        leaf = Path(prefix + '0').read_bytes()
+        require(leaf in profile.get('DeveloperCertificates', []),
+                f'{bundle.name}: signing certificate is not authorized by profile')
     authorized = profile['Entitlements']
     info = plistlib.loads((bundle / 'Info.plist').read_bytes())
     actual_id = requested.get('application-identifier', '')
@@ -41,10 +51,20 @@ def check_profile(bundle, requested):
     require(team in profile.get('TeamIdentifier', []), f'{bundle.name}: profile team mismatch')
     require(authorized.get('com.apple.developer.team-identifier') == team,
             f'{bundle.name}: entitlement team mismatch')
-    for key in [GROUPS, NETWORK]:
-        for value in requested.get(key, []):
-            require(any(fnmatch.fnmatchcase(value, allowed) for allowed in authorized.get(key, [])),
-                    f'{bundle.name}: profile does not authorize {key}')
+    for key, value in requested.items():
+        allowed = authorized.get(key)
+        if isinstance(value, str):
+            permitted = isinstance(allowed, str) and fnmatch.fnmatchcase(value, allowed)
+        elif isinstance(value, list):
+            permitted = isinstance(allowed, list) and all(
+                any(isinstance(item, str) and isinstance(rule, str) and fnmatch.fnmatchcase(item, rule)
+                    or item == rule for rule in allowed) for item in value
+            )
+        elif isinstance(value, bool):
+            permitted = not value or allowed is True
+        else:
+            permitted = value == allowed
+        require(permitted, f'{bundle.name}: profile does not authorize {key}')
     return team
 
 
@@ -59,7 +79,7 @@ def verify(ipa):
         tunnel = host / 'PlugIns/zLoaderTunnel.appex'
         require(widget.is_dir() and tunnel.is_dir(), 'Widget or tunnel was removed during signing')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic', str(host)], check=True)
-        declared = {bundle: entitlements(bundle) for bundle in [host, widget, tunnel]}
+        declared = {bundle: entitlements(bundle) for bundle in [host, *host.glob('PlugIns/*.appex')]}
         require(bool(set(declared[host].get(GROUPS, [])) & set(declared[widget].get(GROUPS, []))),
                 'Host and widget need the same signed App Group')
         for bundle in [host, tunnel]:
@@ -67,8 +87,8 @@ def verify(ipa):
                     f'{bundle.name}: packet-tunnel-provider was omitted by the signer')
         teams = {check_profile(bundle, requested) for bundle, requested in declared.items()}
         require(len(teams) == 1, 'Host and extensions are signed by different teams')
-        print('PASS signed bundle integrity, shared App Group, tunnel entitlements and matching profiles')
-        print('Profile expiry, device authorization and physical launch still require device validation.')
+        print('PASS Apple-signed integrity, all extension entitlements, authorized certificates, current profiles, shared App Group and tunnel capability')
+        print('Registered-device eligibility and physical launch still require device validation.')
 
 
 if __name__ == '__main__':

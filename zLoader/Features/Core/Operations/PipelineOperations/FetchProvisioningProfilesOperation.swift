@@ -161,6 +161,14 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         let parentID: String
         if let preferredBundleID = await self.getPreferredBundleID(for: targetAppBundle, team: team) {
             parentID = preferredBundleID
+        } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
+                  let profile = targetAppBundle.provisioningProfile,
+                  let certificate = context.targetSigningCertificate,
+                  profile.bundleIdentifier == context.targetBundleIdentifier,
+                  profile.teamIdentifier == team.identifier,
+                  profile.certificates.contains(where: { $0.rawDER == certificate.certificate.rawDER }) {
+            // Keep an established identity when re-signing our own app with its original certificate.
+            parentID = context.targetBundleIdentifier
         } else if self.context.appendTeamID {
             parentID = "\(self.context.targetBundleIdentifier).\(team.identifier)"
         } else {
@@ -188,6 +196,12 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             preferredName = targetAppBundle.name
         }
         
+        if let profile = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: parentAppBundle,
+                                                       bundleID: bundleID, team: team) {
+            self.debugLog("[FetchProvisioningProfiles] Reusing compatible embedded profile; certificate, identity, device, expiry and capabilities checked.")
+            return profile
+        }
+
         self.debugLog("[FetchProvisioningProfiles] Registering App ID with name '\(preferredName)' and bundleID '\(bundleID)'...")
         let appID = try await self.registerAppID(for: targetAppBundle, name: preferredName, bundleIdentifier: bundleID, team: team)
         self.debugLog("[FetchProvisioningProfiles] App ID registered successfully: \(appID.bundleIdentifier) (\(appID.identifier))")
@@ -248,6 +262,41 @@ private extension FetchProvisioningProfilesOperation{
         }
     }
     
+    func reusableEmbeddedProfile(for app: ALTApplication, parentAppBundle: ALTApplication?,
+                                 bundleID: String, team: ALTTeam) async -> ALTProvisioningProfile? {
+        guard app.isZLoaderApp || parentAppBundle?.isZLoaderApp == true,
+              let certificate = context.targetSigningCertificate,
+              let validUntil = certificate.certificate.notAfter, validUntil > Date() else { return nil }
+
+        var candidates = [app.provisioningProfile].compactMap { $0 }
+        // An unsigned update may omit profiles; the running installation can supply its own.
+        if let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
+            let current = ([running] + running.appExtensions).first { $0.bundleIdentifier == bundleID }
+            if let profile = current?.provisioningProfile { candidates.append(profile) }
+        }
+        let matching = candidates.filter {
+            $0.bundleIdentifier == bundleID && $0.teamIdentifier == team.identifier &&
+            $0.expirationDate > Date() &&
+            $0.certificates.contains { $0.rawDER == certificate.certificate.rawDER }
+        }
+        guard !matching.isEmpty, let deviceID = try? await safeFetchUDID() else { return nil }
+        var required = context.customEntitlementsByBundleID[app.bundleIdentifier] ?? app.entitlements
+        if parentAppBundle == nil {
+            for (key, value) in context.additionalEntitlements { required[key] = value }
+        }
+        required = PacketTunnelProvisioning.requestedEntitlements(required, required: requiresPacketTunnelCapability(for: app))
+        let target = ProfileReuseRequirements(bundleID: bundleID, teamID: team.identifier,
+                                              certificate: certificate.certificate.rawDER,
+                                              deviceID: deviceID, entitlements: required)
+        return matching.first { profile in
+            EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
+                bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
+                expiresAt: profile.expirationDate, certificates: profile.certificates.map { $0.rawDER },
+                devices: profile.deviceIDs, entitlements: profile.entitlements
+            ), for: target)
+        }
+    }
+
     func requiresPacketTunnelCapability(for app: ALTApplication) -> Bool {
         PacketTunnelProvisioning.requiresCapability(
             infoPlist: app.infoPlist, extensions: app.appExtensions.map { $0.infoPlist }

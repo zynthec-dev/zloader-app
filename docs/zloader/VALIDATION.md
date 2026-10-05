@@ -147,3 +147,16 @@ read-only and authorize packet-tunnel-provider. This does not validate the
 separate profiles downloaded during zLoader self-signing. No live Developer
 Portal update or physical self-refresh test was performed. See
 [SELF-REFRESH-SIGNING.md](SELF-REFRESH-SIGNING.md).
+
+## Private signed release and profile reuse: 0.7.5 (0705), 2026-10-06
+
+See [APPLE-SIGNED.md](APPLE-SIGNED.md) for outputs, hashes, signing/re-signing
+validation and limits. Release default-ID build
+(`/tmp/zloader-signed-profiles-device.log`), Xcode-ID Release build
+(`.build/apple-signed-build.log`) and arm64 Simulator Debug build
+(`/tmp/zloader-signed-profiles-simulator.log`): PASS, zero warnings/errors.
+All existing local harnesses plus embedded-profile reuse checks pass. Signed
+packaging and a second real Apple signing with the same identity preserve every
+embedded profile and all declared entitlement values. Signing test logs:
+`/tmp/zloader-apple-signed-package.log`, `/tmp/zloader-apple-resign-check.log`.
+This is local signing/re-signing evidence, not an in-app physical self-refresh.
