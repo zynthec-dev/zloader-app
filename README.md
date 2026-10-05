@@ -25,6 +25,7 @@ sh zLoader/scripts/apply-dependency-patches.sh
 sh zLoader/scripts/test-transport.sh
 sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/test-context.sh
+sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 python3 zLoader/scripts/test-settings-storyboard.py
 sh zLoader/scripts/build-unsigned.sh
 ```
@@ -43,6 +44,7 @@ profiles. A paid membership alone does not establish that the signed IPA has
 these capabilities. Keep extensions when importing. The separate unsigned IPA
 is for inspection and does not establish device installability.
 
+- [Xcode installation and self-refresh profiles](docs/zloader/SELF-REFRESH-SIGNING.md)
 - [Settings and onboarding wireless pairing](docs/zloader/ONBOARDING-PAIRING.md)
 - [Transport and iOS constraints](docs/zloader/TRANSPORT.md)
 - [Build validation and device acceptance](docs/zloader/VALIDATION.md)

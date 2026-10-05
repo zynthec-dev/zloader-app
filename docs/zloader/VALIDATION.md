@@ -124,3 +124,26 @@ prototype at SettingsViewController.heightForHeaderInSection. See
 
 No booted simulator was available and no updated physical-device Settings run
 was performed here. Apple signing and on-device pairing limits remain unchanged.
+
+## Xcode/self-refresh profile follow-up: 0.7.4 (0704), 2026-10-06
+
+- iOS arm64 Release build: PASS, zero warnings/errors,
+  `/tmp/zloader-tunnel-provisioning-device.log`.
+- arm64 Simulator Debug build: PASS, zero warnings/errors,
+  `/tmp/zloader-tunnel-provisioning-simulator.log`.
+- New packet-tunnel request/authorization harness: PASS host/provider detection,
+  widget exclusion, stale metadata repair, unrelated values preserved, idempotency
+  and rejection of missing, wrong or malformed Apple authorization responses.
+- Existing Settings XML, App Group, context and transport harnesses: PASS again.
+- Packaging: PASS version/build 0.7.4/0704, ZIP integrity, nested ad-hoc seals and
+  capability/XML entitlement-slot checks.
+- `outputs/zLoader-0.7.4-iLoader.ipa` SHA-256:
+  `6f78ddb691abfee25fb8cf9ce72823fafd9c033f7061fd3374e14c8516e50188`.
+- `outputs/zLoader-0.7.4-unsigned.ipa` SHA-256:
+  `ad5bd1c6818bd82440e612fde19d89b286ddb3ab1ee6939df2fd09036b7e6707`.
+
+Existing local Xcode Debug host/provider signatures and profiles were inspected
+read-only and authorize packet-tunnel-provider. This does not validate the
+separate profiles downloaded during zLoader self-signing. No live Developer
+Portal update or physical self-refresh test was performed. See
+[SELF-REFRESH-SIGNING.md](SELF-REFRESH-SIGNING.md).

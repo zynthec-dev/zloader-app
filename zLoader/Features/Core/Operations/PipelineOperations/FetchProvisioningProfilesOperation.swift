@@ -202,6 +202,10 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         self.debugLog("[FetchProvisioningProfiles] Fetching provisioning profile from Apple for App ID \(groupAppID.bundleIdentifier)...")
         let profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
         self.debugLog("[FetchProvisioningProfiles] Provisioning profile fetched for \(groupAppID.bundleIdentifier) (Name: \(profile.name), Expiration: \(String(describing: profile.expirationDate)))")
+        if requiresPacketTunnelCapability(for: targetAppBundle),
+           !PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) {
+            throw OperationError.invalidParameters(PacketTunnelProvisioning.failureMessage(for: groupAppID.bundleIdentifier))
+        }
         return profile
     }
 }
@@ -244,6 +248,12 @@ private extension FetchProvisioningProfilesOperation{
         }
     }
     
+    func requiresPacketTunnelCapability(for app: ALTApplication) -> Bool {
+        PacketTunnelProvisioning.requiresCapability(
+            infoPlist: app.infoPlist, extensions: app.appExtensions.map { $0.infoPlist }
+        )
+    }
+
     func updateFeatures(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> ALTAppID {
         let bundleID = targetAppBundle.bundleIdentifier
         var entitlements = self.context.customEntitlementsByBundleID[bundleID]
@@ -252,6 +262,11 @@ private extension FetchProvisioningProfilesOperation{
             entitlements[key] = value
         }
         
+        // Cached/custom entitlements cannot remove a requirement of an embedded provider.
+        entitlements = PacketTunnelProvisioning.requestedEntitlements(
+            entitlements, required: requiresPacketTunnelCapability(for: targetAppBundle)
+        )
+
         guard let allowedFeatures = team.type.allowedFeatures else {
             throw OperationError.invalidParameters("Cannot update features for unknown team type.")
         }
@@ -301,7 +316,7 @@ private extension FetchProvisioningProfilesOperation{
         
         // set for requesting and send request
         var appID = appID
-        appID.features = targetFeatures
+        appID.features.merge(targetFeatures) { _, requested in requested }
         
         do {
             let updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team)
