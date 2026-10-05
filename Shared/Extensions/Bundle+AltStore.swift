@@ -98,8 +98,13 @@ public extension Bundle
     
     // @livecontainer
     @objc dynamic var altstoreAppGroup: String? {
-        let appGroup = self.appGroups.first { $0.contains(Bundle.baseAltStoreAppGroupID) }
-        return appGroup
+        var preferred = [Bundle.baseAltStoreAppGroupID]
+        if let identifier = self.bundleIdentifier {
+            preferred.append("group." + identifier)
+        }
+        return AppGroupResolver.resolve(declared: self.appGroups, preferred: preferred) {
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil
+        }
     }
     
 }

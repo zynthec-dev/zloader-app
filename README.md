@@ -14,13 +14,21 @@ physical iPhone. An unsigned build does not establish installability.
 
 - [Transport investigation and constraints](docs/zloader/TRANSPORT.md)
 - [Build evidence and device acceptance](docs/zloader/VALIDATION.md)
+- [App Group startup failure and re-signing](docs/zloader/APP-GROUPS.md)
 - [Upstream and local build workflow](docs/zloader/UPSTREAM.md)
 
 ```sh
 git submodule update --init --recursive
 sh zLoader/scripts/test-transport.sh
+sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/build-unsigned.sh
 ```
+
+For importing into SideStore, use `outputs/zLoader-resignable.ipa`. Its ad-hoc
+signature preserves App Group and Network Extension capability requests for
+the importer. It still requires real Apple provisioning and signing before
+installation. `zLoader-unsigned.ipa` is a separate unsigned review artifact;
+its missing Mach-O entitlements can prevent importers from provisioning App Groups.
 
 License: original SideStore AGPL-3.0 remains. LocalDevVPN/StosVPN license and
 attribution notices are bundled and shown in About. No signing or entitlement

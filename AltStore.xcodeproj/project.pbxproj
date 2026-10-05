@@ -90,6 +90,7 @@
 				Errors/ALTLocalizedError.swift,
 				Errors/UserInfoValue.swift,
 				"Extensions/Bundle+AltStore.swift",
+				Extensions/AppGroupResolver.swift,
 			);
 			target = BF58047A246A28F7008AE704 /* SideBackup */;
 		};

@@ -112,9 +112,14 @@ open class PersistentContainer: NSPersistentContainer, @unchecked Sendable {
     open func loadPersistentStores() async throws {
         #if !os(tvOS)
         guard FileManager.default.altstoreSharedDirectory != nil else {
-            throw DatabaseError.missingAppGroup(
-                reason: NSLocalizedString("Unable to access the shared App Group container. Refusing to create or use a private sandbox fallback database.", comment: "")
-            )
+            let groups = Bundle.main.appGroups
+            let reason: String
+            if groups.isEmpty {
+                reason = "The installed app has no readable App Group entitlement. Re-sign the zLoader resignable IPA with App Groups enabled and matching host/widget provisioning profiles. An unsigned IPA may lose these requirements when imported into a signing app."
+            } else {
+                reason = "iOS could not authorize an unambiguous shared container for the signed App Groups: \(groups.joined(separator: ", ")). Check App Group registration and matching host/widget profiles, then re-sign."
+            }
+            throw DatabaseError.missingAppGroup(reason: reason + " No private fallback database was created; existing data was not deleted.")
         }
         #endif
 

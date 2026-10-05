@@ -25,6 +25,7 @@ git switch zloader-development
 git merge <verified-upstream-nightly-sha>
 git submodule update --init --recursive
 sh zLoader/scripts/test-transport.sh
+sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/build-unsigned.sh
 ```
 
@@ -39,7 +40,9 @@ They contain SideStore product names and upstream publishing destinations and
 are NOT the fork's release process. GitHub Actions is disabled for this repository pending an explicit fork-specific
 release configuration. The user approved uploading the source and configuring
 the repository. The local
-scripts above build/package an unsigned review artifact without fake-signing.
+scripts above package both an unsigned review artifact and a resignable IPA.
+The latter uses local ad-hoc signatures solely to preserve capability requests
+for SideStore import; it is not an authorized iOS installation signature.
 Do not run the inherited `make fakesign ipa` as a zLoader release workflow.
 
 ## Identity and sources
