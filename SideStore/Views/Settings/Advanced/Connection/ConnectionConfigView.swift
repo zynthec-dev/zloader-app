@@ -339,7 +339,7 @@ struct ConnectionConfigView: View {
                 UserDefaults.standard.remotePairingPortOverride = 0
             }
             syncMinimuxerBackendFromUserDefaults()
-            try? await fetchUDID(forceLive: true)
+            _ = try? await fetchUDID(forceLive: true)
         }
         await bindConnectionConfig()
         showConfirmDialog = true
@@ -371,7 +371,7 @@ struct ConnectionConfigView: View {
                 .foregroundColor(textColor ?? (editable ? .secondary : .gray))
                 .disabled(!editable)
                 .keyboardType(isPort ? .numberPad : .numbersAndPunctuation)
-                .onChange(of: proxy.wrappedValue) { newValue in
+                .onValueChange(of: proxy.wrappedValue) { newValue in
                     guard editable else { return }
                     if isPort {
                         let digits = newValue.filter { "0123456789".contains($0) }

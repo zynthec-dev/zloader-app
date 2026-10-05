@@ -75,6 +75,27 @@ class NewsViewController: UICollectionViewController
         NotificationCenter.default.addObserver(self, selector: #selector(NewsViewController.importApp(_:)), name: AppDelegate.importAppDeepLinkNotification, object: nil)
     }
     
+    #if !os(tvOS)
+    override func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        UIContextMenuConfiguration(identifier: indexPath as NSIndexPath, previewProvider: { [weak self] in
+            guard let self else { return nil }
+            let item = self.dataSource.item(at: indexPath)
+                if let url = item.externalURL { return self.makeWebViewController(for: url, preferredTintColor: item.tintColor) }
+                if let app = item.storeApp { return AppViewController.makeAppViewController(app: app) }
+                return nil
+        })
+    }
+
+    override func collectionView(_ collectionView: UICollectionView, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration, animator: any UIContextMenuInteractionCommitAnimating) {
+        guard let controller = animator.previewViewController else { return }
+        animator.addCompletion { [weak self] in
+            guard let self else { return }
+            if controller is AppViewController { self.navigationController?.pushViewController(controller, animated: true) }
+            else { self.present(controller, animated: true) }
+        }
+    }
+    #endif
+
     override func viewDidLoad()
     {
         super.viewDidLoad()
@@ -102,7 +123,6 @@ class NewsViewController: UICollectionViewController
         self.collectionView.register(AppBannerFooterView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter, withReuseIdentifier: "AppBanner")
         
         #if !os(tvOS)
-        self.registerForPreviewing(with: self, sourceView: self.collectionView)
         
         let refreshControl = UIRefreshControl(frame: .zero)
         refreshControl.addTarget(self, action: #selector(NewsViewController.updateSources), for: .primaryActionTriggered)

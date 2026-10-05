@@ -136,7 +136,6 @@ class MyAppsViewController: UICollectionViewController
         }
         
         #if !os(tvOS)
-        self.registerForPreviewing(with: self, sourceView: self.collectionView)
         #endif
         
         NotificationCenter.default.addObserver(self, selector: #selector(MyAppsViewController.didChangeAppIcon(_:)), name: UIApplication.didChangeAppIconNotification, object: nil)
@@ -653,12 +652,12 @@ private extension MyAppsViewController
         if self.updatesDataSource.itemCount > 0
         {
             self.navigationController?.tabBarItem.badgeValue = String(describing: self.updatesDataSource.itemCount)
-            UIApplication.shared.applicationIconBadgeNumber = Int(self.updatesDataSource.itemCount)
+            setApplicationBadge(Int(self.updatesDataSource.itemCount))
         }
         else
         {
             self.navigationController?.tabBarItem.badgeValue = nil
-            UIApplication.shared.applicationIconBadgeNumber = 0
+            setApplicationBadge(0)
         }
         
         // Reloading collection view when not visible can mess with cell margins.
@@ -998,7 +997,7 @@ private extension MyAppsViewController
                 switch result {
                 case .success(let installedApp):
                     completion(.success(()))
-                    installedApp.managedObjectContext?.perform {
+                    installedApp.managedObjectContext?.enqueueWithObject(installedApp) { installedApp in
                         debugLog("Successfully installed app: \(installedApp.bundleIdentifier)")
                     }
                 case .failure(let error):
@@ -1191,8 +1190,8 @@ private extension MyAppsViewController
     func reinstallFromCache(_ installedApp: InstalledApp)
     {
         InstallAppDialog.present(installedApp: installedApp, from: self) { [weak self] in
-            guard let self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 let previousProgress = AppManager.shared.installationProgress(for: installedApp)
                 guard previousProgress == nil else {
                     previousProgress?.cancel()
@@ -1226,8 +1225,8 @@ private extension MyAppsViewController
     func reinstallFromSource(_ storeApp: StoreApp)
     {
         InstallAppDialog.present(storeApp: storeApp, from: self) { [weak self] in
-            guard let self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 let previousProgress = AppManager.shared.installationProgress(for: storeApp)
                 guard previousProgress == nil else {
                     previousProgress?.cancel()
@@ -1261,12 +1260,12 @@ private extension MyAppsViewController
     func activate(_ installedApp: InstalledApp)
     {
         Task { @MainActor in
-            func finish(_ result: Result<InstalledApp, Error>)
+            @Sendable func finish(_ result: Result<InstalledApp, Error>)
             {
                 do
                 {
                     let app = try result.get()
-                    app.managedObjectContext?.perform {
+                    app.managedObjectContext?.enqueueWithObject(app) { app in
                         app.isActive = true
                         try? app.managedObjectContext?.save()
                     }
@@ -1288,7 +1287,7 @@ private extension MyAppsViewController
             if !UserDefaults.standard.isAppLimitDisabled && UserDefaults.standard.activeAppsLimit != nil
             {
                 self.promptToDeactivateApp(for: installedApp) { result in
-                    installedApp.managedObjectContext?.perform {
+                    Task { @MainActor in
                         switch result
                         {
                         case .failure(let error):
@@ -2374,7 +2373,10 @@ extension MyAppsViewController
         let section = Section(rawValue: indexPath.section)!
         switch section
         {
-        case .updates, .noUpdates: return nil
+        case .noUpdates: return nil
+        case .updates:
+            guard let app = self.dataSource.item(at: indexPath).storeApp else { return nil }
+            return UIContextMenuConfiguration(identifier: indexPath as NSIndexPath, previewProvider: { AppViewController.makeAppViewController(app: app) })
         case .activeApps, .inactiveApps:
             let installedApp = self.dataSource.item(at: indexPath)
             guard !AppManager.shared.isActivelyManagingApp(withBundleID: installedApp.bundleIdentifier) else { return nil }
@@ -2386,6 +2388,11 @@ extension MyAppsViewController
         }
     }
     
+    override func collectionView(_ collectionView: UICollectionView, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration, animator: any UIContextMenuInteractionCommitAnimating) {
+        guard let controller = animator.previewViewController else { return }
+        animator.addCompletion { [weak self] in self?.navigationController?.pushViewController(controller, animated: true) }
+    }
+
     override func collectionView(_ collectionView: UICollectionView, previewForHighlightingContextMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview?
     {
         guard let indexPath = configuration.identifier as? NSIndexPath else { return nil }
@@ -2668,10 +2675,10 @@ extension MyAppsViewController: UICollectionViewDropDelegate
                 
                 let previousInstalledApp = self.dataSource.item(at: destinationIndexPath)
                 self.deactivate(previousInstalledApp) { (result) in
-                    installedApp.managedObjectContext?.perform {
-                        switch result
-                        {
-                        case .failure: installedApp.isActive = false
+                    Task { @MainActor in
+                        switch result {
+                        case .failure:
+                            installedApp.managedObjectContext?.enqueueWithObject(installedApp) { app in app.isActive = false }
                         case .success: self.activate(installedApp)
                         }
                     }

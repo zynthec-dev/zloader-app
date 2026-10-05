@@ -72,6 +72,23 @@ class BrowseViewController: UICollectionViewController
     
     @IBOutlet private var sourcesBarButtonItem: UIBarButtonItem!
     
+    #if !os(tvOS)
+    override func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        UIContextMenuConfiguration(identifier: indexPath as NSIndexPath, previewProvider: { [weak self] in
+            guard let self else { return nil }
+            return AppViewController.makeAppViewController(app: self.dataSource.item(at: indexPath))
+        })
+    }
+
+    override func collectionView(_ collectionView: UICollectionView, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration, animator: any UIContextMenuInteractionCommitAnimating) {
+        guard let controller = animator.previewViewController else { return }
+        animator.addCompletion { [weak self] in
+            guard let self else { return }
+            self.navigationController?.pushViewController(controller, animated: true)
+        }
+    }
+    #endif
+
     override func viewDidLoad()
     {
         super.viewDidLoad()
@@ -99,7 +116,6 @@ class BrowseViewController: UICollectionViewController
         collectionViewLayout.minimumLineSpacing = 30
         
         #if !os(tvOS)
-        self.registerForPreviewing(with: self, sourceView: self.collectionView)
         
         let refreshControl = UIRefreshControl(frame: .zero, primaryAction: UIAction { [weak self] _ in
             self?.updateSources()

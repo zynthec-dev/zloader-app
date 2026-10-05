@@ -43,7 +43,7 @@ final class PerformBackupRestoreOperation: BasePipelineOperation<InstallAppOpera
         guard let context = installedApp.managedObjectContext else {
             throw OperationError.invalidParameters("BackupRestoreAppOperation: installedApp.managedObjectContext is nil")
         }
-        let (bundleID, fileURL, name, openAppURL) = context.performAndWait {
+        let (bundleID, fileURL, name, openAppURL) = await context.performWithObject(installedApp) { installedApp in
             (installedApp.bundleIdentifier, installedApp.fileURL, installedApp.name, installedApp.openAppURL)
         }
         

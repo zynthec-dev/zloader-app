@@ -673,7 +673,7 @@ private extension SettingsViewController
             let keepAnisette = contentVC.isKeepAnisetteChecked
             let keepAnisetteHeaders = contentVC.isKeepAnisetteHeadersChecked
             let keepSideSignHeaders = contentVC.isKeepSideSignHeadersChecked
-            Task.detached { [weak self] in
+            Task { @MainActor [weak self] in
                 await AuthManager.shared.signOut(
                     keepCertificate: keepCert,
                     keepAnisetteData: keepAnisette,

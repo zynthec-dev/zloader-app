@@ -17,7 +17,7 @@ public final class FileImportHandler {
 
     private init() {
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.flushPendingImport()
+            Task { @MainActor [weak self] in self?.flushPendingImport() }
         }
     }
 

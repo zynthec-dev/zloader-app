@@ -500,6 +500,7 @@ final class BonjourDiscoveryManager: NSObject, ObservableObject, NetServiceDeleg
                 }
             }
             
+            let resolvedAddresses = allAddresses
             await MainActor.run {
                 guard self.isResolving, self.resolvedService == nil else { return }
                 
@@ -509,7 +510,7 @@ final class BonjourDiscoveryManager: NSObject, ObservableObject, NetServiceDeleg
                     domain: service.domain,
                     hostname: cleanHost.isEmpty ? service.name : cleanHost,
                     port: port,
-                    addresses: allAddresses,
+                    addresses: resolvedAddresses,
                     txtRecords: txtRecords
                 )
                 self.isResolving = false

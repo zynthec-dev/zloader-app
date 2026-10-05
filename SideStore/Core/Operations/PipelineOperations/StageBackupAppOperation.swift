@@ -81,7 +81,7 @@ final class StageBackupAppOperation: BasePipelineOperation<InstallAppOperationCo
             "UTTypeDescription": "SideStore Backup App",
             "UTTypeIconFiles": [],
             "UTTypeIdentifier": targetApp.installedBackupAppUTI,
-            "UTTypeTagSpecification": [:]
+            "UTTypeTagSpecification": [String: String]()
         ]
 
         var exportedUTIs = sideBackupBundle.infoPlist[Bundle.Info.exportedUTIs] as? [[String: any Sendable]] ?? []

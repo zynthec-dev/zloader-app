@@ -769,12 +769,12 @@ struct ServiceDetailView: View {
             viewModel.logDetails(for: service, trigger: "onAppear (Entering Details View)")
             startAutoRefresh(triggerImmediateScan: true)
         }
-        .onChange(of: viewModel.resolvedService) { newResolved in
+        .onValueChange(of: viewModel.resolvedService) { newResolved in
             if let resolved = newResolved {
                 viewModel.logDetails(for: service, trigger: "Service Resolved", resolved: resolved)
             }
         }
-        .onChange(of: viewModel.resolveError) { newError in
+        .onValueChange(of: viewModel.resolveError) { newError in
             if let err = newError {
                 debugLog("[ServiceDetailView] Resolution error for '\(service.name)': \(err)")
             }

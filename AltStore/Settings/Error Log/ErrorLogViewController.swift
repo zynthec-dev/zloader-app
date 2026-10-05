@@ -159,7 +159,7 @@ private extension ErrorLogViewController
             cell.errorDescriptionTextView.accessibilityLabel = cell.errorDescriptionTextView.text
         }
         dataSource.prefetchHandler = { (loggedError, indexPath) in
-            let (installedApp, iconURL) = await loggedError.managedObjectContext?.perform {
+            let (installedApp, iconURL) = await loggedError.managedObjectContext?.performWithObject(loggedError) { loggedError in
                 (loggedError.installedApp, loggedError.storeApp?.iconURL)
             } ?? (nil, nil)
             

@@ -387,7 +387,7 @@ public struct ConsoleLogView: View {
                        #if !os(tvOS)
                        .textFieldStyle(RoundedBorderTextFieldStyle())
                        #endif
-                       .onChange(of: searchText) { newValue in
+                       .onValueChange(of: searchText) { newValue in
                            viewModel.searchTerm = newValue
                            viewModel.performSearch()
                        }
@@ -465,14 +465,14 @@ public struct ConsoleLogView: View {
                                 }
                         }
                     }
-                    .onChange(of: scrollToIndex) { newIndex in
+                    .onValueChange(of: scrollToIndex) { newIndex in
                         if let index = newIndex {
                             withAnimation {
                                 proxy.scrollTo(index, anchor: .center)
                             }
                         }
                     }
-                    .onChange(of: scrollToBottom) { _ in
+                    .onValueChange(of: scrollToBottom) { _ in
                         viewModel.logLines.indices.last.map { last in
                             proxy.scrollTo(last, anchor: .bottom)
                         }

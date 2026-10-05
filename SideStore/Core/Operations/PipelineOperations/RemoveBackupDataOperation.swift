@@ -28,7 +28,7 @@ final class RemoveBackupDataOperation: BasePipelineOperation<InstallAppOperation
         }
         
         self.setProgress(30)
-        let backupDirectoryURL: URL? = await installedApp.managedObjectContext?.perform {
+        let backupDirectoryURL: URL? = await installedApp.managedObjectContext?.performWithObject(installedApp) { installedApp in
             self.backupDirectoryURL(for: installedApp)
         }
         guard let backupDirectoryURL else {

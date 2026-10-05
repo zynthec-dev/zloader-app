@@ -9,7 +9,8 @@
 import UIKit
 import SideSign
 
-class SignInFlowHandler: AnyObject, SignInHandler, AnisetteServerHandler {
+@MainActor
+final class SignInFlowHandler: AnyObject, SignInHandler, AnisetteServerHandler {
     
     private weak var presentingViewController: UIViewController?
     private weak var presentedAuthVC: AuthenticationViewController?
@@ -705,7 +706,7 @@ class SignInFlowHandler: AnyObject, SignInHandler, AnisetteServerHandler {
             let resignViewController = storyboard.instantiateViewController(withIdentifier: "resignAltStoreViewController") as! ResignAltStoreViewController
             resignViewController.context = context
             resignViewController.mismatchReason = mismatchReason
-            resignViewController.isFreeTeam = isFreeTeam ?? false
+            resignViewController.isFreeTeam = isFreeTeam
             resignViewController.completionHandler = { result in
                 guard !hasResumed else {
                     debugLog("[SignInFlowHandler] resolveResign completionHandler invoked more than once. Ignoring.")

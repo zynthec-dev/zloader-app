@@ -23,10 +23,11 @@ final class RemoveAppOperation: BasePipelineOperation<InstallAppOperationContext
             throw OperationError.invalidParameters("RemoveAppOperation: self.context.installedApp is nil")
         }
         
+        let objectID = installedApp.objectID
         let backgroundContext = self.context.dbBackgroundContext
         
         await backgroundContext.perform {
-            let installedAppInContext = backgroundContext.object(with: installedApp.objectID) as! InstalledApp
+            let installedAppInContext = backgroundContext.object(with: objectID) as! InstalledApp
             CacheResignedMetadataOperation.clearCustomizations(for: installedAppInContext)
             backgroundContext.delete(installedAppInContext)
         }

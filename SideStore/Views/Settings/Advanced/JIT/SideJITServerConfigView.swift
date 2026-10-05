@@ -132,7 +132,7 @@ struct SideJITServerConfigView: View {
                     }
                 }
             }
-            .onChange(of: isServerEnabled) { newValue in
+            .onValueChange(of: isServerEnabled) { newValue in
                 UserDefaults.standard.isSideJITServerEnabled = newValue
                 if newValue {
                     refreshServerState()
@@ -205,7 +205,7 @@ struct SideJITServerConfigView: View {
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                     .keyboardType(.URL)
-                    .onChange(of: customAddress) { newValue in
+                    .onValueChange(of: customAddress) { newValue in
                         let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                         UserDefaults.standard.textInputSideJITServerurl = trimmed.isEmpty ? nil : trimmed
                         refreshServerState()

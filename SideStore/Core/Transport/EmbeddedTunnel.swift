@@ -68,8 +68,11 @@ final class EmbeddedTunnel {
 
     private func statusChanges(_ connection: NEVPNConnection) -> AsyncStream<NEVPNStatus> {
         AsyncStream { continuation in
-            let token = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: connection, queue: .main) { _ in
-                continuation.yield(connection.status)
+            let token = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: connection, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let status = self?.manager?.connection.status else { return }
+                    continuation.yield(status)
+                }
             }
             continuation.onTermination = { _ in NotificationCenter.default.removeObserver(token) }
         }
@@ -80,7 +83,7 @@ final class EmbeddedTunnel {
 enum ZLoaderTransport {
     static let leases = TransportLeaseCoordinator(start: {
         #if os(iOS) && !targetEnvironment(simulator)
-        await syncMinimuxerBackendFromUserDefaults()
+        syncMinimuxerBackendFromUserDefaults()
         guard await getDeviceConnectionMode() == .localVPN else { return }
         try await EmbeddedTunnel.shared.start()
         await minimuxer.network.refreshEndpoint()

@@ -124,7 +124,7 @@ struct ThemePickerView: View {
                     Spacer()
                     ColorPicker("", selection: $selectedColor, supportsOpacity: false)
                         .labelsHidden()
-                        .onChange(of: selectedColor) { newColor in
+                        .onValueChange(of: selectedColor) { newColor in
                             let uiColor = UIColor(newColor)
                             themeManager.primaryColor = uiColor
                         }

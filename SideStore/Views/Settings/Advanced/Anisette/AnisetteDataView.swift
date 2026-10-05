@@ -124,7 +124,7 @@ class AnisetteDataViewModel: ObservableObject {
     }
     
     func reset() async {
-        let config = await AnisetteConfigManager.shared.resetToDefaults()
+        let config = AnisetteConfigManager.shared.resetToDefaults()
         clientInfo = config.clientInfo
         userAgent = config.userAgent
         customDeviceID = ""

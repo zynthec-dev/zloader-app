@@ -434,7 +434,7 @@ extension AppDelegate
                 return
             }
             
-            Task.detached(priority: .userInitiated) {
+            Task(priority: .userInitiated) { @MainActor in
                 do
                 {
                     try await DatabaseManager.shared.start()
@@ -573,7 +573,7 @@ private extension AppDelegate
                 #endif
 
                 DispatchQueue.main.async {
-                    UIApplication.shared.applicationIconBadgeNumber = updates.count
+                    setApplicationBadge(updates.count)
                 }
                 
                 completionHandler(.success(sources))

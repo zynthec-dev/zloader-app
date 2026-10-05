@@ -317,7 +317,7 @@ public extension InstalledApp
     func loadIcon() async throws -> UIImage?
     {
         if self.bundleIdentifier == StoreApp.altstoreAppID,
-           let iconName = UIApplication.alt_shared?.value(forKey: "alternateIconName") as? String
+           let iconName = await MainActor.run(body: { UIApplication.alt_shared?.alternateIconName })
         {
             // Use alternate app icon for AltStore, if one was chosen.
             let imageName = iconName.replacingOccurrences(of: "Icon", with: "")
@@ -499,11 +499,11 @@ public extension InstalledApp
         return installedAppUTI
     }
     
-    public var installedAppUTI: String {
+    var installedAppUTI: String {
         return InstalledApp.installedAppUTI(forBundleIdentifier: self.resignedBundleIdentifier)
     }
     
-    public var installedBackupAppUTI: String {
+    var installedBackupAppUTI: String {
         return self.installedAppUTI + ".backup"
     }
 

@@ -82,7 +82,7 @@ final class ProfileManagementViewModel: ObservableObject, @unchecked Sendable {
                         idMap[remoteItem.uuid] = profileID
                         if ProfileManager.shared.getProfile(uuid: remoteItem.uuid) == nil {
                             if let downloaded = try? await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: profileID) {
-                                try? ProfileManager.shared.importProfile(data: downloaded.data)
+                                _ = try? ProfileManager.shared.importProfile(data: downloaded.data)
                             }
                         }
                     }
@@ -90,11 +90,14 @@ final class ProfileManagementViewModel: ObservableObject, @unchecked Sendable {
 
                 let updatedLocal = ProfileManager.shared.getAllLocalProfiles()
 
+                let fetchedUUIDs = remoteUUIDs
+                let fetchedIDs = idMap
+                let fetchedProfiles = listedMap
                 await MainActor.run {
                     self.team = currentTeam
-                    self.remoteProfileUUIDs = remoteUUIDs
-                    self.remoteProfileIdMap = idMap
-                    self.remoteProfilesMap = listedMap
+                    self.remoteProfileUUIDs = fetchedUUIDs
+                    self.remoteProfileIdMap = fetchedIDs
+                    self.remoteProfilesMap = fetchedProfiles
                     self.profiles = updatedLocal
                     self.hasFetchedRemote = true
                     self.isLoading = false

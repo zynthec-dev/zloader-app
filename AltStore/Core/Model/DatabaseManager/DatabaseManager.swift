@@ -53,7 +53,7 @@ public class DatabaseManager: @unchecked Sendable
         do {
             let container = Self.shared.persistentContainer
             
-            var databaseStore = container.persistentStoreCoordinator.persistentStores.first
+            let databaseStore = container.persistentStoreCoordinator.persistentStores.first
             let databaseStoreURL = databaseStore?.url ?? PersistentContainer.defaultDirectoryURL().appendingPathComponent(AppConstants.Database.fileName)
             
             // Reset the managed object context

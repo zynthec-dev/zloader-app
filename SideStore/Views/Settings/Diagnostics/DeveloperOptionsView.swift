@@ -420,7 +420,7 @@ struct DeveloperOptionsView: View {
                                 .foregroundColor(.white)
                                 .font(.system(size: 17))
                                 .frame(width: 90)
-                                .onChange(of: tcpProbeTimeoutText) { newValue in
+                                .onValueChange(of: tcpProbeTimeoutText) { newValue in
                                     let filtered = newValue.filter { "0123456789".contains($0) }
                                     if filtered != newValue {
                                         tcpProbeTimeoutText = filtered

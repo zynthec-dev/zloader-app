@@ -77,7 +77,7 @@ struct CreateManualProfileView: View {
                                     .tag(appID.identifier)
                             }
                         }
-                        .onChange(of: selectedAppIDIdentifier) { _ in
+                        .onValueChange(of: selectedAppIDIdentifier) { _ in
                             updateDefaultProfileName()
                         }
                     }
@@ -87,7 +87,7 @@ struct CreateManualProfileView: View {
                             Text(type.displayName).tag(type)
                         }
                     }
-                    .onChange(of: selectedProfileType) { newType in
+                    .onValueChange(of: selectedProfileType) { newType in
                         updateDefaultProfileName()
                         if newType.acceptedDeviceTypes == .none {
                             selectedDeviceIDs.removeAll()

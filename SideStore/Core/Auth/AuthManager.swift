@@ -146,7 +146,7 @@ public final class AuthManager: @unchecked Sendable {
         skipHowTos: Bool = false
     ) async throws -> SignInResult {
         let dbBackgroundContext = DatabaseManager.shared.persistentContainer.newBackgroundContext()
-        let signInFlowHandler = SignInFlowHandler(presentingViewController: presentingViewController)
+        let signInFlowHandler = await MainActor.run { SignInFlowHandler(presentingViewController: presentingViewController) }
         let context = StandaloneOperationContext(
             steps: .signIn,
             dbBackgroundContext: dbBackgroundContext

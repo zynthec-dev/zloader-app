@@ -276,7 +276,6 @@ class DeveloperServicesViewModel: ObservableObject {
     func deleteAllProfiles(presentingViewController: UIViewController? = nil) async -> (deletedCount: Int, failedCount: Int) {
         self.isActionLoading = true
         defer { self.isActionLoading = false }
-        do {
             var deleted = 0
             var failed = 0
             for profile in self.profiles {
@@ -295,11 +294,6 @@ class DeveloperServicesViewModel: ObservableObject {
             await self.fetchProfiles(presentingViewController: presentingViewController)
             self.showToastMessage("Purged \(deleted) profile(s)\(failed > 0 ? " (\(failed) failed)" : "")")
             return (deleted, failed)
-        } catch {
-            debugLog("[DeveloperServices] deleteAllProfiles failed: \(error)")
-            self.errorMessage = error.localizedDescription
-            return (0, 0)
-        }
     }
 
     func fetchAppGroups(presentingViewController: UIViewController? = nil, isPullToRefresh: Bool = false) async {

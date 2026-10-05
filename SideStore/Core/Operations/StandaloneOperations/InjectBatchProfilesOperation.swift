@@ -48,8 +48,9 @@ final class InjectBatchProfilesOperation: BaseStandaloneOperation<StandaloneOper
 
             if let installedApp = batch.app, let dbContext = installedApp.managedObjectContext {
                 debugLog("[InjectBatchProfilesOperation] Updating database record for \(batch.bundleID)...")
-                try await dbContext.perform {
-                    if let certStatus = batch.certStatus {
+                let certStatus = batch.certStatus
+                try await dbContext.performWithObject(installedApp) { installedApp in
+                    if let certStatus {
                         installedApp.certificateStatus = certStatus
                     }
                     if dbContext.hasChanges {

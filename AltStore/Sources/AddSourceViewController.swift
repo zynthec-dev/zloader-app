@@ -718,7 +718,7 @@ private extension AddSourceViewController
                 let dispatchGroup = DispatchGroup()
                 
                 var sourcesByURL = [URL: Source]()
-                var fetchError: Error?
+                let fetchError: Error? = nil
                 
                 for sourceURL in featuredSourceURLs
                 {

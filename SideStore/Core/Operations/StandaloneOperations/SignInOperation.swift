@@ -222,7 +222,6 @@ final class SignInOperation: BaseStandaloneOperation<StandaloneOperationContext,
             case .success(let result):
                 let team = result.team
                 let certificate = result.certificate
-                let session = result.session
 
                 self.verboseLog("[SignInOperation] finalizeAuthentication: Authentication Success for team \(team.identifier) account.")
                 

@@ -1,0 +1,147 @@
+diff --git a/DeviceGateway/BaseDeviceGateway.swift b/DeviceGateway/BaseDeviceGateway.swift
+index 2501584..5d67b58 100644
+--- a/DeviceGateway/BaseDeviceGateway.swift
++++ b/DeviceGateway/BaseDeviceGateway.swift
+@@ -224,7 +224,7 @@ extension BaseDeviceGateway {
+         return String(data: data, encoding: .utf8) ?? String(data: data, encoding: .ascii)
+     }
+ 
+-    open func findProcessPID(
++    public func findProcessPID(
+         appId: String,
+         bundlePath: String? = nil,
+         executableName: String? = nil,
+diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
+index e9310d0..9bcdc7b 100644
+--- a/DeviceGateway/idevice/IdeviceGateway.swift
++++ b/DeviceGateway/idevice/IdeviceGateway.swift
+@@ -2014,7 +2014,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         hostModel: String,
+         outPath: String,
+         resolveFileName: ((String, String) -> String)?,
+-        onRequestPin: @escaping (@escaping (String) -> Void) -> Void
++        onRequestPin: @escaping @Sendable (@escaping @Sendable (String) -> Void) -> Void
+     ) throws -> PairedDeviceRecord {
+         debugLog("[IdeviceGateway] triggerWirelessPair() called, targetIp: \(targetIp), targetPort: \(targetPort), hostName: \(hostName), hostModel: \(hostModel), outPath: \(outPath)")
+         
+@@ -2027,8 +2027,8 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         }
+ 
+         class PinContext {
+-            let onRequestPin: (@escaping (String) -> Void) -> Void
+-            init(_ onRequestPin: @escaping (@escaping (String) -> Void) -> Void) {
++            let onRequestPin: @Sendable (@escaping @Sendable (String) -> Void) -> Void
++            init(_ onRequestPin: @escaping @Sendable (@escaping @Sendable (String) -> Void) -> Void) {
+                 self.onRequestPin = onRequestPin
+             }
+         }
+@@ -2051,18 +2051,24 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+                         guard let context = context else { return nil }
+                         let ctxObj = Unmanaged<PinContext>.fromOpaque(context).takeUnretainedValue()
+                         let sema = DispatchSemaphore(value: 0)
+-                        var enteredPin: String? = nil
++                        final class PinReply: @unchecked Sendable {
++                            private let lock = NSLock()
++                            private var value: String?
++                            func set(_ pin: String) { lock.lock(); defer { lock.unlock() }; value = pin }
++                            func get() -> String? { lock.lock(); defer { lock.unlock() }; return value }
++                        }
++                        let reply = PinReply()
+                         debugLog("[IdeviceGateway] pin_callback invoked, requesting PIN from user UI...")
+                         ctxObj.onRequestPin { pin in
+                             debugLog("[IdeviceGateway] pin_callback received user entered PIN: '\(pin)'")
+-                            enteredPin = pin
++                            reply.set(pin)
+                             sema.signal()
+                         }
+                         let waitResult = sema.wait(timeout: .now() + 60.0)
+                         if waitResult == .timedOut {
+                             debugLog("[IdeviceGateway] pin_callback timed out waiting for user input")
+                         }
+-                        guard let pinStr = enteredPin, let p = strdup(pinStr) else { return nil }
++                        guard let pinStr = reply.get(), let p = strdup(pinStr) else { return nil }
+                         return UnsafePointer(p)
+                     },
+                     pinContextPtr,
+@@ -2134,7 +2140,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+             if let err = err {
+                 let msg = self.getErrorMessage(from: err)
+                 debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container failed: \(msg)")
+-                defer { safeFreeError(err) }
++                safeFreeError(err)
+                 throw IdeviceGatewayError(.serviceError, reason: "Failed to vend container for \(bundleId), error: (\(msg))")
+             }
+             debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container succeeded")
+@@ -2157,7 +2163,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         if let err = err {
+             let msg = self.getErrorMessage(from: err)
+             debugLog("[IdeviceGateway] afcListDirectory() afc_list_directory failed for: \(path), error: (\(msg))")
+-            defer { safeFreeError(err) }
++            safeFreeError(err)
+             throw IdeviceGatewayError(.serviceError, reason: "Failed to list directory: \(path), error: (\(msg))")
+         }
+         var items: [String] = []
+@@ -2220,7 +2226,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         }
+         if let err = err {
+             debugLog("[IdeviceGateway] afcGetFileInfo() afc_get_file_info failed for: \(path)")
+-            defer { safeFreeError(err) }
++            safeFreeError(err)
+             throw IdeviceGatewayError(.serviceError, reason: "Failed to get info for path: \(path)")
+         }
+         defer {
+@@ -2268,7 +2274,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         }
+         if let err = err {
+             verboseLog("[IdeviceGateway] afcRemovePathRecursive() afc_remove_path failed for: \(path)")
+-            defer { safeFreeError(err) }
++            safeFreeError(err)
+         }
+     }
+ 
+diff --git a/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift b/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift
+index 44de525..522cef1 100644
+--- a/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift
++++ b/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift
+@@ -594,17 +594,17 @@ public final class LibimobiledeviceGateway: BaseDeviceGateway, DeviceGatewayAPI,
+     }
+ 
+     private func signaturePlaceholder(image: Data, trustcache: Data, manifest: Data, mounter: mobile_image_mounter_client_t) throws {
+-        var optionsPlist: plist_t? = plist_new_dict()
++        let optionsPlist: plist_t? = plist_new_dict()
+         defer { if let p = optionsPlist { plist_free(p) } }
+ 
+-        try trustcache.withUnsafeBytes { tcBuf in
++        trustcache.withUnsafeBytes { tcBuf in
+             if let tcPtr = tcBuf.baseAddress?.assumingMemoryBound(to: CChar.self) {
+                 let tcDataPlist = plist_new_data(tcPtr, UInt64(trustcache.count))
+                 plist_dict_set_item(optionsPlist, "ImageTrustCache", tcDataPlist)
+             }
+         }
+ 
+-        try manifest.withUnsafeBytes { mftBuf in
++        manifest.withUnsafeBytes { mftBuf in
+             if let mftPtr = mftBuf.baseAddress?.assumingMemoryBound(to: CChar.self) {
+                 let mftDataPlist = plist_new_data(mftPtr, UInt64(manifest.count))
+                 plist_dict_set_item(optionsPlist, "ImageManifest", mftDataPlist)
+@@ -1269,7 +1269,7 @@ public final class LibimobiledeviceGateway: BaseDeviceGateway, DeviceGatewayAPI,
+             create: heartbeat_client_new,
+             cleanup: heartbeat_client_free
+         ) { hb in
+-            var plist: plist_t? = plist_new_dict()
++            let plist: plist_t? = plist_new_dict()
+             defer { if let p = plist { plist_free(p) } }
+             plist_dict_set_item(plist, "Command", plist_new_string("Pico"))
+ 
+diff --git a/Sources/Services/DeviceConnectionManager.swift b/Sources/Services/DeviceConnectionManager.swift
+index 01b6e27..7878211 100644
+--- a/Sources/Services/DeviceConnectionManager.swift
++++ b/Sources/Services/DeviceConnectionManager.swift
+@@ -102,7 +102,6 @@ actor DeviceConnectionManager {
+             case .localVPN:
+                 // cache last state in locals
+                 let lastInterfacesCache = interfacesCache
+-                let lastVpnIface = vpnIface
+                 let lastReportedPeer = reportedPeerIp
+                 let lastDerivedPeer = derivedPeerIp
+                 let lastDerivedPeerMask = derivedPeerSubnetMask

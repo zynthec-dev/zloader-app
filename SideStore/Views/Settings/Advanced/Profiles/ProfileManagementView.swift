@@ -32,7 +32,6 @@ struct ProfileManagementView: View {
     @State private var pendingImport: PendingProfileImport? = nil
     @State private var profileToEditOnPortal: ALTListedProvisioningProfile? = nil
     @State private var showAddOptions = false
-    @State private var navigateToPortalProfiles = false
 
     private var allowedImportTypes: [UTType] {
         [UTType(filenameExtension: "mobileprovision")].compactMap { $0 }
@@ -327,24 +326,12 @@ struct ProfileManagementView: View {
                 Task {
                     await devServicesViewModel.loadAll(presentingViewController: presentingViewController)
                 }
-                navigateToPortalProfiles = true
+                let controller = UIHostingController(rootView: ProfilesListView(viewModel: devServicesViewModel, presentingViewController: presentingViewController))
+                presentingViewController?.navigationController?.pushViewController(controller, animated: true)
             }
             SwiftUI.Button("Cancel", role: .cancel) {}
         }
-        .onChange(of: navigateToPortalProfiles) { isActive in
-            if !isActive {
-                viewModel.loadProfiles(isPullToRefresh: true)
-            }
-        }
-        .background(
-            NavigationLink(
-                destination: ProfilesListView(viewModel: devServicesViewModel, presentingViewController: presentingViewController),
-                isActive: $navigateToPortalProfiles
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
+        .onAppear { viewModel.loadProfiles(isPullToRefresh: true) }
     }
 
     private func handleFileSelected(at url: URL) {

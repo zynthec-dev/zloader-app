@@ -94,12 +94,17 @@ class AppScreenshotCollectionViewCell: UICollectionViewCell
         
         self.updateAspectRatio()
         self.updateTraits()
+        if #available(iOS 17, tvOS 17, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitDisplayScale.self]) { (self: AppScreenshotCollectionViewCell, _: UITraitCollection) in self.updateTraits() }
+        }
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    @available(iOS, introduced: 8, deprecated: 17)
+    @available(tvOS, introduced: 9, deprecated: 17)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?)
     {
         super.traitCollectionDidChange(previousTraitCollection)

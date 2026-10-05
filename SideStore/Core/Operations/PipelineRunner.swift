@@ -115,12 +115,8 @@ final class PipelineRunner: Sendable
         let operations = operations.filter { progress.progress(for: $0) == nil || progress.progress(for: $0)?.isCancelled == true }
         guard !operations.isEmpty else { throw OperationError.cancelled }
         
-        let backgroundTaskID = await MainActor.run {
-            var taskID = UIBackgroundTaskIdentifier.invalid
-            taskID = UIApplication.shared.beginBackgroundTask(withName: "com.altstore.AppManager.perform") {
-                UIApplication.shared.endBackgroundTask(taskID)
-            }
-            return taskID
+        let backgroundTask = await MainActor.run {
+            BackgroundOperationTask(name: "com.zynthec.zLoader.operation")
         }
         
         // Disable the idleTimeout
@@ -146,9 +142,7 @@ final class PipelineRunner: Sendable
                 if UIApplication.shared.isIdleTimerDisabled && !context.isActivelyManagingAnyApp {
                     UIApplication.shared.isIdleTimerDisabled = false
                 }
-                if backgroundTaskID != .invalid {
-                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                }
+                backgroundTask.end()
             }
         }
         

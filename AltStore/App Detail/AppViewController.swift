@@ -66,6 +66,11 @@ final class AppViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        if #available(iOS 17, tvOS 17, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self, UITraitPreferredContentSizeCategory.self]) { (self: AppViewController, _: UITraitCollection) in
+                if self._viewDidAppear { self._shouldResetLayout = true }
+            }
+        }
         
         self.navigationBarDownloadButton = PillButton(type: .system)
         self.navigationBarDownloadButton.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -389,6 +394,8 @@ final class AppViewController: UIViewController
         self.bannerView.backgroundEffectView.backgroundColor = .clear
     }
     
+    @available(iOS, introduced: 8, deprecated: 17)
+    @available(tvOS, introduced: 9, deprecated: 17)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?)
     {
         super.traitCollectionDidChange(previousTraitCollection)

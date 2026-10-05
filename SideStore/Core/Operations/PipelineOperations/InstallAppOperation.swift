@@ -193,7 +193,7 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         
         // Phase 3: Post-install CoreData write — update refreshedDate
         if !isDifferentSideStore && !isSelfReinstall && !isSideBackup {
-            await backgroundContext.perform {
+            await backgroundContext.performWithObject(installedApp) { installedApp in
                 installedApp.refreshedDate = Date()
             }
         }

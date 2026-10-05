@@ -45,9 +45,9 @@ final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationConte
     private func enableJIT(for installedApp: InstalledApp) async throws
     {
         let userdefaults = UserDefaults.standard
-        let dbContext = self.context.dbBackgroundContext
+        guard let dbContext = installedApp.managedObjectContext else { throw OperationError.invalidParameters("Missing app context") }
 
-        let (targetBundleId, appName) = await dbContext.perform {
+        let (targetBundleId, appName) = await dbContext.performWithObject(installedApp) { installedApp in
             (installedApp.resignedBundleIdentifier, installedApp.name)
         }
 

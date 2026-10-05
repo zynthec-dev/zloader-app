@@ -24,12 +24,12 @@ final class UninstallAppOperation: BasePipelineOperation<InstallAppOperationCont
         }
         
         
-        let bundleID = await installedApp.managedObjectContext?.perform { installedApp.bundleIdentifier }
+        let bundleID = await installedApp.managedObjectContext?.performWithObject(installedApp) { installedApp in installedApp.bundleIdentifier }
         if bundleID?.isAltStoreAppID == true {
             throw OperationError.invalidParameters("zLoader cannot delete itself.")
         }
         
-        let resignedBundleIdentifier = await installedApp.managedObjectContext?.perform {
+        let resignedBundleIdentifier = await installedApp.managedObjectContext?.performWithObject(installedApp) { installedApp in
             self.resignedBundleIdentifier(for: installedApp)
         }
         guard let resignedBundleIdentifier else {

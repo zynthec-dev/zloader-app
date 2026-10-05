@@ -654,7 +654,7 @@ final class AppManager: ObservableObject, @unchecked Sendable
     
     func enableJIT(for installedApp: InstalledApp, completionHandler: @escaping (Result<Void, Error>) -> Void)
     {
-        Task.detached {
+        Task { @MainActor in
             debugLog("[AppManager] enableJIT() called for app: \(installedApp.bundleIdentifier)")
             let dbBackgroundContext = DatabaseManager.shared.persistentContainer.newBackgroundContext()
             let context = StandaloneOperationContext(steps: .enableJIT, dbBackgroundContext: dbBackgroundContext)
@@ -664,11 +664,7 @@ final class AppManager: ObservableObject, @unchecked Sendable
                     _ = try await enableJITOperation.execute()
                     completionHandler(.success(()))
                 } catch {
-                    var appName: String = ""
-                    installedApp.managedObjectContext?.performAndWait {
-                        appName = installedApp.name
-                    }
-                    if appName.isEmpty { appName = installedApp.name }
+                    let appName = await installedApp.managedObjectContext?.performWithObject(installedApp) { app in app.name } ?? "App"
                     let localizedTitle = String(format: NSLocalizedString("Failed to Enable JIT for %@", comment: ""), appName)
                     let mappedError = (error as NSError).withLocalizedTitle(localizedTitle)
                     self.log(error, operation: .enableJIT, app: installedApp)

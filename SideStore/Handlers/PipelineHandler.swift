@@ -317,7 +317,7 @@ final class PipelineHandler: PipelineExecutionHandler,
                 teamType: teamType
             )
         }
-        debugLog("[PipelineHandler] resolveEntitlementsCustomization result: \(result?.count) target(s) returned")
+        debugLog("[PipelineHandler] resolveEntitlementsCustomization result: \(result?.count ?? 0) target(s) returned")
         return result
     }
 
@@ -409,7 +409,6 @@ final class PipelineHandler: PipelineExecutionHandler,
         }
         
         if (alert.textFields?.count ?? 0) >= 2,
-           let tf1 = alert.textFields?.first,
            let tf2 = alert.textFields?[1],
            let container = tf2.superview {
             tf2.isHidden = true
