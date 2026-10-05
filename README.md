@@ -1,3 +1,37 @@
+# zLoader
+
+Maintained by [zynthec-dev](https://github.com/zynthec-dev) in
+[zLoader-ios](https://github.com/zynthec-dev/zLoader-ios).
+**Based on [SideStore](https://github.com/SideStore/SideStore)**, nightly `0dd743f7`.
+
+zLoader embeds a local packet tunnel, removes cellular toggle shortcuts, and
+owns transport lifetime through signing, provisioning, install and refresh
+operation leases. Mint glass branding includes Light/Dark palettes and three
+alternative icons. Network Extension provisioning is mandatory for both app
+and provider; free-account self-signing of this integrated IPA is unsupported.
+Cellular-only operation is implemented experimentally and not verified on a
+physical iPhone. An unsigned build does not establish installability.
+
+- [Transport investigation and constraints](docs/zloader/TRANSPORT.md)
+- [Build evidence and device acceptance](docs/zloader/VALIDATION.md)
+- [Upstream and local build workflow](docs/zloader/UPSTREAM.md)
+
+```sh
+git submodule update --init --recursive
+sh zLoader/scripts/test-transport.sh
+sh zLoader/scripts/build-unsigned.sh
+```
+
+License: original SideStore AGPL-3.0 remains. LocalDevVPN/StosVPN license and
+attribution notices are bundled and shown in About. No signing or entitlement
+bypass is provided. Existing upstream automation is retained as source history;
+do not use it to publish the fork without adapting its destinations.
+
+---
+
+The following is the original upstream README and describes SideStore, not
+verified zLoader release behavior.
+
 # SideStore
 
 > SideStore is an *untethered, community driven* alternative app store for non-jailbroken iOS devices 

@@ -27,3 +27,7 @@ DEBUG_ACTIVITY_MODE = disable
 
 // Mute warnings about duplicate classes in AuthKit and AuthUIKit
 DEBUG_DUPLICATE_CLASSES = NO
+
+#include "zLoader/Branding.xcconfig"
+// Local signing settings must override downstream defaults.
+#include? "CodeSigning.xcconfig"

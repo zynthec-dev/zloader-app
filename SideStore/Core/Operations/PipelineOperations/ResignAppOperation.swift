@@ -44,7 +44,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
             for id in requiredIDs {
                 guard let values = profiles[id]?.entitlements["com.apple.developer.networking.networkextension"] as? [String],
                       values.contains("packet-tunnel-provider") else {
-                    throw OperationError.invalidParameters("Provisioning profile for \(id) does not authorize packet-tunnel-provider. zStore cannot sign or refresh its embedded tunnel with this profile.")
+                    throw OperationError.invalidParameters("Provisioning profile for \(id) does not authorize packet-tunnel-provider. zLoader cannot sign or refresh its embedded tunnel with this profile.")
                 }
             }
         }

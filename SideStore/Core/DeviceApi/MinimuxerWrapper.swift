@@ -205,7 +205,7 @@ public func isMinimuxerReady() async -> Result<Bool, MinimuxerError> {
 }
 
 public func ensureMinimuxerReady() async throws {
-    try await ZStoreTransport.withLease {
+    try await ZLoaderTransport.withLease {
         await minimuxer.network.refreshEndpoint()
         try await withRemotePairingRetry {
             switch await isMinimuxerReady() {
@@ -272,7 +272,7 @@ func minimuxerStop() async throws {
 }
 
 private func withDeviceTransport<T>(_ operation: () async throws -> T) async throws -> T {
-    try await ZStoreTransport.withLease {
+    try await ZLoaderTransport.withLease {
         try await withRemotePairingRetry(operation)
     }
 }

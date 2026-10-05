@@ -159,7 +159,7 @@ final class SettingsViewController: UITableViewController
     
     #if !os(tvOS)
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
+        return .default
     }
     #endif
     
@@ -225,6 +225,9 @@ final class SettingsViewController: UITableViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        // About contains version and attribution; remove upstream social promotion.
+        self.tableView.tableFooterView = nil
+
         
         #if !os(tvOS)
         // --- iOS 26 fix ---
@@ -507,7 +510,7 @@ private extension SettingsViewController
             }
             else
             {
-                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Sign in with your Apple ID to download apps from SideStore.", comment: "")
+                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Sign in with your Apple ID to download apps from zLoader.", comment: "")
             }
             
         case .patreon:
@@ -517,7 +520,7 @@ private extension SettingsViewController
             }
             else
             {
-                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Support the SideStore Team by following our socials or becoming a patron!", comment: "")
+                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Support the zLoader Team by following our socials or becoming a patron!", comment: "")
             }
 
         case .account:
@@ -534,7 +537,7 @@ private extension SettingsViewController
             }
             else
             {
-                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Enable Background Refresh to automatically refresh apps in the background when connected to Wi-Fi. \n\nEnable Disable Idle Timeout to allow SideStore to keep your device awake during a refresh or install of any apps.", comment: "")
+                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Enable Background Refresh to automatically refresh apps in the background when connected to Wi-Fi. \n\nEnable Disable Idle Timeout to allow zLoader to keep your device awake during a refresh or install of any apps.", comment: "")
             }
             
         case .display:
@@ -544,7 +547,7 @@ private extension SettingsViewController
             }
             else
             {
-                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Personalize your SideStore experience by choosing an alternate app icon.", comment: "")
+                settingsHeaderFooterView.secondaryLabel.text = NSLocalizedString("Personalize your zLoader experience by choosing an alternate app icon.", comment: "")
             }
             
             
@@ -617,6 +620,7 @@ private extension SettingsViewController
     {
         switch section
         {
+        case .patreon, .betaTesting: return true
         // case .macDirtyCow:
         //     let isHidden = !(UserDefaults.standard.isCowExploitSupported && UserDefaults.standard.isDebugModeEnabled)
         //     return isHidden
@@ -793,7 +797,7 @@ private extension SettingsViewController
     func clearCache()
     {
         let makeCacheTitle: (String) -> String = { sizeString in
-            String(format: NSLocalizedString("Are you sure you want to clear SideStore's cache?\n\nCache Size: %@", comment: ""), sizeString)
+            String(format: NSLocalizedString("Are you sure you want to clear zLoader's cache?\n\nCache Size: %@", comment: ""), sizeString)
         }
         let alertController = UIAlertController(title: makeCacheTitle(NSLocalizedString("Calculating…", comment: "")),
                                                 message: NSLocalizedString("This will remove all temporary files as well as backups for uninstalled apps.", comment: ""),
@@ -1013,6 +1017,19 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
+        if Section.allCases[indexPath.section] == .credits && indexPath.row < 3 {
+            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+            let titles = ["About zLoader", "Based on SideStore", "zLoader Repository"]
+            let details = [ZLoaderBrand.maintainer, "SideStore, AltStore and their contributors", "zynthec-dev/zLoader-ios"]
+            cell.textLabel?.text = titles[indexPath.row]
+            cell.detailTextLabel?.text = details[indexPath.row]
+            cell.textLabel?.textColor = .label
+            cell.detailTextLabel?.textColor = .secondaryLabel
+            cell.backgroundColor = .secondarySystemGroupedBackground
+            cell.accessoryType = .disclosureIndicator
+            return cell
+        }
+
         if Section.allCases[indexPath.section] == .account && indexPath.row == 3 {
             let cell = tableView.dequeueReusableCell(withIdentifier: AccountVerificationRow.reuseIdentifier) as? AccountVerificationRow
                 ?? AccountVerificationRow()
@@ -1205,9 +1222,9 @@ extension SettingsViewController
             let row = CreditsRow.allCases[indexPath.row]
             switch row
             {
-            case .developer: self.openTwitter(username: "sidestoreio")
-            case .operations: self.openTwitter(username: "sidestoreio")
-            case .designer: self.openTwitter(username: "lit_ritt")
+            case .developer: navigationController?.pushViewController(UIHostingController(rootView: ZLoaderAboutView()), animated: true)
+            case .operations: self.openWebURL(ZLoaderBrand.upstreamURL, preferredTintColor: .altPrimary)
+            case .designer: self.openWebURL(ZLoaderBrand.repositoryURL, preferredTintColor: .altPrimary)
             case .softwareLicenses: break
             }
             
@@ -1225,36 +1242,8 @@ extension SettingsViewController
                 
                 // Option 1: GitHub
                 alertController.addAction(UIAlertAction(title: "GitHub", style: .default) { _ in
-                    self.openWebURL(AppConstants.URLs.sideStoreIssues, preferredTintColor: .altPrimary)
+                    self.openWebURL(ZLoaderBrand.repositoryURL, preferredTintColor: .altPrimary)
                 })
-                
-                // Option 2: Discord
-                alertController.addAction(UIAlertAction(title: "Discord", style: .default) { _ in
-                    self.openWebURL(AppConstants.URLs.sideStoreDiscord, preferredTintColor: .altPrimary)
-                })
-                
-                #if !os(tvOS)
-                // Option 3: Mail
-                alertController.addAction(UIAlertAction(title: "Send Email", style: .default) { _ in
-                    if MFMailComposeViewController.canSendMail() {
-                        let mailViewController = MFMailComposeViewController()
-                        mailViewController.mailComposeDelegate = self
-                        mailViewController.setToRecipients(["support@sidestore.io"])
-
-                        // TODO: MARKETING_VERSION is going to be set anyways so this needs to be fixed for beta
-                        if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-                            mailViewController.setSubject("SideStore Beta \(version) Feedback")
-                        } else {
-                            mailViewController.setSubject("SideStore Beta Feedback")
-                        }
-
-                       self.present(mailViewController, animated: true, completion: nil)
-                    } else {
-                      let toastView = ToastView(text: NSLocalizedString("Cannot Send Mail", comment: ""), detailText: nil)
-                      toastView.show(in: self)
-                    }
-                })
-                #endif
                 
                 // Cancel action
                 alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
@@ -1297,7 +1286,7 @@ extension SettingsViewController
                     selected: UserDefaults.standard.menuAnisetteURL,
                     onResetAdiPb: { [weak self] in
                         guard let self = self else { return }
-                        ToastView(text: "Cleared adi.pb!", detailText: "You will need to log back into Apple ID in SideStore.")
+                        ToastView(text: "Cleared adi.pb!", detailText: "You will need to log back into Apple ID in zLoader.")
                             .show(in: self)
                     }
                 )

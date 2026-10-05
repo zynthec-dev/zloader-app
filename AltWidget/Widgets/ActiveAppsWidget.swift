@@ -123,7 +123,7 @@ private struct ActiveAppsWidgetView: View
                 LazyVStack(spacing: 12) {
                     ForEach(Array(entry.apps.enumerated()), id: \.offset) { index, app in
                     
-                        let icon: UIImage = app.icon ?? UIImage(named: "SideStore") ?? UIImage(systemName: "app.fill")!
+                        let icon: UIImage = app.icon ?? UIImage(named: "zLoader") ?? UIImage(systemName: "app.fill")!
                         
                         // 1024x1024 images are not supported by previews but supported by device
                         // so we scale the image to 97% so as to reduce its actual size but not too much
@@ -227,7 +227,7 @@ private struct ActiveAppsWidgetView: View
     
     private var placeholder: some View {
         VStack(spacing: 4) {
-            Text("Open SideStore")
+            Text("Open zLoader")
                 .font(.system(.body, design: .rounded))
                 .fontWeight(.semibold)
                 .foregroundColor(Color.white.opacity(0.8))

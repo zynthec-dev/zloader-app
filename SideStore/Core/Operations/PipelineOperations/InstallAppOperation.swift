@@ -123,10 +123,10 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             let isDifferentSideStore = Self.isDifferentSideStoreContainer(installedApp, resignedAppBundle)
             if isDifferentSideStore {
                 self.debugLog("""
-                [WARN] Skipped inserting/updating into InstalledApp table for SideStore:
+                [WARN] Skipped inserting/updating into InstalledApp table for zLoader:
                     - Resigned Bundle ID: '\(resignedAppBundle.bundleIdentifier)'
                     - Active Container Bundle ID: '\(installedApp.resignedBundleIdentifier)'
-                    Reason: A different bundle ID installs SideStore as a new app container which initializes its own database upon launch.
+                    Reason: A different bundle ID installs zLoader as a new app container which initializes its own database upon launch.
                             Hence we do not perist current change to prevent corruption of current sidestore's database entry.
                     
                 """)
@@ -423,7 +423,7 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             //
             //         let content = UNMutableNotificationContent()
             //         content.title = "Refreshing..."
-            //         content.body = "SideStore will automatically move to the homescreen to finish refreshing!"
+            //         content.body = "zLoader will automatically move to the homescreen to finish refreshing!"
             //         let notification = UNNotificationRequest(identifier: Bundle.Info.appbundleIdentifier + ".FinishRefreshNotification", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false))
             //         try? await UNUserNotificationCenter.current().add(notification)
             //         

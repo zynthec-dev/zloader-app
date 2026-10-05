@@ -395,7 +395,7 @@ extension MergePolicy{
                 }
                 catch
                 {
-                    let nsError = error.serialized(withFailure: NSLocalizedString("SideStore's database could not be saved.", comment: ""))
+                    let nsError = error.serialized(withFailure: NSLocalizedString("zLoader's database could not be saved.", comment: ""))
                     throw nsError
                 }
                 

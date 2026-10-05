@@ -1,0 +1,6 @@
+// Downstream identity; keep upstream target and source names stable.
+PRODUCT_NAME = zLoader
+ORG_IDENTIFIER = com.zynthec
+BASE_BUNDLE_ID = $(ORG_IDENTIFIER).zLoader
+DEVELOPMENT_TEAM =
+MAIN_BUNDLE_IDENTIFIER[config=Debug] = $(BASE_BUNDLE_ID).debug

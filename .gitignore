@@ -107,3 +107,9 @@ scratch*.sh
 # zStore local build products
 .build/
 outputs/
+
+!docs/zloader/*.md
+!SideStore/Resources/ZStoreCredits/*.md
+!zLoader/**/*.md
+
+!zLoader/scripts/*.sh

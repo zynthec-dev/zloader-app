@@ -183,7 +183,7 @@ final class PipelineHandler: PipelineExecutionHandler,
                 let alert = UIAlertController(
                     title: "Finish Refresh",
                     message: """
-                    To finish refreshing, SideStore must be moved to the background. To do this, you can either go to the Home Screen manually or by hitting Continue. Please reopen SideStore after doing this.
+                    To finish refreshing, zLoader must be moved to the background. To do this, you can either go to the Home Screen manually or by hitting Continue. Please reopen zLoader after doing this.
                     """,
                     preferredStyle: .alert
                 )

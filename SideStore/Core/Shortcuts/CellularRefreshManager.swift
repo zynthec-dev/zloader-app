@@ -1,7 +1,7 @@
 import Foundation
 import Minimuxer
 
-/// Upstream-compatible preference facade. SideApps never toggles system cellular
+/// Upstream-compatible preference facade. zLoader never toggles system cellular
 /// settings or launches Shortcuts. Device transport is owned by operation leases.
 public final class CellularRefreshManager: @unchecked Sendable {
     public static let shared = CellularRefreshManager()

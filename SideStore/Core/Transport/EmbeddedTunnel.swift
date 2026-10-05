@@ -21,7 +21,7 @@ final class EmbeddedTunnel {
 
     func start() async throws {
         guard let providerID else {
-            throw OperationError.invalidVPN(reason: "ZStoreTunnel is missing from this build.")
+            throw OperationError.invalidVPN(reason: "ZLoaderTunnel is missing from this build.")
         }
         let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
         let selected = configurations.first {
@@ -31,9 +31,9 @@ final class EmbeddedTunnel {
         if selected.connection.status == .connected { return }
         let config = NETunnelProviderProtocol()
         config.providerBundleIdentifier = providerID
-        config.serverAddress = "ZStore local device tunnel"
+        config.serverAddress = "ZLoader local device tunnel"
         selected.protocolConfiguration = config
-        selected.localizedDescription = "ZStore"
+        selected.localizedDescription = "ZLoader"
         selected.isEnabled = true
         selected.isOnDemandEnabled = false
         try await selected.saveToPreferences()
@@ -47,7 +47,7 @@ final class EmbeddedTunnel {
             switch selected.connection.status {
             case .connected: return
             case .disconnected, .invalid:
-                throw OperationError.invalidVPN(reason: "The embedded tunnel could not connect. Check the Network Extension entitlement and provisioning profiles for both ZStore and ZStoreTunnel.")
+                throw OperationError.invalidVPN(reason: "The embedded tunnel could not connect. Check the Network Extension entitlement and provisioning profiles for both ZLoader and ZLoaderTunnel.")
             default: continue
             }
         }
@@ -76,7 +76,7 @@ final class EmbeddedTunnel {
 }
 #endif
 
-enum ZStoreTransport {
+enum ZLoaderTransport {
     static let leases = TransportLeaseCoordinator(start: {
         #if os(iOS) && !targetEnvironment(simulator)
         await syncMinimuxerBackendFromUserDefaults()

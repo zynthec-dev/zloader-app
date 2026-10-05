@@ -33,7 +33,7 @@ extension WidgetDataManager {
             for app in sortedAllApps {
                 var icon: UIImage? = nil
                 if app.bundleIdentifier == StoreApp.altstoreAppID {
-                    icon = ALTApplication(fileURL: Bundle.Info.activeBundleURL)?.icon ?? UIImage(named: "SideStore")
+                    icon = ALTApplication(fileURL: Bundle.Info.activeBundleURL)?.icon ?? UIImage(named: "zLoader")
                 } else if let application = ALTApplication(fileURL: app.fileURL) {
                     icon = application.icon
                 }

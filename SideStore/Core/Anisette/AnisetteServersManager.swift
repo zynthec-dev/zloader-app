@@ -35,14 +35,14 @@ public actor AnisetteServersManager {
 
     private let privateBackupFileURL: URL = {
         let appSupport = FileManager.default.applicationSupportDirectory
-        let dir = appSupport.appendingPathComponent("SideStore", isDirectory: true)
+        let dir = appSupport.appendingPathComponent("zLoader", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("anisette-servers-backup.json")
     }()
 
     private let rawImportedBackupFileURL: URL = {
         let appSupport = FileManager.default.applicationSupportDirectory
-        let dir = appSupport.appendingPathComponent("SideStore", isDirectory: true)
+        let dir = appSupport.appendingPathComponent("zLoader", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("raw-imported-backup.json")
     }()

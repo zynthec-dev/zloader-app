@@ -686,17 +686,17 @@ public extension StoreApp
     class func makeAltStoreApp(version: String, buildVersion: String?, in context: NSManagedObjectContext) -> StoreApp
     {
         let placeholderBundleId = StoreApp.altstoreAppID
-        let placeholderDownloadURL = AppConstants.Sources.sideStoreWebsite
+        let placeholderDownloadURL = URL(string: "https://github.com/zynthec-dev/zLoader-ios/releases")!
         let placeholderSourceID = Source.altStoreIdentifier
         let placeholderVersion = "0.0.0"
         let placeholderDate = Date.distantPast
         let placeholderChannel = ReleaseTrackType.stable.description
         
         let app = StoreApp(context: context)
-        app.name = "SideStore"
+        app.name = "zLoader"
         app.bundleIdentifier = placeholderBundleId
-        app.developerName = "Side Team"
-        app.localizedDescription = "SideStore is an alternative App Store."
+        app.developerName = "zynthec-dev"
+        app.localizedDescription = "zLoader is an alternative App Store."
         app.iconURL = sideStoreAppIconURL        
         app.screenshotURLs = []
         app.sourceIdentifier = placeholderSourceID

@@ -416,7 +416,7 @@ extension AppDelegate
             
             let content = UNMutableNotificationContent()
             content.title = NSLocalizedString("App Refresh Tip", comment: "")
-            content.body = NSLocalizedString("The more you open SideStore, the more chances it's given to refresh apps in the background.", comment: "")
+            content.body = NSLocalizedString("The more you open zLoader, the more chances it's given to refresh apps in the background.", comment: "")
             
             let request = UNNotificationRequest(identifier: "background-refresh-reminder5", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(request)
@@ -550,7 +550,7 @@ private extension AppDelegate
                     }
                     else
                     {
-                        content.title = NSLocalizedString("SideStore News", comment: "")
+                        content.title = NSLocalizedString("zLoader News", comment: "")
                     }
                     
                     content.body = newsItem.title
@@ -682,7 +682,7 @@ private extension AppDelegate {
         debugLog("[AppDelegate] reconcileSelfReinstallation: Current BundlePath: '\(currBundlePath)', Last BundlePath: '\(lastBundlePath ?? "nil")'")
         
         if let lastBundlePath, currBundlePath != lastBundlePath {
-            debugLog("[AppDelegate] reconcileSelfReinstallation: App reinstallation confirmed (BundlePath changed)! Applying staged updates to SideStore app in database.")
+            debugLog("[AppDelegate] reconcileSelfReinstallation: App reinstallation confirmed (BundlePath changed)! Applying staged updates to zLoader app in database.")
             let context = DatabaseManager.shared.persistentContainer.newBackgroundContext()
             context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
             

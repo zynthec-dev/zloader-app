@@ -35,12 +35,12 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         }
         if requiresTunnel {
             guard !self.context.useMainProfile else {
-                throw OperationError.invalidParameters("zStore's tunnel requires its own provisioning profile; using the main app profile for extensions is unsupported.")
+                throw OperationError.invalidParameters("zLoader's tunnel requires its own provisioning profile; using the main app profile for extensions is unsupported.")
             }
             if self.context.overrideProvisioningProfile == nil {
                 let team = try await AuthManager.shared.getAuthenticatedTeam()
                 guard team.type != .free else {
-                    throw OperationError.invalidParameters("A free Apple account cannot provision the Network Extension required by this zStore IPA. Use an eligible paid developer team and profiles authorizing packet-tunnel-provider. The entitlement will not be stripped or bypassed.")
+                    throw OperationError.invalidParameters("A free Apple account cannot provision the Network Extension required by this zLoader IPA. Use an eligible paid developer team and profiles authorizing packet-tunnel-provider. The entitlement will not be stripped or bypassed.")
                 }
             }
         }
@@ -337,7 +337,7 @@ private extension FetchProvisioningProfilesOperation{
         }
         
         if targetAppBundle.isAltStoreApp {
-            verboseLog("[FetchProvisioningProfiles] Application groups before modifying for SideStore: \(applicationGroups)")
+            verboseLog("[FetchProvisioningProfiles] Application groups before modifying for zLoader: \(applicationGroups)")
             
             // Remove app groups that contain AltStore since they can be problematic (cause SideStore to expire early)
             for (index, group) in applicationGroups.enumerated() {
@@ -395,7 +395,7 @@ private extension FetchProvisioningProfilesOperation{
                     group = existing
                 } else {
                     // Not all characters are allowed in group names, so we replace periods with spaces (like Apple does).
-                    let name = "SideStore " + groupIdentifier.replacingOccurrences(of: ".", with: " ")
+                    let name = "zLoader " + groupIdentifier.replacingOccurrences(of: ".", with: " ")
                     do {
                         group = try await TaskChainCoalescer.shared.coalesce(key: "add_app_group_\(adjustedGroupIdentifier)") {
                             // skip add if already added into shared by other tasks

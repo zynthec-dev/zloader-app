@@ -348,7 +348,7 @@ public class DatabaseManager: @unchecked Sendable
                     let (signature, _) = try CacheAppOperation.cachePayload(for: temporaryFileURL)
                     installedApp.appBundleFingerprint = signature
                 } catch {
-                    debugLog("Failed to cache SideStore app bundle: \(error)")
+                    debugLog("Failed to cache zLoader app bundle: \(error)")
                 }
             }
             

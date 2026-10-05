@@ -103,7 +103,7 @@ final class PipelineRunner: Sendable
                  handler: PipelineExecutionHandler,
                  group: RefreshGroup) async throws -> RefreshGroup
     {
-        return try await ZStoreTransport.withLease {
+        return try await ZLoaderTransport.withLease {
             try await self.performWithTransport(operations, handler: handler, group: group)
         }
     }

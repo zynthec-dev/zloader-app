@@ -133,7 +133,7 @@ private struct AppDetailWidgetView: View
             else
             {
                 VStack(spacing: 4) {
-                    Text("Open SideStore")
+                    Text("Open zLoader")
                         .font(.system(.subheadline, design: .rounded))
                         .fontWeight(.semibold)
                         .foregroundColor(Color.white.opacity(0.8))
@@ -160,7 +160,7 @@ private struct AppDetailWidgetView: View
 
     func backgroundView(icon: UIImage? = nil, tintColor: UIColor? = nil) -> some View
     {
-        let defaultIcon = UIImage(named: "SideStore") ?? UIImage(systemName: "app.fill")!
+        let defaultIcon = UIImage(named: "zLoader") ?? UIImage(systemName: "app.fill")!
         let icon = icon ?? defaultIcon
         let tintColor = tintColor ?? .gray
         
@@ -216,7 +216,7 @@ private struct AppIconView: View
     let imageHeight: CGFloat
 
     var body: some View {
-        let image = icon ?? UIImage(named: "SideStore") ?? UIImage(systemName: "app.fill")!
+        let image = icon ?? UIImage(named: "zLoader") ?? UIImage(systemName: "app.fill")!
         Image(uiImage: image)
             .resizable()
             .aspectRatio(CGSize(width: 1, height: 1), contentMode: .fit)
