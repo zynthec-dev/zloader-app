@@ -75,3 +75,30 @@ Install/update with the current Xcode identities preserved; retain all extension
 and do not delete the existing app as a repair step. Development installation is
 limited to devices authorized by these profiles. Validate launch, Settings,
 Pairing and self-refresh on the intended iPhone before claiming runtime success.
+
+## Complete resignable variant, 2026-10-06
+
+```sh
+python3 zLoader/scripts/package-resignable.py \
+  --signed-ipa outputs/zLoader-0.7.5-Apple-signed.ipa
+```
+
+Output: `outputs/zLoader-0.7.5-resignable.ipa`; latest resignable/iLoader aliases
+are updated to this same artifact. It contains the host, Widget, Tunnel and the
+embedded Backup IPA with all original entitlement values and byte-identical
+Apple profiles. Each bundle is locally ad-hoc signed as import metadata; this
+variant must be properly Apple re-signed before installing. It is distinct from
+the original Apple-signed IPA, which remains unchanged.
+
+Validation passed for nested ad-hoc seals, ZIP integrity, full entitlement
+comparison, original profile-byte preservation, and XML CSSLOT_ENTITLEMENTS in
+host, both extensions and Backup. Input profiles/signatures were fully checked
+before creating this variant. The output correctly fails the final Apple-anchor
+check; its attached profiles do not make an ad-hoc signature Apple-authorized.
+A receiving signer must retain the profiles or supply matching, equally capable
+profiles and the corresponding private key. iLoader/other importers may replace
+these; this package cannot force their behavior.
+
+SHA-256:
+`138cf2b0142e30ddae10de89285e1213638746277d259e57a676f170da192750`.
+No physical installation or in-app refresh of this variant was run.

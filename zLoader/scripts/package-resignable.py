@@ -5,6 +5,8 @@ Groups or Network Extension access. A real signer must provision and sign both
 host and extensions with Apple's matching profiles before installation.
 """
 import hashlib
+import argparse
+import sys
 import json
 import plistlib
 import shutil
@@ -14,6 +16,14 @@ import zipfile
 import struct
 
 root = Path(__file__).resolve().parents[2]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--signed-ipa', type=Path, help='Keep all entitlements and profiles from a private Apple-signed IPA')
+args = parser.parse_args()
+if args.signed_ipa:
+    subprocess.run([sys.executable, str(root / 'zLoader/scripts/package-profile-resignable.py'),
+                    str(args.signed_ipa.resolve())], check=True)
+    raise SystemExit(0)
+
 source = root / '.build/Device/Build/Products/Release-iphoneos/zLoader.app'
 out = root / 'outputs'
 out.mkdir(exist_ok=True)

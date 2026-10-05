@@ -37,7 +37,7 @@ def pack(payload, destination):
         require(archive.testzip() is None, 'Invalid packaged ZIP')
 
 
-def sign_bundle(bundle, identity, entitlements, temporary):
+def sign_bundle(bundle, identity, entitlements, temporary, require_apple=True):
     magic = {bytes.fromhex(x) for x in ['feedface', 'cefaedfe', 'feedfacf', 'cffaedfe', 'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca']}
     # Sign dependencies first, then framework seals, extension seals and the host.
     for file in bundle.rglob('*'):
@@ -56,8 +56,10 @@ def sign_bundle(bundle, identity, entitlements, temporary):
         subprocess.run(['codesign', '--force', '--sign', identity, '--timestamp=none',
                         '--generate-entitlement-der', '--entitlements', str(path), str(component)],
                        capture_output=True, check=True)
-    subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic', str(bundle)],
-                   capture_output=True, check=True)
+    verify_args = ['codesign', '--verify', '--deep', '--strict']
+    if require_apple:
+        verify_args.append('-R=anchor apple generic')
+    subprocess.run([*verify_args, str(bundle)], capture_output=True, check=True)
 
 
 def main():

@@ -160,3 +160,11 @@ packaging and a second real Apple signing with the same identity preserve every
 embedded profile and all declared entitlement values. Signing test logs:
 `/tmp/zloader-apple-signed-package.log`, `/tmp/zloader-apple-resign-check.log`.
 This is local signing/re-signing evidence, not an in-app physical self-refresh.
+
+## Complete resignable follow-up (0.7.5)
+
+The profile-inclusive resignable variant preserves every signed entitlement and
+original Apple profile for host, Widget, Tunnel and embedded Backup. Nested seals,
+ZIP integrity and exact XML entitlement-slot import checks pass. Artifact/hash and
+re-signing limits: [APPLE-SIGNED.md](APPLE-SIGNED.md). No app source changed, so no
+new Xcode compilation was required for this packaging-only change.
