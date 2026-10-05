@@ -8,7 +8,7 @@ public fork-network entry (GitHub public forks cannot be made private).
 - `develop`: unmodified SideStore baseline at `0dd743f7`.
 - `zloader-development`: downstream implementation and branding.
 - `upstream`: https://github.com/SideStore/SideStore.git
-- Planned `origin`: https://github.com/zynthec-dev/zLoader-ios.git (upload awaits approval)
+- `origin`: https://github.com/zynthec-dev/zLoader-ios.git
 
 The upstream Xcode target/module `SideStore`, source folders, database names,
 URL schemes, serialization keys and pinned submodule gitlinks remain stable.
@@ -36,9 +36,9 @@ upstream contribution must follow SideStore's human contribution policies.
 
 Original `.github/workflows` and Makefile publishing automation are preserved.
 They contain SideStore product names and upstream publishing destinations and
-are NOT the fork's release process. Before uploading, GitHub Actions should be disabled for this new repository
-pending an explicit fork-specific release configuration. This remote setting
-and the code push await user approval after automatic review rejected them. The local
+are NOT the fork's release process. GitHub Actions is disabled for this repository pending an explicit fork-specific
+release configuration. The user approved uploading the source and configuring
+the repository. The local
 scripts above build/package an unsigned review artifact without fake-signing.
 Do not run the inherited `make fakesign ipa` as a zLoader release workflow.
 

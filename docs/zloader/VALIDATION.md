@@ -47,9 +47,11 @@ provider bundle IDs, embedded provider and bundled license files were verified.
 SHA-256: `89df5edfef98c0c6bc8d2a594cc714242b7f96a48c40bb75d76433ec88b9f156`.
 This package is not signed or installability-tested.
 
-GitHub repository was created private. Source push and remote Actions/default
-branch configuration await explicit approval after automatic review rejected
-that export. All current implementation is available in the local branch.
+GitHub repository is private. On 2026-10-05, after explicit user approval,
+the unchanged SideStore baseline was pushed to `develop` and the zLoader
+implementation to `zloader-development`. Default branch: `develop`. GitHub
+Actions is disabled to prevent inherited SideStore publishing workflows from
+running against upstream destinations. No release or hosted CI run was created.
 
 Final verification also covers the tunnel-start status race fix: the initial
 disconnected state is not treated as a completed failed connection attempt.
