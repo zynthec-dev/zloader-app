@@ -148,12 +148,8 @@ final class SettingsViewController: UITableViewController
 //    @IBOutlet private var refreshSideJITServer: UILabel!
     @IBOutlet private var disableResponseCachingSwitch: UISwitch!
     
-    @IBOutlet private var mastodonButton: UIButton!
-    @IBOutlet private var threadsButton: UIButton!
-    @IBOutlet private var twitterButton: UIButton!
-    @IBOutlet private var githubButton: UIButton!
     
-    @IBOutlet private var versionLabel: UILabel!
+    private let versionLabel = UILabel()
     
     @IBOutlet private var recreateDatabaseSwitch: UISwitch!
     
@@ -183,7 +179,7 @@ final class SettingsViewController: UITableViewController
     
     private func updateReleaseChannelButtonTitle() {
         let channel = UserDefaults.standard.betaUdpatesTrack ?? UserDefaults.defaultBetaUpdatesTrack
-        betaTrackPopupButton.setTitle(channel, for: .normal)
+        betaTrackPopupButton?.setTitle(channel, for: .normal)
     }
     
     private func configureReleaseChannelButton() {
@@ -210,10 +206,10 @@ final class SettingsViewController: UITableViewController
                          children: items
         )
         #if !os(tvOS)
-        betaTrackPopupButton.menu = menu
+        betaTrackPopupButton?.menu = menu
         #else
         if #available(tvOS 17.0, *) {
-            betaTrackPopupButton.menu = menu
+            betaTrackPopupButton?.menu = menu
         }
         #endif
 
@@ -225,8 +221,10 @@ final class SettingsViewController: UITableViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        // About contains version and attribution; remove upstream social promotion.
-        self.tableView.tableFooterView = nil
+        configureVersionFooter()
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Pairing", style: .plain, target: self, action: #selector(openPairingFiles)
+        )
 
         
         #if !os(tvOS)
@@ -272,19 +270,6 @@ final class SettingsViewController: UITableViewController
             self.navigationController?.tabBarItem.scrollEdgeAppearance = appearance
         }
         #endif
-        
-        // We can only configure the contentMode for a button's background image from Interface Builder.
-        // This works, but it means buttons don't visually highlight because there's no foreground image.
-        // As a workaround, we manually set the foreground image + contentMode here.
-        for button in [self.mastodonButton!, self.threadsButton!, self.twitterButton!, self.githubButton!]
-        {
-            // Get the assigned image from Interface Builder.
-            let image = button.configuration?.background.image
-            
-            button.configuration = nil
-            button.setImage(image, for: .normal)
-            button.imageView?.contentMode = .scaleAspectFit
-        }
         
         configureReleaseChannelButton()
     }
@@ -341,6 +326,25 @@ final class SettingsViewController: UITableViewController
 private extension SettingsViewController
 {
     
+    private func configureVersionFooter() {
+        let footer = UIView(frame: CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 85))
+        versionLabel.translatesAutoresizingMaskIntoConstraints = false
+        footer.addSubview(versionLabel)
+        NSLayoutConstraint.activate([
+            versionLabel.leadingAnchor.constraint(equalTo: footer.leadingAnchor, constant: 16),
+            versionLabel.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -16),
+            versionLabel.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
+        ])
+        tableView.tableFooterView = footer
+    }
+
+    @objc private func openPairingFiles() {
+        // Pairing detail and wireless routes need a SwiftUI navigation container.
+        let controller = UIHostingController(rootView: PairingFileNavigationView())
+        controller.hidesBottomBarWhenPushed = true
+        navigationController?.pushViewController(controller, animated: true)
+    }
+
     private func getVersionAttributedString() -> NSAttributedString {
         let appVersion = Bundle.Info.activeBundleVersion
         let iosVersion = "iOS \(UIDevice.current.systemVersion) (\(ProcessInfo.processInfo.operatingSystemBuild))"
@@ -355,7 +359,7 @@ private extension SettingsViewController
             string: appVersion,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 14),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+                .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
         )
@@ -364,7 +368,7 @@ private extension SettingsViewController
             string: "\n" + iosVersion,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 12),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.5),
+                .foregroundColor: UIColor.tertiaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
         )
@@ -388,7 +392,7 @@ private extension SettingsViewController
             string: "Copied! ",
             attributes: [
                 .font: UIFont.systemFont(ofSize: 14),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+                .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
         )
@@ -413,9 +417,9 @@ private extension SettingsViewController
             
             if let team = currentActiveTeam, AuthManager.shared.isAuthenticated
             {
-                self.accountNameLabel.text = team.name
-                self.accountEmailLabel.text = appleID
-                self.accountTypeLabel.text = team.type.localizedDescription
+                self.accountNameLabel?.text = team.name
+                self.accountEmailLabel?.text = appleID
+                self.accountTypeLabel?.text = team.type.localizedDescription
                 
                 self.activeTeam = team
                 self.startAccountVerification(for: team)
@@ -432,13 +436,13 @@ private extension SettingsViewController
         }
         
         // AppRefreshRow
-        self.backgroundRefreshSwitch.isOn = UserDefaults.standard.isBackgroundRefreshEnabled
-        self.noIdleTimeoutSwitch.isOn = UserDefaults.standard.isIdleTimeoutDisableEnabled
-        self.disableAppLimitSwitch.isOn = UserDefaults.standard.isAppLimitDisabled
+        self.backgroundRefreshSwitch?.isOn = UserDefaults.standard.isBackgroundRefreshEnabled
+        self.noIdleTimeoutSwitch?.isOn = UserDefaults.standard.isIdleTimeoutDisableEnabled
+        self.disableAppLimitSwitch?.isOn = UserDefaults.standard.isAppLimitDisabled
 
         // BetaTestingRow
-        self.betaUpdatesSwitch.isOn = UserDefaults.standard.isBetaUpdatesEnabled
-        self.betaTrackPopupButton.isEnabled = UserDefaults.standard.isBetaUpdatesEnabled
+        self.betaUpdatesSwitch?.isOn = UserDefaults.standard.isBetaUpdatesEnabled
+        self.betaTrackPopupButton?.isEnabled = UserDefaults.standard.isBetaUpdatesEnabled
 
         // DiagnosticsRow
         // DiagnosticsRow (managed via DeveloperOptionsView)
@@ -762,7 +766,7 @@ private extension SettingsViewController
     
     @IBAction func toggleEnableBetaUpdates(_ sender: UISwitch) {
         betaTrackLabel.isEnabled = sender.isOn
-        betaTrackPopupButton.isEnabled = sender.isOn
+        betaTrackPopupButton?.isEnabled = sender.isOn
         // update it in database
         UserDefaults.standard.isBetaUpdatesEnabled = sender.isOn
     }
@@ -900,29 +904,6 @@ private extension SettingsViewController
         UIApplication.shared.open(safariURL, options: [:])
     }
     
-    @IBAction func followZLoaderMastodon()
-    {
-        self.openMastodon(username: "@zloaderio@fosstodon.org")
-    }
-    
-    @IBAction func followZLoaderThreads()
-    {
-        self.openThreads(username: "zloader.io")
-    }
-    
-    @IBAction func followZLoaderTwitter()
-    {
-        self.openTwitter(username: "zloaderio")
-    }
-    
-    @IBAction func followZLoaderGitHub()
-    {
-        UIApplication.shared.open(AppConstants.URLs.zLoaderGitHub, options: [:])
-    }
-}
-
-private extension SettingsViewController
-{
     @objc func openPatreonSettings(_ notification: Notification)
     {
         guard self.presentedViewController == nil else { return }
@@ -1019,8 +1000,8 @@ extension SettingsViewController
     {
         if Section.allCases[indexPath.section] == .credits && indexPath.row < 3 {
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            let titles = ["About zLoader", "Based on ZLoader", "zLoader Repository"]
-            let details = [ZLoaderBrand.maintainer, "ZLoader, ZLoader and their contributors", "zynthec-dev/zLoader-ios"]
+            let titles = ["About zLoader", "Based on SideStore", "zLoader Repository"]
+            let details = [ZLoaderBrand.maintainer, "SideStore, AltStore and their contributors", "zynthec-dev/zLoader-ios"]
             cell.textLabel?.text = titles[indexPath.row]
             cell.detailTextLabel?.text = details[indexPath.row]
             cell.textLabel?.textColor = .label
@@ -1070,7 +1051,7 @@ extension SettingsViewController
                indexPath.section == Section.appRefresh.rawValue,
                indexPath.row == AppRefreshRow.allCases.count-1      // last row
         {
-            cell.setValue(3, forKey: "style")
+            cell.style = .bottom
         }
         
         
@@ -1270,17 +1251,9 @@ extension SettingsViewController
                 self.tableView.deselectRow(at: indexPath, animated: true)
                 
             case .pairingFileManagement:
-                let pairingView = PairingFileManagementView()
-                let vc = UIHostingController(rootView: pairingView)
-                #if !os(tvOS)
-                let appearance = UINavigationBarAppearance()
-                appearance.configureWithDefaultBackground()
-                vc.navigationItem.scrollEdgeAppearance = appearance
-                vc.navigationItem.standardAppearance = appearance
-                #endif
-                self.navigationController?.pushViewController(vc, animated: true)
+                openPairingFiles()
                 self.tableView.deselectRow(at: indexPath, animated: true)
-                
+
             case .anisetteServers:
                 let anisetteServersView = AnisetteServersView(
                     selected: UserDefaults.standard.menuAnisetteURL,

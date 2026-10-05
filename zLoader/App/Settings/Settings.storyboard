@@ -20,85 +20,7 @@
                         <color key="backgroundColor" name="SettingsBackground"/>
                         <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <color key="separatorColor" white="1" alpha="0.25" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                        <stackView key="tableFooterView" opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="equalCentering" alignment="center" spacing="15" id="48g-cT-stR">
-                            <rect key="frame" x="0.0" y="749" width="402" height="125"/>
-                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                            <subviews>
-                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="900" text="Follow zLoader for updates" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XFa-MY-7cV">
-                                    <rect key="frame" x="91.666666666666671" y="0.0" width="218.66666666666663" height="20.333333333333332"/>
-                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                    <color key="textColor" white="1" alpha="0.69999999999999996" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                    <nil key="highlightedColor"/>
-                                </label>
-                                <stackView opaque="NO" contentMode="scaleToFill" spacing="20" translatesAutoresizingMaskIntoConstraints="NO" id="hru-pm-ZI3">
-                                    <rect key="frame" x="102" y="46" width="198" height="34.666666666666657"/>
-                                    <subviews>
-                                        <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="fill" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="B8Q-e7-beR" userLabel="Mastodon">
-                                            <rect key="frame" x="0.0" y="0.0" width="34.666666666666664" height="34.666666666666664"/>
-                                            <constraints>
-                                                <constraint firstAttribute="width" secondItem="B8Q-e7-beR" secondAttribute="height" id="gaj-Mb-oSa"/>
-                                                <constraint firstAttribute="width" constant="34.5" id="kjw-36-Rjk"/>
-                                            </constraints>
-                                            <state key="normal" title=""/>
-                                            <buttonConfiguration key="configuration" style="plain" title="  ">
-                                                <backgroundConfiguration key="background" image="Mastodon" imageContentMode="scaleAspectFit"/>
-                                            </buttonConfiguration>
-                                            <connections>
-                                                <action selector="followzLoaderMastodon" destination="aMk-Xp-UL8" eventType="primaryActionTriggered" id="nKQ-bR-E96"/>
-                                            </connections>
-                                        </button>
-                                        <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="fill" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="AWk-yE-9LI" userLabel="Threads">
-                                            <rect key="frame" x="54.666666666666657" y="0.0" width="34.333333333333343" height="34.666666666666664"/>
-                                            <constraints>
-                                                <constraint firstAttribute="width" constant="34.5" id="3o9-57-KDr"/>
-                                                <constraint firstAttribute="width" secondItem="AWk-yE-9LI" secondAttribute="height" id="QuX-po-kv7"/>
-                                            </constraints>
-                                            <state key="normal" title=""/>
-                                            <buttonConfiguration key="configuration" style="plain">
-                                                <backgroundConfiguration key="background" image="Threads" imageContentMode="scaleAspectFit"/>
-                                            </buttonConfiguration>
-                                            <connections>
-                                                <action selector="followzLoaderThreads" destination="aMk-Xp-UL8" eventType="primaryActionTriggered" id="0f0-KK-7lE"/>
-                                            </connections>
-                                        </button>
-                                        <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="fill" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="uYZ-Vu-RzK" userLabel="Twitter">
-                                            <rect key="frame" x="109" y="0.0" width="34.666666666666657" height="34.666666666666664"/>
-                                            <constraints>
-                                                <constraint firstAttribute="width" constant="34.5" id="LKG-L3-APj"/>
-                                                <constraint firstAttribute="width" secondItem="uYZ-Vu-RzK" secondAttribute="height" id="UyA-cy-ol3"/>
-                                            </constraints>
-                                            <state key="normal" title=""/>
-                                            <buttonConfiguration key="configuration" style="plain">
-                                                <backgroundConfiguration key="background" image="Twitter" imageContentMode="scaleAspectFit"/>
-                                            </buttonConfiguration>
-                                            <connections>
-                                                <action selector="followzLoaderTwitter" destination="aMk-Xp-UL8" eventType="primaryActionTriggered" id="m1Q-xB-VTe"/>
-                                            </connections>
-                                        </button>
-                                        <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="fill" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="oqj-4S-I9l" userLabel="GitHub">
-                                            <rect key="frame" x="163.66666666666669" y="0.0" width="34.333333333333343" height="34.666666666666664"/>
-                                            <constraints>
-                                                <constraint firstAttribute="width" constant="34.5" id="BEp-uf-a6X"/>
-                                                <constraint firstAttribute="width" secondItem="oqj-4S-I9l" secondAttribute="height" id="ye3-ez-e16"/>
-                                            </constraints>
-                                            <state key="normal" title=""/>
-                                            <buttonConfiguration key="configuration" style="plain">
-                                                <backgroundConfiguration key="background" image="GitHub" imageContentMode="scaleAspectFit"/>
-                                            </buttonConfiguration>
-                                            <connections>
-                                                <action selector="followzLoaderGitHub" destination="aMk-Xp-UL8" eventType="primaryActionTriggered" id="vo1-Er-hjQ"/>
-                                            </connections>
-                                        </button>
-                                    </subviews>
-                                </stackView>
-                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="900" text="Version 0.6.0" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5u7-mb-jJj">
-                                    <rect key="frame" x="159" y="108" width="84" height="17"/>
-                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                    <color key="textColor" white="1" alpha="0.69999999999999996" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                    <nil key="highlightedColor"/>
-                                </label>
-                            </subviews>
-                        </stackView>
+
                         <sections>
                             <tableViewSection headerTitle="" id="flW-d4-bco">
                                 <cells>
@@ -1308,7 +1230,7 @@
                                                 <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="fXy-wl-F5I">
                                                     <rect key="frame" x="311" y="11.666666666666664" width="63" height="28"/>
                                                     <connections>
-                                                        <action selector="toggleEnableAppExtensionsCustomization:" destination="aMk-Xp-UL8" eventType="valueChanged" id="gtQ-5M-9Mt"/>
+
                                                     </connections>
                                                 </switch>
                                             </subviews>
@@ -1400,24 +1322,16 @@
                         <outlet property="accountEmailLabel" destination="0uP-Cd-tNX" id="14b-aL-yE3"/>
                         <outlet property="accountNameLabel" destination="CnN-M1-AYK" id="Ldc-Py-Bix"/>
                         <outlet property="accountTypeLabel" destination="434-MW-Den" id="mNB-QE-4Jg"/>
-                        <outlet property="altSignVerboseLoggingSwitch" destination="ns7-8G-sT9" id="a2K-b8-xWs"/>
+
                         <outlet property="backgroundRefreshSwitch" destination="DPu-zD-Als" id="eiG-Hv-Vko"/>
                         <outlet property="betaTrackLabel" destination="1B5-BJ-Rkb" id="wcZ-in-EOa"/>
                         <outlet property="betaTrackPopupButton" destination="kYQ-zz-vjQ" id="QXm-ud-70m"/>
                         <outlet property="betaUpdatesSwitch" destination="Blb-Dp-9QF" id="C4e-rj-ocb"/>
 
                         <outlet property="disableAppLimitSwitch" destination="1aa-og-ZXD" id="oVL-Md-yZ8"/>
-                        <outlet property="disableResponseCachingSwitch" destination="AAh-cu-qw8" id="aVT-Md-yZ8"/>
-                        <outlet property="githubButton" destination="oqj-4S-I9l" id="sxB-LE-gA2"/>
-                        <outlet property="mastodonButton" destination="B8Q-e7-beR" id="Kbe-Og-rsg"/>
-                        <outlet property="minimuxerVerboseLoggingSwitch" destination="os8-7F-rSm" id="gxg-Gx-xwO"/>
-                        <outlet property="rotateLogsOnStartupSwitch" destination="rot-lg-switch" id="rot-lg-outlet-conn"/>
+
                         <outlet property="noIdleTimeoutSwitch" destination="iQA-wm-5ag" id="jHC-js-q0Y"/>
-                        <outlet property="recreateDatabaseSwitch" destination="uGv-Lb-Ita" id="BMU-cK-0ee"/>
-                        <outlet property="threadsButton" destination="AWk-yE-9LI" id="SOc-ei-4gK"/>
-                        <outlet property="twitterButton" destination="uYZ-Vu-RzK" id="anA-jh-w4z"/>
-                        <outlet property="verboseOperationsLoggingSwitch" destination="Q5X-Mo-KpE" id="aVL-Md-tZ8"/>
-                        <outlet property="versionLabel" destination="5u7-mb-jJj" id="zvU-TQ-lO6"/>
+
                     </connections>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="SI0-mJ-Wad" userLabel="First Responder" sceneMemberID="firstResponder"/>

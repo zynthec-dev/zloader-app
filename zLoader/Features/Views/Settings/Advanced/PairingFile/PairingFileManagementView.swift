@@ -569,3 +569,23 @@ struct PairingFileManagementView: View {
         return formatter.string(from: date)
     }
 }
+
+/// UIKit Settings hosts this container so its detail and wireless links can push.
+struct PairingFileNavigationView: View {
+    var body: some View {
+        if #available(iOS 16.0, tvOS 16.0, *) {
+            NavigationStack { PairingFileManagementView() }
+        } else {
+            LegacyPairingNavigationView()
+        }
+    }
+}
+
+@available(iOS, introduced: 15.0, deprecated: 16.0)
+@available(tvOS, introduced: 15.0, deprecated: 16.0)
+private struct LegacyPairingNavigationView: View {
+    var body: some View {
+        NavigationView { PairingFileManagementView() }
+            .navigationViewStyle(.stack)
+    }
+}

@@ -127,7 +127,10 @@ final class WirelessPairViewModel: ObservableObject {
         return (ip: ip, port: port)
     }
     
-    init() {
+    private let onPairingFileReady: ((URL) throws -> Void)?
+
+    init(onPairingFileReady: ((URL) throws -> Void)? = nil) {
+        self.onPairingFileReady = onPairingFileReady
         debugLog("[WirelessPairViewModel] init() initializing...")
         activeInterfaces = minimuxer.network.activeInterfaces
         
@@ -185,6 +188,7 @@ final class WirelessPairViewModel: ObservableObject {
     }
     
     private var discoveryTask: Task<Void, Never>?
+    private var pairingTask: Task<Void, Never>?
     
     func refreshInterfaces() {
         debugLog("[WirelessPairViewModel] refreshInterfaces() scanning active interfaces...")
@@ -308,7 +312,7 @@ final class WirelessPairViewModel: ObservableObject {
             case .configuredFallback:
                 let fallback = fallbackConfigEndpoint
                 debugLog("[WirelessPairViewModel] confirmSelection -> Connecting to configured fallback at \(fallback.ip):\(fallback.port)")
-                triggerPairing(targetIp: fallback.ip, targetPort: fallback.port, targetName: "configured_host")
+                triggerPairing(targetIp: fallback.ip, targetPort: fallback.port, targetName: "configured_host", usesLocalTransport: ConnectionConfig.shared.useLocalVPN)
             }
         } else {
             debugLog("[WirelessPairViewModel] confirmSelection -> Starting server advertising (selectedInterfaceId=\(selectedServerInterfaceId ?? "none"))")
@@ -485,6 +489,7 @@ final class WirelessPairViewModel: ObservableObject {
     }
     
     func startPairing() {
+        guard pairingTask == nil else { return }
         let docsPath = FileManager.default.documentsDirectory.path
         debugLog("[WirelessPairViewModel] startPairing() starting advertisement with base path: '\(docsPath)'")
         isAdvertising = true
@@ -512,12 +517,7 @@ final class WirelessPairViewModel: ObservableObject {
                 
                 switch result {
                 case .success(let device):
-                    debugLog("[WirelessPairViewModel] startPairing() SUCCESS with device: name='\(device.name)', model='\(device.model)'")
-                    self.pairedDevice = device
-                    self.statusText = "Success!"
-                    self.subStatusText = "Successfully paired with \(device.name) (\(device.model))!\nPairing file saved to documents."
-                    self.shareSheetURL = URL(fileURLWithPath: device.pairingFilePath)
-                    self.isShareSheetPresented = true
+                    self.acceptPairedDevice(device)
                 case .failure(let error):
                     debugLog("[WirelessPairViewModel] startPairing() FAILURE: error='\(error.localizedDescription)'")
                     self.errorMessage = error.localizedDescription
@@ -530,6 +530,7 @@ final class WirelessPairViewModel: ObservableObject {
 
     func stopPairing() {
         debugLog("[WirelessPairViewModel] stopPairing() stopping advertisement and tearing down session")
+        pairingTask?.cancel()
         wirelessPairing.stop()
         
         isAdvertising = false
@@ -545,8 +546,10 @@ final class WirelessPairViewModel: ObservableObject {
         targetIp: String,
         targetPort: UInt16,
         targetName: String? = nil,
+        usesLocalTransport: Bool = false,
         completion: ((Result<MinimuxerPairedDevice, Swift.Error>) -> Void)? = nil
     ) {
+        guard pairingTask == nil else { return }
         let docsPath = FileManager.default.documentsDirectory.path
         debugLog("[WirelessPairViewModel] triggerPairing() initiating handshake to \(targetIp):\(targetPort), base path: '\(docsPath)'")
         isAdvertising = true
@@ -557,41 +560,71 @@ final class WirelessPairViewModel: ObservableObject {
         statusText = "Connecting to device..."
         subStatusText = "Initiating pairing handshake on \(targetIp):\(targetPort)..."
         
-        wirelessPairing.trigger(
-            targetIp: targetIp,
-            targetPort: targetPort,
-            outPath: docsPath,
-            resolveFileName: { name, model in
-                Self.pairingFileName(for: name.isEmpty ? targetName : name, model: model)
-            }
-        ) { [weak self] (result: Result<MinimuxerPairedDevice, Swift.Error>) in
-            Task { @MainActor in
-                guard let self = self else { return }
-                debugLog("[WirelessPairViewModel] triggerPairing() completion received: result=\(result)")
-                self.isAdvertising = false
-                self.pinCode = nil
-                self.serviceID = nil
-                self.port = nil
-                
-                switch result {
-                case .success(let device):
-                    debugLog("[WirelessPairViewModel] triggerPairing() SUCCESS with device: name='\(device.name)', model='\(device.model)'")
-                    self.pairedDevice = device
-                    self.statusText = "Success!"
-                    self.subStatusText = "Successfully paired with \(device.name) (\(device.model))!\nPairing file saved to documents."
-                    self.shareSheetURL = URL(fileURLWithPath: device.pairingFilePath)
-                    self.isShareSheetPresented = true
-                case .failure(let error):
-                    debugLog("[WirelessPairViewModel] triggerPairing() FAILURE: error='\(error.localizedDescription)'")
-                    self.errorMessage = error.localizedDescription
-                    self.statusText = "Pairing Failed"
-                    self.subStatusText = "An error occurred during pairing: \(error.localizedDescription)"
+        pairingTask = Task { @MainActor in
+            let operation = {
+                try Task.checkCancellation()
+                let device: MinimuxerPairedDevice = try await withCheckedThrowingContinuation { continuation in
+                    wirelessPairing.trigger(
+                        targetIp: targetIp,
+                        targetPort: targetPort,
+                        outPath: docsPath,
+                        resolveFileName: { name, model in
+                            Self.pairingFileName(for: name.isEmpty ? targetName : name, model: model)
+                        },
+                        completion: { continuation.resume(with: $0) }
+                    )
                 }
-                completion?(result)
+                try Task.checkCancellation()
+                return device
             }
+            let result: Result<MinimuxerPairedDevice, Swift.Error>
+            do {
+                // Hold the local tunnel until the handshake really finishes, including cancellation.
+                let device = try await usesLocalTransport
+                    ? ZLoaderTransport.withLease(operation)
+                    : operation()
+                result = .success(device)
+            } catch {
+                result = .failure(error)
+            }
+            pairingTask = nil
+            guard !Task.isCancelled else { return }
+            isAdvertising = false
+            pinCode = nil
+            serviceID = nil
+            port = nil
+            switch result {
+            case .success(let device):
+                acceptPairedDevice(device)
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                statusText = "Pairing Failed"
+                subStatusText = "An error occurred during pairing: \(error.localizedDescription)"
+            }
+            completion?(result)
         }
     }
     
+
+    private func acceptPairedDevice(_ device: MinimuxerPairedDevice) {
+        let url = URL(fileURLWithPath: device.pairingFilePath)
+        do {
+            // Onboarding imports the real generated record before reporting success.
+            try onPairingFileReady?(url)
+            pairedDevice = device
+            statusText = "Success!"
+            subStatusText = "Wireless pairing completed."
+            if onPairingFileReady == nil {
+                shareSheetURL = url
+                isShareSheetPresented = true
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            statusText = "Pairing File Import Failed"
+            subStatusText = "The generated file could not be activated. You can retry or import it manually."
+        }
+    }
+
     nonisolated static func pairingFileName(for deviceName: String? = nil, model: String? = nil) -> String {
         let namePart = deviceName ?? ""
         let modelPart = model ?? ""

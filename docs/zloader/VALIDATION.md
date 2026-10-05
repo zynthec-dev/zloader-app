@@ -32,9 +32,9 @@ The compiled model audit establishes schema equivalence, not physical-device dat
 migration. Existing database/metadata filenames are recognized. Bundle-ID or
 App-Group changes can still result in a different iOS data container.
 
-## Artifacts
+## Earlier 0.7.1 artifacts
 
-- `outputs/zLoader-resignable.ipa`:
+- Previous `outputs/zLoader-resignable.ipa`:
   SHA-256 `6ca6173ec2b32be512ac646e1a785577602122737aa93d6af6ab2657b062e50f`.
 - `outputs/zLoader-0.7.1.ipa` / `zLoader-unsigned.ipa` (requested release format):
   SHA-256 `d95402e528f64989b81d4b771238e62fe11932593f53dff39d7d1aa2faafe0fe`.
@@ -79,3 +79,27 @@ It matches the resignable artifact hash above. The signed-result checker correct
 rejects this ad-hoc artifact at the Apple-anchor check. A positive check against
 a real iLoader-signed IPA has not been possible; no profile/account was supplied.
 See [ILOADER.md](ILOADER.md) for verified upstream signer limitations.
+
+## Settings and onboarding follow-up: 0.7.2 (0702)
+
+- Final iOS arm64 Release build: PASS, zero warnings/errors,
+  `/tmp/zloader-settings-pairing-device.log`.
+- Final arm64 Simulator Debug build: PASS, zero warnings/errors,
+  `/tmp/zloader-settings-pairing-simulator.log`.
+- Apple-signing validator negative test: correctly rejects the ad-hoc package
+  at the Apple-anchor check. A real iLoader-signed IPA is still unavailable.
+- Settings storyboard regression: PASS for iOS and tvOS resource IDs, outlets,
+  selectors and module. Six dangling destinations were removed in each resource.
+- App Group (10 cases), Core Data confinement and all four transport test groups:
+  PASS again.
+- Packaging: PASS ZIP integrity, nested ad-hoc seals and entitlement/XML-slot
+  checks; version/build inspected as 0.7.2/0702.
+- `outputs/zLoader-0.7.2-iLoader.ipa` SHA-256:
+  `9f2c5613e1502545318232e43a7ff130156be1e59a3258b0229194fcd541c87b`.
+- `outputs/zLoader-0.7.2-unsigned.ipa` SHA-256:
+  `b1bfb2e3744c9bd2ec291f34e594860f441d501d266313237bdfb19647a95be4`.
+
+The iLoader package contains local ad-hoc metadata for re-signing; it is not a
+real Apple-signed IPA. No simulator was booted, no runtime UI session was run,
+and no iOS 27.0.1 crash report or physical-device pairing was available. See
+[ONBOARDING-PAIRING.md](ONBOARDING-PAIRING.md) for implementation and device checks.

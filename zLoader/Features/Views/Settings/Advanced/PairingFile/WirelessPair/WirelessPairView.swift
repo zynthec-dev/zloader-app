@@ -9,7 +9,14 @@
 import SwiftUI
 
 struct WirelessPairView: View {
-    @StateObject private var viewModel = WirelessPairViewModel()
+    @StateObject private var viewModel: WirelessPairViewModel
+    private let startsAsClient: Bool
+    @State private var didOpenClient = false
+
+    init(startsAsClient: Bool = false, onPairingFileReady: ((URL) throws -> Void)? = nil) {
+        self.startsAsClient = startsAsClient
+        _viewModel = StateObject(wrappedValue: WirelessPairViewModel(onPairingFileReady: onPairingFileReady))
+    }
     
     private let spring = Animation.spring(response: 0.35, dampingFraction: 0.68)
     private let pulse = Animation.interactiveSpring(response: 1.5, dampingFraction: 0.55)
@@ -154,9 +161,15 @@ struct WirelessPairView: View {
             }
         }
         .onAppear {
+            if startsAsClient && !didOpenClient {
+                didOpenClient = true
+                viewModel.openClientDialog()
+            }
             debugLog("[WirelessPairView] onAppear (isAdvertising=\(viewModel.isAdvertising), serviceID=\(viewModel.serviceID ?? "nil"), port=\(viewModel.port.map(String.init) ?? "nil"))")
         }
         .onDisappear {
+            if viewModel.isAdvertising { viewModel.stopPairing() }
+            viewModel.stopDiscovery()
             debugLog("[WirelessPairView] onDisappear (isAdvertising=\(viewModel.isAdvertising))")
         }
         .sheet(isPresented: $viewModel.isTargetDialogPresented) {
