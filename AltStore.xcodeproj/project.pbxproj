@@ -55,6 +55,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				BF989177250AABF4002ACF50 /* AltWidgetExtension.appex in Embed Foundation Extensions */,
+                5A570000000000000000000B,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -278,6 +279,7 @@
 				A8EECF2A2F4B195000F2436D /* SideStore */,
 				A8EEC3D92F4B0FC800F2436D /* SideBackup */,
 				A8EEC71D2F4B10D900F2436D /* xcconfigs */,
+                5A5700000000000000000006,
 				BFD2476B2284B9A500981D42 /* Products */,
 				B3C39607284F4C8400DA9E2F /* Build.xcconfig */,
 				B3C39606284F4C8400DA9E2F /* CodeSigning.xcconfig */,
@@ -295,6 +297,7 @@
 			isa = PBXGroup;
 			children = (
 				BFD2476A2284B9A500981D42 /* SideStore.app */,
+                5A5700000000000000000002,
 				BF58047B246A28F7008AE704 /* SideBackup.app */,
 				BF989167250AABF3002ACF50 /* AltWidgetExtension.appex */,
 			);
@@ -361,6 +364,7 @@
 			dependencies = (
 				0ED4AEC92E6DDB2A0039E2C0 /* PBXTargetDependency */,
 				BF989176250AABF4002ACF50 /* PBXTargetDependency */,
+                5A570000000000000000000C,
 			);
 			fileSystemSynchronizedGroups = (
 				A8EEC3482F4B0D8600F2436D /* Shared */,
@@ -437,6 +441,7 @@
 			projectRoot = "";
 			targets = (
 				BFD247692284B9A500981D42 /* SideStore */,
+                5A5700000000000000000001,
 				BF58047A246A28F7008AE704 /* SideBackup */,
 				BF989166250AABF3002ACF50 /* AltWidgetExtension */,
 			);
@@ -1057,6 +1062,24 @@
 			productName = SideSign;
 		};
 /* End XCSwiftPackageProductDependency section */
+/* zStore embedded local tunnel */
+5A5700000000000000000002 = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = ZStoreTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+5A5700000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
+5A5700000000000000000004 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+5A5700000000000000000005 = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ZStoreTunnel.entitlements; sourceTree = "<group>"; };
+5A5700000000000000000006 = {isa = PBXGroup; children = (5A5700000000000000000003, 5A5700000000000000000004, 5A5700000000000000000005,); path = ZStoreTunnel; sourceTree = "<group>"; };
+5A570000000000000000000A = {isa = PBXBuildFile; fileRef = 5A5700000000000000000003; };
+5A570000000000000000000B = {isa = PBXBuildFile; fileRef = 5A5700000000000000000002; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy,); }; };
+5A5700000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (5A570000000000000000000A,); runOnlyForDeploymentPostprocessing = 0; };
+5A5700000000000000000008 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+5A5700000000000000000009 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+5A570000000000000000000D = {isa = PBXContainerItemProxy; containerPortal = BFD247622284B9A500981D42; proxyType = 1; remoteGlobalIDString = 5A5700000000000000000001; remoteInfo = ZStoreTunnel; };
+5A570000000000000000000C = {isa = PBXTargetDependency; target = 5A5700000000000000000001; targetProxy = 5A570000000000000000000D; platformFilter = ios; };
+5A5700000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = 5A570000000000000000000E; buildPhases = (5A5700000000000000000007, 5A5700000000000000000008, 5A5700000000000000000009,); buildRules = (); dependencies = (); name = ZStoreTunnel; productName = ZStoreTunnel; productReference = 5A5700000000000000000002; productType = "com.apple.product-type.app-extension"; };
+5A570000000000000000000E = {isa = XCConfigurationList; buildConfigurations = (5A570000000000000000000F, 5A5700000000000000000010,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+5A570000000000000000000F = {isa = XCBuildConfiguration; baseConfigurationReference = B3C39607284F4C8400DA9E2F; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ZStoreTunnel/ZStoreTunnel.entitlements; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ZStoreTunnel/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = "$(MAIN_BUNDLE_IDENTIFIER).Tunnel"; PRODUCT_NAME = ZStoreTunnel; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+5A5700000000000000000010 = {isa = XCBuildConfiguration; baseConfigurationReference = B3C39607284F4C8400DA9E2F; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ZStoreTunnel/ZStoreTunnel.entitlements; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ZStoreTunnel/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 15.0; PRODUCT_BUNDLE_IDENTIFIER = "$(MAIN_BUNDLE_IDENTIFIER).Tunnel"; PRODUCT_NAME = ZStoreTunnel; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+
 	};
 	rootObject = BFD247622284B9A500981D42 /* Project object */;
 }

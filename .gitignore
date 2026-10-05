@@ -104,3 +104,6 @@ tmp
 
 scratch*.sh
 *.sh
+# zStore local build products
+.build/
+outputs/

@@ -33,6 +33,22 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
                                                    "self.context.targetSigningCertificate is nil")
         }
         
+        let tunnelExtensions = appBundle.appExtensions.filter {
+            ($0.infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String == "com.apple.networkextension.packet-tunnel"
+        }
+        if !tunnelExtensions.isEmpty {
+            let hostID = context.targetBundleIdentifier
+            let requiredIDs = [hostID] + tunnelExtensions.map {
+                $0.bundleIdentifier.replacingOccurrences(of: appBundle.bundleIdentifier, with: hostID)
+            }
+            for id in requiredIDs {
+                guard let values = profiles[id]?.entitlements["com.apple.developer.networking.networkextension"] as? [String],
+                      values.contains("packet-tunnel-provider") else {
+                    throw OperationError.invalidParameters("Provisioning profile for \(id) does not authorize packet-tunnel-provider. zStore cannot sign or refresh its embedded tunnel with this profile.")
+                }
+            }
+        }
+
         debugLog("[ResignAppOperation] Resigning app \(self.context.bundleIdentifier)...")
         
         self.setProgress(5)

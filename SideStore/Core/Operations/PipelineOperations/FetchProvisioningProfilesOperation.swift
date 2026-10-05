@@ -30,6 +30,21 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             throw OperationError.invalidParameters("FetchProvisioningProfilesOperation: context.targetAppBundle is nil")
         }
 
+        let requiresTunnel = targetAppBundle.appExtensions.contains {
+            ($0.infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String == "com.apple.networkextension.packet-tunnel"
+        }
+        if requiresTunnel {
+            guard !self.context.useMainProfile else {
+                throw OperationError.invalidParameters("zStore's tunnel requires its own provisioning profile; using the main app profile for extensions is unsupported.")
+            }
+            if self.context.overrideProvisioningProfile == nil {
+                let team = try await AuthManager.shared.getAuthenticatedTeam()
+                guard team.type != .free else {
+                    throw OperationError.invalidParameters("A free Apple account cannot provision the Network Extension required by this zStore IPA. Use an eligible paid developer team and profiles authorizing packet-tunnel-provider. The entitlement will not be stripped or bypassed.")
+                }
+            }
+        }
+
         let effectiveBundleId = self.context.targetBundleIdentifier
 
         let appExtensions = targetAppBundle.appExtensions

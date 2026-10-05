@@ -51,16 +51,6 @@ struct UserCustomizationsView: View {
     @State private var isFileSizeVerificationEnabled: Bool = UserDefaults.standard.isFileSizeVerificationEnabled
     @State private var permissionCheckingDisabled: Bool = UserDefaults.standard.permissionCheckingDisabled
     @State private var isCellularRefreshEnabled: Bool = UserDefaults.standard.isCellularRefreshEnabled
-    @State private var turnOnDataShortcutName: String = UserDefaults.standard.turnOnDataShortcutName
-    @State private var turnOffDataShortcutName: String = UserDefaults.standard.turnOffDataShortcutName
-    @State private var turnOnBaseDelayText: String = {
-        let delay = CellularRefreshManager.shared.turnOnDataBaseDelayOverride ?? AppConstants.Shortcuts.defaultTurnOnDataBaseDelay
-        return String(delay)
-    }()
-    @State private var turnOffBaseDelayText: String = {
-        let delay = CellularRefreshManager.shared.turnOffDataBaseDelayOverride ?? AppConstants.Shortcuts.defaultTurnOffDataBaseDelay
-        return String(delay)
-    }()
     @State private var wireGuardExportURL: URL? = nil
 
     @State private var isFreeAccount: Bool = false
@@ -594,167 +584,17 @@ struct UserCustomizationsView: View {
         }
     }
 
-    @ViewBuilder
     private var cellularRefreshShortcutsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("CELLULAR REFRESH")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+        VStack(alignment: .leading, spacing: 12) {
+            toggleRow(title: "Cellular Refresh", subtitle: "Use cellular Internet while the embedded local tunnel handles device operations", isOn: Binding(
+                get: { isCellularRefreshEnabled },
+                set: { isCellularRefreshEnabled = $0; CellularRefreshManager.shared.setEnabled($0) }
+            ))
+            Text("No cellular toggle shortcuts are needed. Requires correctly provisioned Network Extension entitlements. Cellular-only device connectivity is experimental and must be verified on your iPhone.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
-
-            VStack(spacing: 0) {
-                toggleRow(
-                    title: "Cellular Refresh",
-                    subtitle: "Automatically toggle cellular data via Shortcuts during refresh",
-                    isOn: Binding(
-                        get: { isCellularRefreshEnabled },
-                        set: { newValue in
-                            isCellularRefreshEnabled = newValue
-                            CellularRefreshManager.shared.setEnabled(newValue)
-                        }
-                    )
-                )
-
-                divider
-
-                textFieldRow(
-                    title: "Turn On Cellular Shortcut",
-                    subtitle: "Name of the shortcut in Apple Shortcuts app",
-                    placeholder: AppConstants.Shortcuts.defaultTurnOnDataShortcutName,
-                    value: turnOnDataShortcutName,
-                    onTap: openTurnOnShortcutDialog
-                )
-
-                divider
-
-                textFieldRow(
-                    title: "Turn Off Cellular Shortcut",
-                    subtitle: "Name of the shortcut in Apple Shortcuts app",
-                    placeholder: AppConstants.Shortcuts.defaultTurnOffDataShortcutName,
-                    value: turnOffDataShortcutName,
-                    onTap: openTurnOffShortcutDialog
-                )
-
-                divider
-
-                textFieldRow(
-                    title: "Turn On Base Delay",
-                    subtitle: "Base wait time after turning on data (seconds, ≥ 0)",
-                    placeholder: String(AppConstants.Shortcuts.defaultTurnOnDataBaseDelay),
-                    value: turnOnBaseDelayText,
-                    unit: "s",
-                    onTap: openTurnOnBaseDelayDialog
-                )
-
-                divider
-
-                textFieldRow(
-                    title: "Turn Off Base Delay",
-                    subtitle: "Base wait time after turning off data (seconds, ≥ 0)",
-                    placeholder: String(AppConstants.Shortcuts.defaultTurnOffDataBaseDelay),
-                    value: turnOffBaseDelayText,
-                    unit: "s",
-                    onTap: openTurnOffBaseDelayDialog
-                )
-
-                divider
-
-                SwiftUI.Button(action: resetCellularDefaults) {
-                    HStack {
-                        Spacer()
-                        Text("Reset to Defaults")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.red)
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
-                }
-            }
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
         }
-    }
-
-    private func openTurnOnShortcutDialog() {
-        editingValueText = turnOnDataShortcutName
-        editDialog = EditDialogState(
-            title: "Turn On Cellular Shortcut",
-            message: "Name of the shortcut in Apple Shortcuts app",
-            placeholder: AppConstants.Shortcuts.defaultTurnOnDataShortcutName,
-            keyboardType: .default,
-            onSave: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                let resolved = trimmed.isEmpty ? AppConstants.Shortcuts.defaultTurnOnDataShortcutName : trimmed
-                let sanitized = CellularRefreshManager.sanitizeShortcutName(resolved, fallback: AppConstants.Shortcuts.defaultTurnOnDataShortcutName)
-                turnOnDataShortcutName = sanitized
-                CellularRefreshManager.shared.setTurnOnDataShortcutName(sanitized)
-            }
-        )
-    }
-
-    private func openTurnOffShortcutDialog() {
-        editingValueText = turnOffDataShortcutName
-        editDialog = EditDialogState(
-            title: "Turn Off Cellular Shortcut",
-            message: "Name of the shortcut in Apple Shortcuts app",
-            placeholder: AppConstants.Shortcuts.defaultTurnOffDataShortcutName,
-            keyboardType: .default,
-            onSave: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                let resolved = trimmed.isEmpty ? AppConstants.Shortcuts.defaultTurnOffDataShortcutName : trimmed
-                let sanitized = CellularRefreshManager.sanitizeShortcutName(resolved, fallback: AppConstants.Shortcuts.defaultTurnOffDataShortcutName)
-                turnOffDataShortcutName = sanitized
-                CellularRefreshManager.shared.setTurnOffDataShortcutName(sanitized)
-            }
-        )
-    }
-
-    private func openTurnOnBaseDelayDialog() {
-        editingValueText = turnOnBaseDelayText
-        editDialog = EditDialogState(
-            title: "Turn On Base Delay",
-            message: "Base wait time after turning on data (seconds, ≥ 0)",
-            placeholder: String(AppConstants.Shortcuts.defaultTurnOnDataBaseDelay),
-            keyboardType: .decimalPad,
-            onSave: { newValue in
-                let filtered = newValue.filter { "0123456789.".contains($0) }
-                if let delay = Double(filtered), delay >= 0 {
-                    turnOnBaseDelayText = String(delay)
-                    CellularRefreshManager.shared.setTurnOnDataBaseDelayOverride(delay)
-                } else {
-                    turnOnBaseDelayText = String(AppConstants.Shortcuts.defaultTurnOnDataBaseDelay)
-                    CellularRefreshManager.shared.setTurnOnDataBaseDelayOverride(nil)
-                }
-            }
-        )
-    }
-
-    private func openTurnOffBaseDelayDialog() {
-        editingValueText = turnOffBaseDelayText
-        editDialog = EditDialogState(
-            title: "Turn Off Base Delay",
-            message: "Base wait time after turning off data (seconds, ≥ 0)",
-            placeholder: String(AppConstants.Shortcuts.defaultTurnOffDataBaseDelay),
-            keyboardType: .decimalPad,
-            onSave: { newValue in
-                let filtered = newValue.filter { "0123456789.".contains($0) }
-                if let delay = Double(filtered), delay >= 0 {
-                    turnOffBaseDelayText = String(delay)
-                    CellularRefreshManager.shared.setTurnOffDataBaseDelayOverride(delay)
-                } else {
-                    turnOffBaseDelayText = String(AppConstants.Shortcuts.defaultTurnOffDataBaseDelay)
-                    CellularRefreshManager.shared.setTurnOffDataBaseDelayOverride(nil)
-                }
-            }
-        )
-    }
-
-    private func resetCellularDefaults() {
-        CellularRefreshManager.shared.resetToDefaults()
-        turnOnDataShortcutName = AppConstants.Shortcuts.defaultTurnOnDataShortcutName
-        turnOffDataShortcutName = AppConstants.Shortcuts.defaultTurnOffDataShortcutName
-        turnOnBaseDelayText = String(AppConstants.Shortcuts.defaultTurnOnDataBaseDelay)
-        turnOffBaseDelayText = String(AppConstants.Shortcuts.defaultTurnOffDataBaseDelay)
     }
 
     private var customizeAppExtensionsBinding: Binding<AppExtensionCustomization> {

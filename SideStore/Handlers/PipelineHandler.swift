@@ -209,7 +209,6 @@ final class PipelineHandler: PipelineExecutionHandler,
     }
     
     func suspendToHomeScreen() async {
-        await CellularRefreshManager.shared.turnOnDataIfNeeded()
         await MainActor.run {
             _ = UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
         }

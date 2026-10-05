@@ -103,6 +103,15 @@ final class PipelineRunner: Sendable
                  handler: PipelineExecutionHandler,
                  group: RefreshGroup) async throws -> RefreshGroup
     {
+        return try await ZStoreTransport.withLease {
+            try await self.performWithTransport(operations, handler: handler, group: group)
+        }
+    }
+
+    private func performWithTransport(_ operations: [AppOperation],
+                                      handler: PipelineExecutionHandler,
+                                      group: RefreshGroup) async throws -> RefreshGroup
+    {
         let operations = operations.filter { progress.progress(for: $0) == nil || progress.progress(for: $0)?.isCancelled == true }
         guard !operations.isEmpty else { throw OperationError.cancelled }
         
@@ -281,9 +290,7 @@ final class PipelineRunner: Sendable
                 )
                 try await scheduleNotifOp.execute()
             }
-            await CellularRefreshManager.shared.turnOnDataIfNeeded()
         } catch {
-            await CellularRefreshManager.shared.turnOnDataIfNeeded()
             progress.set(nil, for: operation)
             
             let elapsed = CFAbsoluteTimeGetCurrent() - group.operationStartTime

@@ -205,15 +205,13 @@ public func isMinimuxerReady() async -> Result<Bool, MinimuxerError> {
 }
 
 public func ensureMinimuxerReady() async throws {
-    if CellularRefreshManager.shared.isEnabled && UserDefaults.standard.enableEMPforWireguard {
-        throw OperationError.invalidVPN(
-            reason: "WireGuard VPN is not supported with Cellular Refresh because iOS pauses the WireGuard tunnel when cellular data is toggled off."
-        )
-    }
-    if !CellularRefreshManager.shared.isEnabled {
+    try await ZStoreTransport.withLease {
+        await minimuxer.network.refreshEndpoint()
         try await withRemotePairingRetry {
-            if case .failure(let error) = await isMinimuxerReady() {
-                throw error.asOperationError
+            switch await isMinimuxerReady() {
+            case .success(true): return
+            case .success(false): throw OperationError.noConnection(reason: "Device transport is not ready.")
+            case .failure(let error): throw error.asOperationError
             }
         }
     }
@@ -273,13 +271,19 @@ func minimuxerStop() async throws {
     #endif
 }
 
+private func withDeviceTransport<T>(_ operation: () async throws -> T) async throws -> T {
+    try await ZStoreTransport.withLease {
+        try await withRemotePairingRetry(operation)
+    }
+}
+
 func installProvisioningProfiles(_ profileData: Data) async throws {
     defer { debugLog("[SideStore] installProvisioningProfiles(profileData) completed") }
     #if targetEnvironment(simulator)
     debugLog("[SideStore] installProvisioningProfiles(profileData) is no-op on simulator")
     #else
     debugLog("[SideStore] installProvisioningProfiles(profileData) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.installProvisioningProfile(profile: profileData)
     }
     #endif
@@ -291,7 +295,7 @@ func removeProvisioningProfile(_ id: String) async throws {
     debugLog("[SideStore] removeProvisioningProfile(id) is no-op on simulator")
     #else
     debugLog("[SideStore] removeProvisioningProfile(id) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.removeProvisioningProfile(id: id)
     }
     #endif
@@ -303,7 +307,7 @@ func removeApp(_ bundleId: String) async throws {
     debugLog("[SideStore] removeApp(bundleId) is no-op on simulator")
     #else
     debugLog("[SideStore] removeApp(bundleId) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.removeApp(bundleId: bundleId)
     }
     #endif
@@ -315,7 +319,7 @@ func sendIpaAfc(_ bundleId: String, _ rawBytes: Data) async throws {
     debugLog("[SideStore] sendIpaAfc(bundleId, rawBytes) is no-op on simulator")
     #else
     debugLog("[SideStore] sendIpaAfc(bundleId, rawBytes) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.sendIpaAfc(bundleId: bundleId, ipaBytes: rawBytes)
     }
     #endif
@@ -327,7 +331,7 @@ func sendAppBundleAfc(_ bundleId: String, at appURL: URL) async throws {
     debugLog("[SideStore] sendAppBundleAfc(bundleId, appURL) is no-op on simulator")
     #else
     debugLog("[SideStore] sendAppBundleAfc(bundleId, appURL) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.sendAppBundleAfc(bundleId: bundleId, appURL: appURL)
     }
     #endif
@@ -339,7 +343,7 @@ func installIPA(_ bundleId: String) async throws {
     debugLog("[SideStore] installIPA(bundleId) is no-op on simulator")
     #else
     debugLog("[SideStore] installIPA(bundleId) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.installIpa(bundleId: bundleId)
     }
     #endif
@@ -351,7 +355,7 @@ func installAppBundle(_ bundleId: String, appName: String) async throws {
     debugLog("[SideStore] installAppBundle(bundleId, appName) is no-op on simulator")
     #else
     debugLog("[SideStore] installAppBundle(bundleId, appName) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.installAppBundle(bundleId: bundleId, appName: appName)
     }
     #endif
@@ -370,7 +374,7 @@ func fetchUDID(forceLive: Bool = false) async throws -> String {
         return cachedUDID
     }
     debugLog("[SideStore] fetchUDID() invoked (forceLive: \(forceLive))")
-    return try await withRemotePairingRetry {
+    return try await withDeviceTransport {
         let udid = try await minimuxer.core.fetchUDID()
         guard !udid.isEmpty else {
             throw OperationError.unknownUDID(reason: "Minimuxer returned empty UDID.")
@@ -393,7 +397,7 @@ func debugApp(_ appId: String) async throws {
     debugLog("[SideStore] debugApp(appId) is no-op on simulator")
     #else
     debugLog("[SideStore] debugApp(appId) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.debugApp(appId: appId)
     }
     #endif
@@ -410,7 +414,7 @@ func attachDebugger(_ pid: UInt32) async throws {
     debugLog("[SideStore] attachDebugger(pid) is no-op on simulator")
     #else
     debugLog("[SideStore] attachDebugger(pid) invoked")
-    try await withRemotePairingRetry {
+    try await withDeviceTransport {
         try await minimuxer.core.attachDebugger(pid: pid)
     }
     #endif
@@ -428,7 +432,7 @@ func dumpProfiles(_ docsPath: String, mode: ProfileDumpMode = .zip) async throws
     return ""
     #else
     debugLog("[SideStore] dumpProfiles(docsPath) invoked")
-    return try await withRemotePairingRetry {
+    return try await withDeviceTransport {
         try await minimuxer.core.dumpProfiles(docsPath: docsPath, mode: mode)
     }
     #endif

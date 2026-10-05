@@ -582,7 +582,7 @@ public extension UserDefaults
             #keyPath(UserDefaults.pairingFileEditSuppressedSHAs): [String: Bool](),
             #keyPath(UserDefaults.isRotateLogsOnStartupEnabled): true,
             #keyPath(UserDefaults.recreateDatabaseOnNextStart): false,
-            #keyPath(UserDefaults.isCellularRefreshEnabled): false,
+            #keyPath(UserDefaults.isCellularRefreshEnabled): true,
             #keyPath(UserDefaults.turnOffDataShortcutName): "TurnOffData",
             #keyPath(UserDefaults.turnOnDataShortcutName): "TurnOnData",
             #keyPath(UserDefaults.isPairingReset): true,
