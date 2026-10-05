@@ -1,0 +1,7 @@
+#include "../Build.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = $(MAIN_BUNDLE_IDENTIFIER).Backup
+CODE_SIGN_ENTITLEMENTS = zLoader/Backup/zLoaderBackup.entitlements
+
+#include? "../local.xcconfig"
+

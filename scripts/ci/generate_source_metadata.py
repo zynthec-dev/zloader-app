@@ -150,8 +150,8 @@ def main():
         "size": file_size(ipa_path),
         "sha256": sha256(ipa_path),
         "download_url": (
-            "https://github.com/SideStore/SideStore/releases/download/"
-            f"{args.release_tag}/SideStore.ipa"
+            "https://github.com/zLoader/Features/zLoader/Features/releases/download/"
+            f"{args.release_tag}/zLoader.ipa"
         ),
         "localized_description": localized_description,
     }

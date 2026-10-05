@@ -155,7 +155,7 @@ test:
 	bundle exec fastlane test
 
 ## -- Building --
-# NOTE: The build config was implicitly 'release' since it was set in AltStore.project
+# NOTE: The build config was implicitly 'release' since it was set in zLoader.project
 #       under "use "Release" configuration for commandline builds" setting
 #		so I had just defined it explicitly.
 #
@@ -169,15 +169,15 @@ MARKETING_VERSION ?=
 BUNDLE_ID_SUFFIX ?= 
 # Common build settings for xcodebuild
 COMMON_BUILD_SETTINGS = \
-	-project AltStore.xcodeproj \
-	-scheme SideStore \
+	-project zLoader.xcodeproj \
+	-scheme zLoader \
 	-sdk iphoneos \
 	-configuration $(BUILD_CONFIG) \
 	CODE_SIGNING_REQUIRED=NO \
 	AD_HOC_CODE_SIGNING_ALLOWED=YES \
 	CODE_SIGNING_ALLOWED=NO \
 	DEVELOPMENT_TEAM=XYZ0123456 \
-	ORG_IDENTIFIER=com.SideStore
+	ORG_IDENTIFIER=com.zLoader
 
 # Append MARKETING_VERSION if it’s not empty (coz otherwise the blank entry becomes override)
 ifneq ($(strip $(MARKETING_VERSION)),)
@@ -192,7 +192,7 @@ endif
 build:
 	@echo ">>>>>>>>> BUILD_CONFIG is set to '$(BUILD_CONFIG)', Building for $(BUILD_CONFIG) mode! <<<<<<<<<<"
 	@echo ""
-	@xcodebuild archive -archivePath ./SideStore \
+	@xcodebuild archive -archivePath ./zLoader \
 		$(COMMON_BUILD_SETTINGS)
 
 build-and-test:
@@ -247,33 +247,33 @@ sim-boot-check:
 
 clean-build:
 	@echo "Cleaning build artifacts..."
-	@xcodebuild clean -project AltStore.xcodeproj -scheme SideStore
+	@xcodebuild clean -project zLoader.xcodeproj -scheme zLoader
 
 fakesign-apps:
-	ldid -SAltStore/Resources/ReleaseEntitlements.plist SideStore.xcarchive/Products/Applications/SideStore.app/SideStore
-	ldid -SAltWidget/Resources/ReleaseEntitlements.plist SideStore.xcarchive/Products/Applications/SideStore.app/PlugIns/AltWidgetExtension.appex/AltWidgetExtension
+	ldid -SzLoader/App/Resources/ReleaseEntitlements.plist zLoader.xcarchive/Products/Applications/zLoader.app/zLoader
+	ldid -SzLoader/Widget/Resources/ReleaseEntitlements.plist zLoader.xcarchive/Products/Applications/zLoader.app/PlugIns/zLoaderWidget.appex/zLoaderWidget
 
-fakesign-sidebackup:	
+fakesign-zloader-backup:
 	@echo ''
-	@echo "fake-signing sidebackup even though it will get resigned, only to retain its entitlements (appGroups)"
-	unzip -q -o SideStore.xcarchive/Products/Applications/SideStore.app/SideBackup.ipa -d SideStore.xcarchive/Products/Applications/SideStore.app/
-	ldid -SSideBackup/SideBackup.entitlements SideStore.xcarchive/Products/Applications/SideStore.app/Payload/SideBackup.app/SideBackup
-	pushd "SideStore.xcarchive/Products/Applications/SideStore.app/"  > /dev/null; \
-	rm -f     SideBackup.ipa; \
-	zip -r SideBackup.ipa Payload; \
+	@echo "fake-signing zloader-backup even though it will get resigned, only to retain its entitlements (appGroups)"
+	unzip -q -o zLoader.xcarchive/Products/Applications/zLoader.app/zLoaderBackup.ipa -d zLoader.xcarchive/Products/Applications/zLoader.app/
+	ldid -SzLoader/Backup/zLoaderBackup.entitlements zLoader.xcarchive/Products/Applications/zLoader.app/Payload/zLoaderBackup.app/zLoaderBackup
+	pushd "zLoader.xcarchive/Products/Applications/zLoader.app/"  > /dev/null; \
+	rm -f     zLoaderBackup.ipa; \
+	zip -r zLoaderBackup.ipa Payload; \
 	popd  > /dev/null
-	@rm -rf SideStore.xcarchive/Products/Applications/SideStore.app/Payload
+	@rm -rf zLoader.xcarchive/Products/Applications/zLoader.app/Payload
 
-fakesign: fakesign-apps fakesign-sidebackup				
+fakesign: fakesign-apps fakesign-zloader-backup
 
 
 ipa:
 	@echo ''
-	@echo "fake-signing sidestore"
-	mkdir -p Payload/SideStore.app
-	cp -R SideStore.xcarchive/Products/Applications/SideStore.app/ Payload/SideStore.app/
-	rm -f     SideStore.ipa
-	zip -r SideStore.ipa Payload
+	@echo "fake-signing zloader"
+	mkdir -p Payload/zLoader.app
+	cp -R zLoader.xcarchive/Products/Applications/zLoader.app/ Payload/zLoader.app/
+	rm -f     zLoader.ipa
+	zip -r zLoader.ipa Payload
 	rm -rf Payload*/
 
 # Global Variables
@@ -290,10 +290,10 @@ ROOT_DIR 			:= $(if $(ROOT_DIR),$(ROOT_DIR),$(if $(CODESIGNING_FOLDER_PATH),$(CO
 VAR_USED			:= $(if $(CONFIGURATION_BUILD_DIR),"CONFIGURATION_BUILD_DIR",$(if $(CODESIGNING_FOLDER_PATH),"CODESIGNING_FOLDER_PATH","?"))
 
 TARGET_BUILD_DIR 	:= build
-TARGET_ARCHIVE_DIR 	:= sidebackup.xcarchive
-TARGET_NAME 		:= SideBackup.app
-TARGET_DSYM_NAME 	:= SideBackup.app.dSYM
-TARGET_IPA_NAME 	:= SideBackup.ipa
+TARGET_ARCHIVE_DIR 	:= zloader-backup.xcarchive
+TARGET_NAME 		:= zLoaderBackup.app
+TARGET_DSYM_NAME 	:= zLoaderBackup.app.dSYM
+TARGET_IPA_NAME 	:= zLoaderBackup.ipa
 
 
 ALT_APP_SRC_PARENT 	:= $(shell readlink -f "$(ROOT_DIR)")
@@ -317,7 +317,7 @@ checkPaths:
 	fi
 
 
-copy-sidebackup: checkPaths
+copy-zloader-backup: checkPaths
 	@echo ''
 	@echo "  CONFIGURATION_BUILD_DIR = '$(CONFIGURATION_BUILD_DIR)'"
 	@echo "  CODESIGNING_FOLDER_PATH = '$(CODESIGNING_FOLDER_PATH)'"
@@ -357,31 +357,31 @@ copy-sidebackup: checkPaths
 	@find "$(ALT_APP_DST_ARCHIVE)" -maxdepth 4 -exec ls -ld {} + || true
 	@echo ''
 
-# fakesign-sidebackup: copy-sidebackup
+# fakesign-zloader-backup: copy-zloader-backup
 # 	@echo "  Adding homebrew binaries to path and invoke ldid"
 # 	@export PATH="/usr/local/bin:/opt/homebrew/bin:$$PATH"; \
-# 	ldid -SSideBackup/Resources/ReleaseEntitlements.plist $(ALT_APP)
+# 	ldid -SzLoader/Backup/Resources/ReleaseEntitlements.plist $(ALT_APP)
 # 	@echo "  fakesign completed"
 # 	@echo ""
 	
-# ipa-sidebackup:
-ipa-sidebackup: checkPaths copy-sidebackup 
-# ipa-sidebackup: checkPaths copy-sidebackup fakesign-sidebackup
-	@echo "  Creating IPA for SideBackup"
+# ipa-zloader-backup:
+ipa-zloader-backup: checkPaths copy-zloader-backup
+# ipa-zloader-backup: checkPaths copy-zloader-backup fakesign-zloader-backup
+	@echo "  Creating IPA for zLoaderBackup"
 	@rm -rf 	"$(ALT_APP_PAYLOAD_DST)"
 	@mkdir -p 	"$(ALT_APP_PAYLOAD_DST)/$(TARGET_NAME)"
 	@echo " Copying from $(ALT_APP_SRC) into $(ALT_APP_PAYLOAD_DST)"
 	@cp -R -f	"$(ALT_APP_SRC)/." "$(ALT_APP_PAYLOAD_DST)/$(TARGET_NAME)"
 	@pushd 		"$(ALT_APP_DST_ARCHIVE)" && zip -r "../../$(ALT_APP_IPA_DST)" Payload || popd
-	@echo "  IPA created: build/SideBackup.ipa"
+	@echo "  IPA created: build/zLoaderBackup.ipa"
 
-clean-sidebackup:
+clean-zloader-backup:
 	@echo ""
-	@echo "====> Cleaning up SideBackup related artifacts <===="
-	@rm -rf build/sidebackup.xcarchive/
-	@rm -f build/SideBackup.ipa
-    #@rm -f AltStore/Resources/SideBackup.ipa
+	@echo "====> Cleaning up zLoaderBackup related artifacts <===="
+	@rm -rf build/zloader-backup.xcarchive/
+	@rm -f build/zLoaderBackup.ipa
+    #@rm -f zLoader/App/Resources/zLoaderBackup.ipa
 
-clean: clean-sidebackup
-	@rm -rf SideStore.ipa
+clean: clean-zloader-backup
+	@rm -rf zLoader.ipa
 	@rm -rf build/

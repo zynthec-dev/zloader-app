@@ -1,71 +1,66 @@
-# Validation and acceptance boundaries
+# Validation and device acceptance
 
-2026-10-05, Xcode 27.0 (27A266a), local macOS Apple Silicon.
+2026-10-05, local Apple Silicon macOS, Xcode 27.0 (27A266a), zLoader 0.7.1 (0701).
 
 | Check | Result |
 | --- | --- |
-| Pinned nightly source + submodules | Cloned and inspected |
-| App Group resolver harness | PASS: 10 cases for access, signer renaming, ambiguity and prefix boundaries |
-| Swift transport lease harness | PASS: overlapping leases, duplicate release, cancellation during startup, failure recovery, teardown/start serialization |
-| iOS arm64 Debug build | PASS |
-| iOS arm64 Release build | PASS, final source; bundle contents inspected |
-| iOS Simulator arm64 Debug build | PASS, final source (ARCHS=arm64 ONLY_ACTIVE_ARCH=YES) |
-| Intel x86_64 Simulator | Fails linking upstream EMProxy/Idevice symbols; no dependency source modified |
-| Tunnel embedding | ZLoaderTunnel.appex included in host PlugIns |
-| App identity and licenses | CFBundleName zLoader; com.zynthec.zLoader; all three license resources checked |
-| UI runtime Light/Dark | Not run; no booted Simulator available. Palette and native glass availability checked in source |
-| Icons | Three 1024px alternatives generated; Mint icon visually inspected |
-| Signed device install | Not tested; no supplied team/profile/device |
-| Cellular-only install / refresh | Not tested on hardware; cannot claim supported end-to-end behavior |
-| Live Apple login / provisioning | Not tested |
-| Hosted CI / public release | Not run / not published |
+| Clean iOS arm64 Release build | PASS, zero warnings (`/tmp/zloader-final-clean-device.log`) |
+| Final Release changes | PASS, zero warnings (`/tmp/zloader-final-device.log`) |
+| Clean arm64 Simulator Debug build | PASS; one simulator-only unnecessary-try warning subsequently fixed |
+| Final arm64 Simulator Debug build | PASS, zero warnings (`/tmp/zloader-final-simulator.log`) |
+| App Group harness | PASS, 10 access/rename/ambiguity/prefix cases |
+| Transport harness | PASS, overlapping leases, idempotent release, cancellation, failure recovery, serialized teardown/start |
+| Core Data confinement harness | PASS, reads/writes, queued completion and propagated errors |
+| Model identity audit | PASS, all 18 archived model versions preserve entity hashes and version identifiers |
+| IPA packaging | PASS, ZIP integrity, nested signature seals and Mach-O XML entitlement slots read by SideSign |
+| Embedded targets | zLoaderBackup, zLoaderWidget.appex, zLoaderTunnel.appex |
+| Source/admin local tests | Feed tests, release pipeline tests, routing and mocked browser tests; see source project evidence |
+| Hosted build CI | Not run; Actions disabled |
+| UI Light/Dark / alternate icons on device | Not run |
+| Apple login/provisioning and signed iPhone launch | Not tested |
+| Cellular-only installation / refresh | Not tested on hardware |
+| Intel Simulator | Original EMProxy/Idevice linking limitation; only arm64 validated |
+
+The warnings fixes use Core Data queue confinement, MainActor UI ownership,
+protected dependency callback state and modern API branches with iOS 15/16
+fallbacks. No compiler warning category is disabled. Swift asset-symbol generation
+is disabled because its generated Color.primary conflicts with the project's own
+symbol; the asset itself remains present. The Minimuxer patch is tracked separately
+with unchanged gitlinks and must be applied before direct Xcode builds.
+
+The compiled model audit establishes schema equivalence, not physical-device data
+migration. Existing database/metadata filenames are recognized. Bundle-ID or
+App-Group changes can still result in a different iOS data container.
+
+## Artifacts
+
+- `outputs/zLoader-0.7.1.ipa` / `zLoader-resignable.ipa`:
+  SHA-256 `47d2c87f0356cf3089a0346f3fce76cb069bfacc8aed8049048c615cb0108a9e`.
+- `outputs/zLoader-unsigned.ipa`:
+  SHA-256 `435a05b0798c3d6ae1ed4eaa9abbf55fd37b705f99c004a7f61f05025ed8885b`.
+
+The resignable artifact uses local ad-hoc signatures to preserve capability
+requests for SideStore import. It is not Apple-authorized or directly installable.
+The unsigned artifact is for inspection. Neither proves the reported App Group
+startup error has been resolved on the iPhone.
 
 ## Required device acceptance
 
-Use legally provisioned host/extension profiles and record iOS version, pairing
-protocol and account type. Test:
+1. Import with extensions retained; inspect final host/widget App Groups and
+   host/provider Network Extension entitlements and their matching profiles.
+2. Launch, complete onboarding and verify shared database/widget access without
+   deleting the existing installation. Confirm the fixed source and self-update.
+3. Accept/refuse VPN consent, check missing-capability errors, then exercise
+   Wi-Fi+Cellular and Cellular-only login, signing, provisioning, transfer, install
+   and single/batch refresh. Verify installed apps actually launch.
+4. Overlapping operations, cancellation, VPN loss, failure and recovery must retain
+   the tunnel until the last operation finishes.
+5. Self-refresh, host suspension/termination and extension replacement need device
+   validation. An OS-killed process can require manual VPN shutdown.
+6. Test CoreDevice/RemotePairing and legacy lockdown separately. The embedded
+   packet tunnel does not supply the IKEv2 interface required by upstream lockdown
+   checks on iOS 26.4+. Unsupported combinations must fail clearly.
+7. Light/Dark, Dynamic Type, VoiceOver, Reduce Transparency, alternate icons and
+   About license/link rendering still require runtime review.
 
-1. First VPN-consent acceptance, refusal and missing-entitlement errors.
-2. Wi-Fi + Cellular enabled, then Cellular-only: Apple login/provisioning,
-   download, signing, AFC transfer, installation, single and batch profile refresh.
-3. Check actual installed app launch and profile expiry, not just UI success.
-4. Parallel operations, failed provisioning, transfer failure, installation
-   failure, VPN loss, user cancellation and subsequent recovery. Tunnel must stay
-   up until the final active operation releases its lease.
-5. Self-refresh, host suspension/termination and extension replacement: inspect
-   VPN state and verify post-relaunch data restoration. An OS-killed process can
-   leave a connection needing manual shutdown; no timer pretends otherwise.
-6. CoreDevice/RemotePairing and legacy lockdown separately. On iOS 26.4+, the
-   embedded packet tunnel is not the IKEv2 interface required by upstream's
-   lockdown checks. Unsupported protocol combinations must fail explicitly.
-7. Light/Dark, Dynamic Type, VoiceOver and Reduce Transparency. About must show
-   working links and complete license texts; alternate icons must switch.
-
-See TRANSPORT.md for architecture, entitlement constraints and primary sources.
-
-Unsigned review artifact: `outputs/zLoader-unsigned.ipa`. ZIP integrity, host and
-provider bundle IDs, embedded provider and bundled license files were verified.
-SHA-256: `662a2f6b78386930670526db5b16793f06a917f641cf7f17a0094504780780a7`.
-This package is not signed or installability-tested.
-
-GitHub repository is private. On 2026-10-05, after explicit user approval,
-the unchanged SideStore baseline was pushed to `develop` and the zLoader
-implementation to `zloader-development`. Default branch: `develop`. GitHub
-Actions is disabled to prevent inherited SideStore publishing workflows from
-running against upstream destinations. No release or hosted CI run was created.
-
-Final verification also covers the tunnel-start status race fix: the initial
-disconnected state is not treated as a completed failed connection attempt.
-Both final Release device and arm64 Debug Simulator builds passed.
-
-## App Group startup repair
-
-Both device Release and arm64 Simulator Debug builds passed after the resolver
-change. The resolver harness (10 cases) and transport harness (4 groups) passed.
-`outputs/zLoader-resignable.ipa` preserves capability requests through local
-ad-hoc signatures. Nested-code seal verification, ZIP integrity and the exact
-Mach-O XML entitlement slot used by SideSign passed for host, widget and tunnel.
-SHA-256: `aa4aae9b71e0f052f0ec46f721b07f106d9a0d04d7bfd33c2341c06ed1b91e5a`.
-This is not an Apple-authorized installation signature. Final signed profiles,
-device launch and resolution of the reported startup error remain unverified.
-See APP-GROUPS.md for the confirmed packaging issue and re-signing steps.
+See [TRANSPORT.md](TRANSPORT.md) and [APP-GROUPS.md](APP-GROUPS.md).

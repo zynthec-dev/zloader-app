@@ -11,7 +11,7 @@ app = root / '.build/Device/Build/Products/Release-iphoneos/zLoader.app'
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleName'] == 'zLoader'
 assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
-tunnel = app / 'PlugIns/ZLoaderTunnel.appex'
+tunnel = app / 'PlugIns/zLoaderTunnel.appex'
 ext = plistlib.loads((tunnel / 'Info.plist').read_bytes())
 assert ext['CFBundleIdentifier'] == info['CFBundleIdentifier'] + '.Tunnel'
 assert ext['NSExtension']['NSExtensionPointIdentifier'] == 'com.apple.networkextension.packet-tunnel'
@@ -30,7 +30,7 @@ subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
                 str(staging / 'Payload'), str(ipa)], check=True)
 with zipfile.ZipFile(ipa) as archive:
     assert archive.testzip() is None
-    assert 'Payload/zLoader.app/PlugIns/ZLoaderTunnel.appex/Info.plist' in archive.namelist()
+    assert 'Payload/zLoader.app/PlugIns/zLoaderTunnel.appex/Info.plist' in archive.namelist()
 result = {'artifact': ipa.name, 'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
           'bundleIdentifier': info['CFBundleIdentifier'], 'tunnelIdentifier': ext['CFBundleIdentifier'],
           'signing': 'unsigned; valid Network Extension provisioning for host and provider required'}

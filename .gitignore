@@ -12,7 +12,7 @@ Pods/
 build/
 DerivedData
 
-SideStore.xcarchive
+zLoader.xcarchive
 ## Various settings
 *.pbxuser
 !default.pbxuser
@@ -41,13 +41,13 @@ xcuserdata
 .idea/
 
 Payload/
-**/SideStore.ipa
-**/SideBackup.ipa
+**/zLoader.ipa
+**/zLoaderBackup.ipa
 **/*.dSYM
 
 Dependencies/.*-prebuilt-fetch-*
-SideStore/minimuxer/*
-SideStore/em_proxy/*
+zLoader/Features/minimuxer/*
+zLoader/Features/em_proxy/*
 !Dependencies/**/.gitkeep
 .nightly-build-num
 
@@ -57,8 +57,8 @@ SideStore/em_proxy/*
 
 # misc
 **/output.txt
-SideStore/.skip-prebuilt-fetch-minimuxer
-SideStore/.skip-prebuilt-fetch-em_proxy
+zLoader/Features/.skip-prebuilt-fetch-minimuxer
+zLoader/Features/.skip-prebuilt-fetch-em_proxy
 
 .git.bkp/
 
@@ -104,12 +104,12 @@ tmp
 
 scratch*.sh
 *.sh
-# zStore local build products
+# zLoader local build products
 .build/
 outputs/
 
 !docs/zloader/*.md
-!SideStore/Resources/ZStoreCredits/*.md
+!zLoader/Features/Resources/Credits/*.md
 !zLoader/**/*.md
 
 !zLoader/scripts/*.sh

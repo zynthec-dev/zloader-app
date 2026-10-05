@@ -38,7 +38,7 @@ an iOS VPN configuration is mandatory and may require foreground interaction.
 The manager discovers the actual embedded provider bundle ID after re-signing.
 It stops only connections it started, not an already connected manual session.
 
-Legacy shortcut preference keys / constants remain inert for upstream merge
+Legacy shortcut preference keys / constants remain inert for existing preference
 compatibility; executable calls and shortcut settings are removed. Cellular
 refresh defaults to enabled, skips the Wi-Fi prerequisite only, and preserves
 real endpoint/pairing readiness checks. The pre-existing 0.5-second self-reinstall
@@ -50,7 +50,7 @@ Both host and extension need profiles authorizing
 `com.apple.developer.networking.networkextension = [packet-tunnel-provider]`.
 An entitlement file or unsigned build does not grant that capability. Free
 Apple-account signing cannot supply it (also reflected in SideSign's entitlement
-model). The fork rejects automatic free-team tunnel provisioning and profiles
+model). zLoader rejects automatic free-team tunnel provisioning and profiles
 missing this entitlement before re-signing. Entitlements must never be stripped
 to make this IPA appear successfully signed. App/extension IDs must match their
 individual profiles and signed provider configuration. The extension consumes

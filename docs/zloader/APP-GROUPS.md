@@ -20,8 +20,8 @@ the exact XML entitlement slot read by SideSign. Requests are:
 | Bundle | Capability request |
 | --- | --- |
 | zLoader | `group.com.zynthec.zLoader`, `packet-tunnel-provider` |
-| AltWidgetExtension | `group.com.zynthec.zLoader` |
-| ZLoaderTunnel | `packet-tunnel-provider` |
+| zLoaderWidget | `group.com.zynthec.zLoader` |
+| zLoaderTunnel | `packet-tunnel-provider` |
 
 This expresses requirements only. It grants no App Group or Network Extension
 authorization and does not make the IPA directly installable. The signer must

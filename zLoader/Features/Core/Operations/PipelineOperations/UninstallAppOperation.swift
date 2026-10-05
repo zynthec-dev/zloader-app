@@ -1,0 +1,53 @@
+//
+//  UninstallAppOperation.swift
+//  ZLoader
+//
+//  Created by Magesh K on 3/8/26.
+//  Copyright © 2026 SideStore. All rights reserved.
+//
+
+import Foundation
+import CoreData
+
+final class UninstallAppOperation: BasePipelineOperation<InstallAppOperationContext, InstalledApp>, @unchecked Sendable {
+    
+    override func execute(parentProgress: Progress?) async throws -> InstalledApp {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        debugLog("[UninstallAppOperation] execute() started")
+        defer {
+            let elapsed = CFAbsoluteTimeGetCurrent() - startTime
+            debugLog("[UninstallAppOperation] execute() took: \(String(format: "%.3fs", elapsed))")
+        }
+        try await super.executePreconditionCheck(parentProgress: parentProgress)
+        guard let installedApp = self.context.installedApp else {
+            throw OperationError.invalidParameters("UninstallAppOperation.main: self.context.installedApp is nil")
+        }
+        
+        
+        let bundleID = await installedApp.managedObjectContext?.performWithObject(installedApp) { installedApp in installedApp.bundleIdentifier }
+        if bundleID?.isZLoaderAppID == true {
+            throw OperationError.invalidParameters("zLoader cannot delete itself.")
+        }
+        
+        let resignedBundleIdentifier = await installedApp.managedObjectContext?.performWithObject(installedApp) { installedApp in
+            self.resignedBundleIdentifier(for: installedApp)
+        }
+        guard let resignedBundleIdentifier else {
+            throw OperationError.invalidParameters("UninstallAppOperation: installedApp.managedObjectContext is nil")
+        }
+        
+        // send uninstall payload to device
+        do {
+            try await removeApp(resignedBundleIdentifier)
+        } catch {
+            throw error
+        }
+        
+        self.setProgress(100)
+        return installedApp
+    }
+    
+    private func resignedBundleIdentifier(for installedApp: InstalledApp) -> String {
+        installedApp.resignedBundleIdentifier
+    }
+}

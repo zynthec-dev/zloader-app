@@ -3,87 +3,49 @@
 Maintained by [zynthec-dev](https://github.com/zynthec-dev) in
 [zLoader-ios](https://github.com/zynthec-dev/zLoader-ios).
 **Based on [SideStore](https://github.com/SideStore/SideStore)**, nightly `0dd743f7`.
+This is an independent clone with its own development and releases.
 
-zLoader embeds a local packet tunnel, removes cellular toggle shortcuts, and
-owns transport lifetime through signing, provisioning, install and refresh
-operation leases. Mint glass branding includes Light/Dark palettes and three
-alternative icons. Network Extension provisioning is mandatory for both app
-and provider; free-account self-signing of this integrated IPA is unsupported.
-Cellular-only operation is implemented experimentally and not verified on a
-physical iPhone. An unsigned build does not establish installability.
+zLoader installs and refreshes apps on-device. The embedded local packet tunnel
+is started when a device operation needs it and retained until its active
+operations finish. Cellular toggle Shortcuts and fixed transport-duration timers
+are removed. Mint Light/Dark styling and three alternative icons are included.
+Cellular-only installation and refresh remain experimental until tested on an iPhone.
 
-- [Transport investigation and constraints](docs/zloader/TRANSPORT.md)
-- [Build evidence and device acceptance](docs/zloader/VALIDATION.md)
-- [App Group startup failure and re-signing](docs/zloader/APP-GROUPS.md)
-- [Upstream and local build workflow](docs/zloader/UPSTREAM.md)
+The fixed, non-removable default source is
+[zynthec Apps](https://altsource.zynthec.com). zLoader self-updates use its own
+`com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
+
+## Build
+
+Requires macOS, Xcode and the pinned submodules:
 
 ```sh
 git submodule update --init --recursive
+sh zLoader/scripts/apply-dependency-patches.sh
 sh zLoader/scripts/test-transport.sh
 sh zLoader/scripts/test-app-groups.sh
+sh zLoader/scripts/test-context.sh
 sh zLoader/scripts/build-unsigned.sh
 ```
 
-For importing into SideStore, use `outputs/zLoader-resignable.ipa`. Its ad-hoc
-signature preserves App Group and Network Extension capability requests for
-the importer. It still requires real Apple provisioning and signing before
-installation. `zLoader-unsigned.ipa` is a separate unsigned review artifact;
-its missing Mach-O entitlements can prevent importers from provisioning App Groups.
+Open `zLoader.xcodeproj`, scheme `zLoader`. The dependency patch must also be
+applied before a direct Xcode build. It is tracked separately, idempotent and
+leaves the original dependency gitlinks intact.
 
-License: original SideStore AGPL-3.0 remains. LocalDevVPN/StosVPN license and
-attribution notices are bundled and shown in About. No signing or entitlement
-bypass is provided. Existing upstream automation is retained as source history;
-do not use it to publish the fork without adapting its destinations.
+For importing into SideStore, use `outputs/zLoader-resignable.ipa`. It contains
+ad-hoc signatures preserving capability requests for the importer. It still
+requires valid Apple provisioning and signing, including its widget and tunnel.
+The paid account must authorize App Groups and Network Extension for the relevant
+profiles. A paid membership alone does not establish that the signed IPA has
+these capabilities. Keep extensions when importing. The separate unsigned IPA
+is for inspection and does not establish device installability.
 
----
+- [Transport and iOS constraints](docs/zloader/TRANSPORT.md)
+- [Build validation and device acceptance](docs/zloader/VALIDATION.md)
+- [App Group startup and signing](docs/zloader/APP-GROUPS.md)
+- [Provenance and own release source](docs/zloader/PROVENANCE.md)
 
-The following is the original upstream README and describes SideStore, not
-verified zLoader release behavior.
-
-# SideStore
-
-> SideStore is an *untethered, community driven* alternative app store for non-jailbroken iOS devices 
-
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
-[![Nightly SideStore build](https://github.com/SideStore/SideStore/actions/workflows/nightly.yml/badge.svg)](https://github.com/SideStore/SideStore/actions/workflows/nightly.yml)
-[![.github/workflows/beta.yml](https://github.com/SideStore/SideStore/actions/workflows/beta.yml/badge.svg)](https://github.com/SideStore/SideStore/actions/workflows/beta.yml)
-[![Discord](https://img.shields.io/discord/949183273383395328?label=Discord)](https://dis.sidestore.io)
-
-![Alt](https://repobeats.axiom.co/api/embed/3a329ce95955690b9a9366f8d5598626a847d96c.svg "Repobeats analytics image")
-
-SideStore is an iOS application that allows you to sideload apps onto your iOS device with just your Apple ID. SideStore resigns apps with your personal development certificate, and then uses a [specially designed VPN](https://github.com/jkcoxson/em_proxy) in order to trick iOS into installing them. SideStore will periodically "refresh" your apps in the background, to keep their normal 7-day development period from expiring.
-
-SideStore's goal is to provide an untethered sideloading experience. It's a community driven fork of [AltStore](https://github.com/rileytestut/AltStore), and has already implemented some of the community's most-requested features.
-
-(Contributions are welcome! 🙂)
-
-## Requirements
-- Xcode 15
-- iOS 14+
-- Rustup (`brew install rustup`)
-
-Why iOS 14? Targeting such a recent version of iOS allows us to accelerate development, especially since not many developers have older devices to test on. This is corrobated by the fact that SwiftUI support is much better, allowing us to transistion to a more modern UI codebase.
-## Project Overview
-
-### SideStore
-SideStore is a just regular, sandboxed iOS application. The AltStore app target contains the vast majority of SideStore's functionality, including all the logic for downloading and updating apps through SideStore. SideStore makes heavy use of standard iOS frameworks and technologies most iOS developers are familiar with.
-
-### EM Proxy
-[EM Proxy](https://github.com/jkcoxson/em_proxy) powers the defining feature of SideStore: untethered app installation. By leveraging a custom-built App Store app with additional entitlements ([LocalDevVPN](https://github.com/jkcoxson/LocalDevVPN)) to create the VPN tunnel for us, it allows SideStore to take advantage of [Jitterbug](https://github.com/osy/Jitterbug)'s loopback method without requiring a paid developer account.
-
-### Minimuxer
-[Minimuxer](https://github.com/jkcoxson/minimuxer) is a lockdown muxer that can run inside iOS’s sandbox. It replicates Apple’s usbmuxd protocol on macOS to “discover” devices to interface with LocalDevVPN on-device.
-
-### Roxas
-[Roxas](https://github.com/rileytestut/roxas) is Riley Testut's internal framework from AltStore used across many of their iOS projects, developed to simplify a variety of common tasks used in iOS development.
-
-We're hoping to eventually eliminate our dependency on it, as it increases the amount of unnecessary Objective-C in the project.
-
-## Contributing/Compilation Instructions
-
-Please see [CONTRIBUTING.md](./CONTRIBUTING.md)
-
-## Licensing
-
-This project is licensed under the **AGPLv3 license**.
+License: [AGPL-3.0](LICENSE). Original copyrights and dependency licenses remain
+in source and About, including SideStore, AltStore and LocalDevVPN/StosVPN credits.
+Distribution must include access to the corresponding source. No entitlement
+or signing bypass is provided.

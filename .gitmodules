@@ -1,4 +1,4 @@
-#sidestore dependencies
+# Pinned third-party dependencies; original project URLs preserve provenance.
 
 [submodule "Dependencies/minimuxer"]
     path = Dependencies/minimuxer

@@ -29,8 +29,8 @@ app_groups_key = 'com.apple.security.application-groups'
 ne_key = 'com.apple.developer.networking.networkextension'
 expected = {
     app: {app_groups_key: [group], ne_key: ['packet-tunnel-provider']},
-    app / 'PlugIns/AltWidgetExtension.appex': {app_groups_key: [group]},
-    app / 'PlugIns/ZLoaderTunnel.appex': {ne_key: ['packet-tunnel-provider']},
+    app / 'PlugIns/zLoaderWidget.appex': {app_groups_key: [group]},
+    app / 'PlugIns/zLoaderTunnel.appex': {ne_key: ['packet-tunnel-provider']},
 }
 
 def sign(path, entitlements=None):

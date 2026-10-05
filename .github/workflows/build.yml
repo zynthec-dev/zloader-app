@@ -1,0 +1,24 @@
+name: Build zLoader artifact
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Validate local harnesses
+        run: |
+          sh zLoader/scripts/apply-dependency-patches.sh
+          sh zLoader/scripts/test-app-groups.sh
+          sh zLoader/scripts/test-context.sh
+          sh zLoader/scripts/test-transport.sh
+      - name: Build and package
+        run: sh zLoader/scripts/build-unsigned.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zLoader-IPAs
+          path: outputs/*.ipa

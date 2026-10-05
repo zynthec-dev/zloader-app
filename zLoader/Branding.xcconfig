@@ -1,4 +1,4 @@
-// Downstream identity; keep upstream target and source names stable.
+// zLoader product identity shared by all targets.
 PRODUCT_NAME = zLoader
 ORG_IDENTIFIER = com.zynthec
 BASE_BUNDLE_ID = $(ORG_IDENTIFIER).zLoader

@@ -31,23 +31,23 @@
 'GUI/UIKit':
   - changed-files:
     - any-glob-to-any-file:
-      - 'SideStore/Views/*'
-      - 'SideStore/Views/**/*'
-      - 'AltStore/App Detail/*.swift'
-      - 'AltStore/Browse/*.swift'
-      - 'AltStore/Authentication/*.swift'
-      - 'AltStore/My Apps/*.swift'
-      - 'AltStore/News/*.swift'
-      - 'AltStore/Settings/*.swift'
-      - 'AltStore/Sources/*.swift'
+      - 'zLoader/Features/Views/*'
+      - 'zLoader/Features/Views/**/*'
+      - 'zLoader/App/App Detail/*.swift'
+      - 'zLoader/App/Browse/*.swift'
+      - 'zLoader/App/Authentication/*.swift'
+      - 'zLoader/App/My Apps/*.swift'
+      - 'zLoader/App/News/*.swift'
+      - 'zLoader/App/Settings/*.swift'
+      - 'zLoader/App/Sources/*.swift'
 
 'Resources | Assets':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Resources/*'
-      - 'AltStore/Resources/**/*'
-      - 'AltStore/Base.lproj/*'
-      - 'AltStore/Base.lproj/**/*'
+      - 'zLoader/App/Resources/*'
+      - 'zLoader/App/Resources/**/*'
+      - 'zLoader/App/Base.lproj/*'
+      - 'zLoader/App/Base.lproj/**/*'
       - 'SideBackup/Assets.xcassets/*'
       - 'SideBackup/Assets.xcassets/**/*'
       - 'AltWidget/Assets.xcassets/*'
@@ -69,63 +69,63 @@
 'App Detail':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/App Detail/*'
-      - 'AltStore/App Detail/**/*'
+      - 'zLoader/App/App Detail/*'
+      - 'zLoader/App/App Detail/**/*'
 
 'App IDs':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/App IDs/*'
-      - 'AltStore/App IDs/**/*'
+      - 'zLoader/App/App IDs/*'
+      - 'zLoader/App/App IDs/**/*'
 
 'Authentication':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Authentication/*'
-      - 'AltStore/Authentication/**/*'
+      - 'zLoader/App/Authentication/*'
+      - 'zLoader/App/Authentication/**/*'
 
 'Browse':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Browse/*'
-      - 'AltStore/Browse/**/*'
+      - 'zLoader/App/Browse/*'
+      - 'zLoader/App/Browse/**/*'
 
 'Managing Apps':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Managing Apps/*'
-      - 'AltStore/Managing Apps/**/*'
+      - 'zLoader/App/Managing Apps/*'
+      - 'zLoader/App/Managing Apps/**/*'
 
 'My Apps':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/My Apps/*'
-      - 'AltStore/My Apps/**/*'
+      - 'zLoader/App/My Apps/*'
+      - 'zLoader/App/My Apps/**/*'
 
 'News':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/News/*'
-      - 'AltStore/News/**/*'
+      - 'zLoader/App/News/*'
+      - 'zLoader/App/News/**/*'
 
 'Settings':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Settings/*'
-      - 'AltStore/Settings/**/*'
+      - 'zLoader/App/Settings/*'
+      - 'zLoader/App/Settings/**/*'
 
 'Sources':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Sources/*'
-      - 'AltStore/Sources/**/*'
+      - 'zLoader/App/Sources/*'
+      - 'zLoader/App/Sources/**/*'
 
 # Core Components
 'Core':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStoreCore/*'
-      - 'AltStoreCore/**/*'
+      - 'zLoaderCore/*'
+      - 'zLoaderCore/**/*'
 
 'Shared':
   - changed-files:
@@ -133,36 +133,36 @@
       - 'Shared/*'
       - 'Shared/**/*'
 
-'SideStore':
+'zLoader':
   - changed-files:
     - any-glob-to-any-file:
-      - 'SideStore/*'
-      - 'SideStore/**/*'
+      - 'zLoader/Features/*'
+      - 'zLoader/Features/**/*'
 
 # Other Core Components
 'Operations':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Operations/*'
-      - 'AltStore/Operations/**/*'
+      - 'zLoader/App/Operations/*'
+      - 'zLoader/App/Operations/**/*'
 
 'Intents':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Intents/*'
-      - 'AltStore/Intents/**/*'
+      - 'zLoader/App/Intents/*'
+      - 'zLoader/App/Intents/**/*'
 
 'Permissions':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/Permissions/*'
-      - 'AltStore/Permissions/**/*'
+      - 'zLoader/App/Permissions/*'
+      - 'zLoader/App/Permissions/**/*'
 
 'App Lifecycle':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltStore/AppDelegate.swift'
-      - 'AltStore/SceneDelegate.swift'
-      - 'AltStore/TabBarController.swift'
-      - 'AltStore/LaunchViewController.swift'
-      - 'AltStore/AppConstants.swift'
+      - 'zLoader/App/AppDelegate.swift'
+      - 'zLoader/App/SceneDelegate.swift'
+      - 'zLoader/App/TabBarController.swift'
+      - 'zLoader/App/LaunchViewController.swift'
+      - 'zLoader/App/AppConstants.swift'

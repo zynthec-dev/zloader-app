@@ -1,0 +1,6 @@
+#include "../Build.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = $(MAIN_BUNDLE_IDENTIFIER).Widget
+CODE_SIGN_ENTITLEMENTS = zLoader/Widget/zLoaderWidget.entitlements
+
+#include? "../local.xcconfig"
