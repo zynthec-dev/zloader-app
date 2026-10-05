@@ -31,9 +31,9 @@ final class EmbeddedTunnel {
         if selected.connection.status == .connected { return }
         let config = NETunnelProviderProtocol()
         config.providerBundleIdentifier = providerID
-        config.serverAddress = "ZLoader local device tunnel"
+        config.serverAddress = "zLoader local device tunnel"
         selected.protocolConfiguration = config
-        selected.localizedDescription = "ZLoader"
+        selected.localizedDescription = "zLoader"
         selected.isEnabled = true
         selected.isOnDemandEnabled = false
         try await selected.saveToPreferences()
@@ -42,12 +42,13 @@ final class EmbeddedTunnel {
         let statuses = statusChanges(selected.connection)
         startedHere = true
         try selected.connection.startVPNTunnel()
-        for await _ in statuses {
+        if selected.connection.status == .connected { return }
+        for await status in statuses {
             try Task.checkCancellation()
-            switch selected.connection.status {
+            switch status {
             case .connected: return
             case .disconnected, .invalid:
-                throw OperationError.invalidVPN(reason: "The embedded tunnel could not connect. Check the Network Extension entitlement and provisioning profiles for both ZLoader and ZLoaderTunnel.")
+                throw OperationError.invalidVPN(reason: "The embedded tunnel could not connect. Check the Network Extension entitlement and provisioning profiles for both zLoader and ZLoaderTunnel.")
             default: continue
             }
         }
@@ -59,17 +60,17 @@ final class EmbeddedTunnel {
         startedHere = false
         let statuses = statusChanges(manager.connection)
         manager.connection.stopVPNTunnel()
-        for await _ in statuses {
-            if manager.connection.status == .disconnected || manager.connection.status == .invalid { return }
+        if manager.connection.status == .disconnected || manager.connection.status == .invalid { return }
+        for await status in statuses {
+            if status == .disconnected || status == .invalid { return }
         }
     }
 
-    private func statusChanges(_ connection: NEVPNConnection) -> AsyncStream<Void> {
+    private func statusChanges(_ connection: NEVPNConnection) -> AsyncStream<NEVPNStatus> {
         AsyncStream { continuation in
             let token = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: connection, queue: .main) { _ in
-                continuation.yield(())
+                continuation.yield(connection.status)
             }
-            continuation.yield(())
             continuation.onTermination = { _ in NotificationCenter.default.removeObserver(token) }
         }
     }
