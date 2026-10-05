@@ -123,7 +123,8 @@ final class SettingsViewController: UITableViewController
     private var accountStatus: AccountVerificationRow.Status = .completed
     private var accountVerificationTask: Task<Void, Never>?
     
-    private var prototypeHeaderFooterView: SettingsHeaderFooterView!
+    // UIKit may ask for section heights while viewDidLoad is still configuring the table.
+    private let prototypeHeaderFooterView = SettingsHeaderFooterView(reuseIdentifier: nil)
     
     // Add outlet
     @IBOutlet private var betaTrackLabel: UILabel!
@@ -221,6 +222,7 @@ final class SettingsViewController: UITableViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        tableView.register(SettingsHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: "HeaderFooterView")
         configureVersionFooter()
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             title: "Pairing", style: .plain, target: self, action: #selector(openPairingFiles)
@@ -237,11 +239,6 @@ final class SettingsViewController: UITableViewController
             navigationController?.navigationBar.scrollEdgeAppearance = appearance       // required for iOS 26, maybe enforce it in storyboard?
         }
         #endif 
-        let nib = UINib(nibName: "SettingsHeaderFooterView", bundle: nil)
-        self.prototypeHeaderFooterView = nib.instantiate(withOwner: nil, options: nil)[0] as? SettingsHeaderFooterView
-        
-        self.tableView.register(nib, forHeaderFooterViewReuseIdentifier: "HeaderFooterView")
-        
         let debugModeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(SettingsViewController.handleDebugModeGesture(_:)))
         debugModeGestureRecognizer.delegate = self
         debugModeGestureRecognizer.direction = .up
@@ -1067,7 +1064,8 @@ extension SettingsViewController
         case .signIn where self.activeTeam != nil: return nil
         case .account where self.activeTeam == nil: return nil
         case .signIn, .account, .patreon, .display, .appRefresh, .techyThings, .credits, .advancedSettings, .betaTesting, .diagnostics /* ,.macDirtyCow */:
-            let headerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "HeaderFooterView") as! SettingsHeaderFooterView
+            let headerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "HeaderFooterView") as? SettingsHeaderFooterView
+                ?? SettingsHeaderFooterView(reuseIdentifier: "HeaderFooterView")
             self.prepare(headerView, for: section, isHeader: true)
             return headerView
             
@@ -1084,7 +1082,8 @@ extension SettingsViewController
         case .signIn where self.activeTeam != nil: return nil
         // case .signIn, .patreon, .display, .appRefresh, .techyThings, .macDirtyCow:
         case .signIn, .patreon, .display, .appRefresh, .techyThings, .betaTesting:
-            let footerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "HeaderFooterView") as! SettingsHeaderFooterView
+            let footerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "HeaderFooterView") as? SettingsHeaderFooterView
+                ?? SettingsHeaderFooterView(reuseIdentifier: "HeaderFooterView")
             self.prepare(footerView, for: section, isHeader: false)
             return footerView
             

@@ -17,10 +17,42 @@ final class SettingsHeaderFooterView: UITableViewHeaderFooterView
         
     @IBOutlet private var stackView: UIStackView!
     
+    override init(reuseIdentifier: String?)
+    {
+        super.init(reuseIdentifier: reuseIdentifier)
+
+        primaryLabel = UILabel()
+        secondaryLabel = UILabel()
+        button = UIButton(type: .system)
+        primaryLabel.font = UIFont.systemFont(ofSize: 14)
+        primaryLabel.textColor = .secondaryLabel
+        primaryLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+        secondaryLabel.font = UIFont.systemFont(ofSize: 14)
+        secondaryLabel.textColor = .secondaryLabel
+        secondaryLabel.numberOfLines = 0
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 14)
+
+        let titleRow = UIStackView(arrangedSubviews: [primaryLabel, button])
+        titleRow.distribution = .equalSpacing
+        stackView = UIStackView(arrangedSubviews: [titleRow, secondaryLabel])
+        stackView.axis = .vertical
+        layoutMargins = UIEdgeInsets(top: 8, left: 30, bottom: 8, right: 30)
+        configureLayout()
+    }
+
+    required init?(coder: NSCoder)
+    {
+        super.init(coder: coder)
+    }
+
     override func awakeFromNib()
     {
         super.awakeFromNib()
-        
+        configureLayout()
+    }
+
+    private func configureLayout()
+    {
         self.contentView.layoutMargins = .zero
         self.contentView.preservesSuperviewLayoutMargins = true
         

@@ -103,3 +103,24 @@ The iLoader package contains local ad-hoc metadata for re-signing; it is not a
 real Apple-signed IPA. No simulator was booted, no runtime UI session was run,
 and no iOS 27.0.1 crash report or physical-device pairing was available. See
 [ONBOARDING-PAIRING.md](ONBOARDING-PAIRING.md) for implementation and device checks.
+
+## Settings header initialization follow-up: 0.7.3 (0703)
+
+The user supplied a physical-device Xcode screenshot identifying a nil measurement
+prototype at SettingsViewController.heightForHeaderInSection. See
+[ONBOARDING-PAIRING.md](ONBOARDING-PAIRING.md) for the initialization-order fix.
+
+- Final iOS arm64 Release build: PASS, zero warnings/errors,
+  `/tmp/zloader-settings-header-device.log`.
+- Final arm64 Simulator Debug build: PASS, zero warnings/errors,
+  `/tmp/zloader-settings-header-simulator.log`.
+- Settings XML regression and all three local harnesses: PASS again.
+- IPA packaging: PASS ZIP integrity, nested ad-hoc seals, capability/XML slots;
+  version/build inspected as 0.7.3/0703.
+- `outputs/zLoader-0.7.3-iLoader.ipa` SHA-256:
+  `d857a703fee34913dc5c0b88eca3ddf5b22bf95845a5882f3cce6df4e8f82de6`.
+- `outputs/zLoader-0.7.3-unsigned.ipa` SHA-256:
+  `4e10be36147953a1f8ca5fe8fae3d2608067ff3eceeecb86b2301eb8dfebe8c0`.
+
+No booted simulator was available and no updated physical-device Settings run
+was performed here. Apple signing and on-device pairing limits remain unchanged.

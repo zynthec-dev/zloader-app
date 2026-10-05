@@ -42,3 +42,24 @@ successful build does not establish that the physical crash is resolved.
 The iLoader-signed host/provider must have Apple-authorized Network Extension
 entitlements and matching profiles. The IPA declarations alone cannot grant this.
 No pairing protocol, entitlement check or Apple signing restriction is bypassed.
+
+## Confirmed Settings initialization crash: 0.7.3
+
+The supplied Xcode screenshot shows `Unexpectedly found nil while implicitly
+unwrapping an Optional value` in `heightForHeaderInSection`, passing
+`prototypeHeaderFooterView` to `preferredHeight`. In 0.7.2, assigning the version
+footer precedes creation of that implicitly unwrapped prototype. Table setup can
+reenter the section-height delegate while the prototype is still nil. The earlier
+resource-wiring fixes did not address this initialization path.
+
+0.7.3 constructs a nonoptional measurement header when the controller is created.
+Settings registers the programmatic header class before configuring its footer.
+The header initializer builds all labels, button, stack and constraints; dequeue
+uses a typed cast with a fully initialized fallback. Existing XIB compatibility
+is retained for the view class. Both header and footer measurements therefore
+use an initialized view independent of the controller's view-loading order.
+
+Restart the paused Xcode run with the new code, open Settings both signed out
+and signed in, scroll all sections, and verify the Pairing button. This runtime
+check on the reported iPhone remains outstanding; the screenshot identifies the
+fault but is not evidence that the updated binary has run successfully.
