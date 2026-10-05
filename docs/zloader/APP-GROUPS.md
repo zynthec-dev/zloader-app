@@ -54,3 +54,11 @@ to retain/provision them or replaced with a capability-aware signing workflow.
 Device acceptance remains: inspect final host/widget entitlements and profiles,
 launch on the iPhone, complete onboarding and confirm shared database/widget access.
 Transport/VPN acceptance is a separate check after container access is restored.
+
+## Current installer: iLoader
+
+The user now installs through iLoader. Its verified generic signing path registers
+App Groups itself and uses downloaded profile entitlements. The fully unsigned
+IPA limitation above specifically describes SideSign-based imports and should not
+be assumed to explain iLoader behavior. See [ILOADER.md](ILOADER.md) for the exact
+version audited, embedded capability metadata and Network Extension restriction.

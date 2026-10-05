@@ -32,7 +32,9 @@ Open `zLoader.xcodeproj`, scheme `zLoader`. The dependency patch must also be
 applied before a direct Xcode build. It is tracked separately, idempotent and
 leaves the original dependency gitlinks intact.
 
-For importing into SideStore, use `outputs/zLoader-resignable.ipa`. It contains
+For installing through iLoader, use `outputs/zLoader-iLoader.ipa` and read
+[the verified iLoader signing limitations](docs/zloader/ILOADER.md).
+For importing into SideStore, `outputs/zLoader-resignable.ipa` has the same metadata. It contains
 ad-hoc signatures preserving capability requests for the importer. It still
 requires valid Apple provisioning and signing, including its widget and tunnel.
 The paid account must authorize App Groups and Network Extension for the relevant

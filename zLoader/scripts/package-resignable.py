@@ -1,4 +1,4 @@
-"""Preserve capability requests for SideStore import, without Apple authorization.
+"""Preserve capability requests for iLoader / SideStore re-signing.
 
 Ad-hoc signatures describe required entitlements; they do not grant iOS App
 Groups or Network Extension access. A real signer must provision and sign both
@@ -27,11 +27,21 @@ assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
 group = 'group.' + info['CFBundleIdentifier']
 app_groups_key = 'com.apple.security.application-groups'
 ne_key = 'com.apple.developer.networking.networkextension'
+def requested_entitlements(relative_path):
+    raw = (root / relative_path).read_text().replace('$(APP_GROUP_IDENTIFIER)', info['CFBundleIdentifier'])
+    result = plistlib.loads(raw.encode('utf-8'))
+    assert '$(' not in str(result), 'Unexpanded entitlement build setting'
+    return result
+
 expected = {
-    app: {app_groups_key: [group], ne_key: ['packet-tunnel-provider']},
-    app / 'PlugIns/zLoaderWidget.appex': {app_groups_key: [group]},
-    app / 'PlugIns/zLoaderTunnel.appex': {ne_key: ['packet-tunnel-provider']},
+    app: requested_entitlements('zLoader/Host.entitlements'),
+    app / 'PlugIns/zLoaderWidget.appex': requested_entitlements('zLoader/Widget/zLoaderWidget.entitlements'),
+    app / 'PlugIns/zLoaderTunnel.appex': requested_entitlements('zLoader/Tunnel/zLoaderTunnel.entitlements'),
 }
+assert expected[app][app_groups_key] == [group]
+assert expected[app / 'PlugIns/zLoaderWidget.appex'][app_groups_key] == [group]
+for bundle in [app, app / 'PlugIns/zLoaderTunnel.appex']:
+    assert expected[bundle][ne_key] == ['packet-tunnel-provider']
 
 def sign(path, entitlements=None):
     args = ['codesign', '--force', '--sign', '-', '--timestamp=none']
@@ -92,9 +102,16 @@ manifest = {
     'artifact': ipa.name,
     'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
     'appGroup': group,
+    'capabilitiesByBundle': {str(path.relative_to(staging / 'Payload')): requirements for path, requirements in expected.items()},
     'signing': 'ad-hoc capability metadata only; not authorized or directly installable on iOS',
     'required': 'Real Apple provisioning and signing for App Groups (host/widget) and Network Extension (host/tunnel)',
 }
 (out / 'zLoader-resignable.json').write_text(json.dumps(manifest, indent=2) + '\n')
+# No Apple signing identity is used. iLoader replaces these local metadata
+# signatures with signatures and entitlements from its downloaded profiles.
+iloader_ipa = out / 'zLoader-iLoader.ipa'
+shutil.copy2(ipa, iloader_ipa)
+iloader_manifest = {**manifest, 'artifact': iloader_ipa.name}
+(out / 'zLoader-iLoader.json').write_text(json.dumps(iloader_manifest, indent=2) + '\n')
 shutil.rmtree(staging)
-print(json.dumps(manifest, indent=2))
+print(json.dumps(iloader_manifest, indent=2))

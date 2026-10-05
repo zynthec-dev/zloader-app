@@ -35,9 +35,9 @@ App-Group changes can still result in a different iOS data container.
 ## Artifacts
 
 - `outputs/zLoader-resignable.ipa`:
-  SHA-256 `f6d7dd20b5544a2d7a086eb7b7f67e09944765006aa7443b350f5dc60bd0ec9a`.
+  SHA-256 `6ca6173ec2b32be512ac646e1a785577602122737aa93d6af6ab2657b062e50f`.
 - `outputs/zLoader-0.7.1.ipa` / `zLoader-unsigned.ipa` (requested release format):
-  SHA-256 `395a39818e16313cee6857cc3cf2e65797f6e9b002b255ddfd57f018e0f65fcf`.
+  SHA-256 `d95402e528f64989b81d4b771238e62fe11932593f53dff39d7d1aa2faafe0fe`.
 
 The resignable artifact uses local ad-hoc signatures to preserve capability
 requests for SideStore import. It is not Apple-authorized or directly installable.
@@ -68,3 +68,14 @@ See [TRANSPORT.md](TRANSPORT.md) and [APP-GROUPS.md](APP-GROUPS.md).
 User-selected distribution format is the fully unsigned IPA. This format lacks
 Mach-O signing entitlements; SideStore import may omit App Group provisioning and
 reproduce the reported container error. This limitation remains explicit.
+
+## iLoader package follow-up
+
+Latest installer is iLoader. Release build and all three local harnesses passed
+again; `/tmp/zloader-iloader-build.log` has zero warnings/errors.
+`outputs/zLoader-iLoader.ipa` contains host/widget App Groups and host/provider
+Network Extension declarations with checked XML Mach-O slots and nested seals.
+It matches the resignable artifact hash above. The signed-result checker correctly
+rejects this ad-hoc artifact at the Apple-anchor check. A positive check against
+a real iLoader-signed IPA has not been possible; no profile/account was supplied.
+See [ILOADER.md](ILOADER.md) for verified upstream signer limitations.
