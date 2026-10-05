@@ -1,5 +1,5 @@
 //
-//  AltWidgetBundle.swift
+//  ZLoaderWidgetBundle.swift
 //  ZLoaderWidget
 //
 //  Created by Riley Testut on 8/22/23.
@@ -10,7 +10,7 @@ import SwiftUI
 import WidgetKit
 
 @main
-struct AltWidgetBundle: WidgetBundle
+struct ZLoaderWidgetBundle: WidgetBundle
 {
     var body: some Widget {
         AppDetailWidget()

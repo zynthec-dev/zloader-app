@@ -48,23 +48,23 @@
       - 'zLoader/App/Resources/**/*'
       - 'zLoader/App/Base.lproj/*'
       - 'zLoader/App/Base.lproj/**/*'
-      - 'SideBackup/Assets.xcassets/*'
-      - 'SideBackup/Assets.xcassets/**/*'
-      - 'AltWidget/Assets.xcassets/*'
-      - 'AltWidget/Assets.xcassets/**/*'
+      - 'zLoader/Backup/Assets.xcassets/*'
+      - 'zLoader/Backup/Assets.xcassets/**/*'
+      - 'zLoader/Widget/Assets.xcassets/*'
+      - 'zLoader/Widget/Assets.xcassets/**/*'
 
 # Tools / Features
 'Backup':
   - changed-files:
     - any-glob-to-any-file:
-      - 'SideBackup/*'
-      - 'SideBackup/**/*'
+      - 'zLoader/Backup/*'
+      - 'zLoader/Backup/**/*'
 
 'Widget':
   - changed-files:
     - any-glob-to-any-file:
-      - 'AltWidget/*'
-      - 'AltWidget/**/*'
+      - 'zLoader/Widget/*'
+      - 'zLoader/Widget/**/*'
 
 'App Detail':
   - changed-files:

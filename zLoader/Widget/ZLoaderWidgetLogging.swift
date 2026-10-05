@@ -1,13 +1,13 @@
 //
-//  AltWidgetLogging.swift
-//  AltWidget
+//  ZLoaderWidgetLogging.swift
+//  ZLoaderWidget
 //
 //  Created by Magesh K on 8/7/26.
 //  Copyright © 2026 SideStore. All rights reserved.
 //
 import Foundation
 
-internal enum AltWidgetLogging {
+internal enum ZLoaderWidgetLogging {
     private static let lock = NSLock()
     internal private(set) static var isLoggingEnabled = true
     private static var hasWrittenBootHeader = false
@@ -101,24 +101,24 @@ internal func debugLog(_ text: @autoclosure () -> String) {
     let message = text()
     if !message.isEmpty && message.allSatisfy({ $0 == "\n" || $0 == "\r" }) {
         print(message, terminator: "")
-        AltWidgetLogging.logToFile(message)
+        ZLoaderWidgetLogging.logToFile(message)
     } else {
         let formatted = "\(getTag(level: "[D]"))\(message)"
         print(formatted)
-        AltWidgetLogging.logToFile(formatted)
+        ZLoaderWidgetLogging.logToFile(formatted)
     }
 }
 
 internal func verboseLog(_ text: @autoclosure () -> String) {
-    if AltWidgetLogging.isLoggingEnabled && AltWidgetLogging.isVerboseLoggingEnabled {
+    if ZLoaderWidgetLogging.isLoggingEnabled && ZLoaderWidgetLogging.isVerboseLoggingEnabled {
         let message = text()
         if !message.isEmpty && message.allSatisfy({ $0 == "\n" || $0 == "\r" }) {
             print(message, terminator: "")
-            AltWidgetLogging.logToFile(message)
+            ZLoaderWidgetLogging.logToFile(message)
         } else {
             let formatted = "\(getTag(level: "[V]"))\(message)"
             print(formatted)
-            AltWidgetLogging.logToFile(formatted)
+            ZLoaderWidgetLogging.logToFile(formatted)
         }
     }
 }

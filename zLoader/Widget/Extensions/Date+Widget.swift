@@ -1,6 +1,6 @@
 //
 //  Date+Widget.swift
-//  AltWidget
+//  ZLoaderWidget
 //
 //  Created by Magesh K on 8/13/26.
 //  Copyright © 2026 SideStore. All rights reserved.

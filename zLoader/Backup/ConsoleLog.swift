@@ -56,7 +56,7 @@ final class ConsoleLog: Sendable {
         }
     }
 
-    private let logger = Logger(subsystem: "io.sidestore.SideBackup", category: "General")
+    private let logger = Logger(subsystem: "com.zynthec.zLoader.Backup", category: "General")
     private let logFileURL: URL
 
     private init() throws {

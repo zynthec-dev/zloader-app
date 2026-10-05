@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>application-identifier</key>
-	<string>XYZ0123456.com.zLoader.zLoader.AltWidget</string>
+	<string>XYZ0123456.com.zynthec.zLoader.Widget</string>
 	<key>com.apple.developer.team-identifier</key>
 	<string>XYZ0123456</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.zLoader.zLoader</string>
+		<string>group.com.zynthec.zLoader</string>
 	</array>
 	<key>get-task-allow</key>
 	<true/>

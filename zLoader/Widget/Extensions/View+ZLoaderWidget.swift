@@ -1,5 +1,5 @@
 //
-//  View+AltWidget.swift
+//  View+ZLoaderWidget.swift
 //  ZLoader
 //
 //  Created by Riley Testut on 8/18/23.

@@ -176,7 +176,7 @@
 	</array>
 	<key>OSLogPreferences</key>
 	<dict>
-		<key>com.zLoader.zLoader</key>
+		<key>com.zynthec.zLoader</key>
 		<dict>
 			<key>AltJIT</key>
 			<dict>
