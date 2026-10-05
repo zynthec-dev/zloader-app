@@ -168,3 +168,25 @@ original Apple profile for host, Widget, Tunnel and embedded Backup. Nested seal
 ZIP integrity and exact XML entitlement-slot import checks pass. Artifact/hash and
 re-signing limits: [APPLE-SIGNED.md](APPLE-SIGNED.md). No app source changed, so no
 new Xcode compilation was required for this packaging-only change.
+
+## Pairing host branding: 0.7.6 (0706), 2026-10-06
+
+Client and server pairing now explicitly use the zLoader host name instead of
+Minimuxer's SideStore default. See [ONBOARDING-PAIRING.md](ONBOARDING-PAIRING.md).
+
+- Standard arm64 Release build: PASS, zero warnings/errors,
+  `/tmp/zloader-pairing-brand-device.log`.
+- Apple-signed Xcode-identity Release build: PASS, zero warnings/errors,
+  `.build/apple-signed-build.log`.
+- arm64 Simulator Debug build: PASS, zero warnings/errors,
+  `/tmp/zloader-pairing-brand-simulator.log`.
+- All existing local harnesses: PASS again.
+- Complete Apple-signed and resignable packaging: PASS all extensions, Backup,
+  profile preservation, entitlement comparison, XML import slots and ZIP integrity.
+- Resignable IPA: `outputs/zLoader-0.7.6-resignable.ipa`, SHA-256
+  `426e2030bfd09bde058698307f872856dc5989aee5625f41c06f030b5e22e55a`.
+- Apple-signed IPA: `outputs/zLoader-0.7.6-Apple-signed.ipa`, SHA-256
+  `a52e3b36cf158e1a329179ab35ad7eed0c23c7a970f8d699910b22df2386fd72`.
+
+New visible pairing name on the physical target, installation and self-refresh
+remain unverified here. Existing pairing records are retained.

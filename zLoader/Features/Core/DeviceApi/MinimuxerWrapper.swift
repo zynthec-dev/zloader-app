@@ -561,7 +561,12 @@ public final class WirelessPairWrapper {
     ) {
         debugLog("[WirelessPairWrapper] start(outPath: '\(outPath)')")
         #if !targetEnvironment(simulator)
-        minimuxer.wirelessPair.start(outPath: outPath, resolveFileName: resolveFileName) { result in
+        minimuxer.wirelessPair.start(
+            hostName: AppConstants.Minimuxer.defaultHostName,
+            hostModel: AppConstants.Minimuxer.defaultHostModel,
+            outPath: outPath,
+            resolveFileName: resolveFileName
+        ) { result in
             debugLog("[WirelessPairWrapper] start callback received: result=\(result)")
             switch result {
             case .success(let device):

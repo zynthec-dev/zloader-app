@@ -150,7 +150,7 @@ public enum AppConstants {
         public static let defaultTCPProbeTimeoutMs              = MinimuxerConstants.defaultTCPProbeTimeoutMs
         public static let empServerHost                         = MinimuxerConstants.empServerHost
         public static let empServerPort                         = MinimuxerConstants.empServerPort
-        public static let defaultHostName                       = MinimuxerConstants.defaultHostName
+        public static let defaultHostName                       = "zLoader"
         public static let defaultHostModel                      = MinimuxerConstants.defaultHostModel
         public static let remotePairingDaemonServiceType        = MinimuxerConstants.remotePairingDaemonServiceType
         public static let remotePairingPairableHostServiceType  = MinimuxerConstants.remotePairingPairableHostServiceType

@@ -102,3 +102,12 @@ these; this package cannot force their behavior.
 SHA-256:
 `138cf2b0142e30ddae10de89285e1213638746277d259e57a676f170da192750`.
 No physical installation or in-app refresh of this variant was run.
+
+## Updated pairing branding: 0.7.6
+
+The 0.7.6 Apple-signed and complete resignable variants carry the corrected client
+and server host name. Their Xcode identities, all extensions, embedded Backup,
+profiles and complete entitlements remain preserved. Use the versioned 0.7.6
+outputs for new pairing attempts; the generic resignable/iLoader aliases also
+point to the new complete resignable output. Hashes and build evidence are in
+[VALIDATION.md](VALIDATION.md). No physical pairing session was performed here.

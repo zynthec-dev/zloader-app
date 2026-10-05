@@ -63,3 +63,19 @@ Restart the paused Xcode run with the new code, open Settings both signed out
 and signed in, scroll all sections, and verify the Pairing button. This runtime
 check on the reported iPhone remains outstanding; the screenshot identifies the
 fault but is not evidence that the updated binary has run successfully.
+
+## Pairing identity: 0.7.6
+
+Wireless pairing previously inherited Minimuxer's `SideStore` default host name.
+The client wrapper used that dependency default through AppConstants; the server
+wrapper called the convenience overload that supplied the same default directly.
+
+AppConstants now defines the application host name as `zLoader`, and the server
+wrapper explicitly passes this name to Minimuxer. Client and server pairing
+therefore both request the zLoader identity. The technical host-model identifier
+is retained for protocol compatibility. Dependency gitlinks and original license
+credits are unchanged. Existing pairing records are not rewritten or deleted.
+
+Start a new pairing session with the updated app and confirm the target's pairing
+prompt/discovery label. Source forwarding and compilation are verified here; the
+new visible name on the physical target still requires a real pairing check.
