@@ -52,6 +52,26 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         if let overrideProfile = self.context.overrideProvisioningProfile {
             self.debugLog("[FetchProvisioningProfiles] Using override provisioning profile '\(overrideProfile.name)' (\(overrideProfile.uuid)) for \(effectiveBundleId)")
             var profiles = [effectiveBundleId: overrideProfile]
+            if requiresTunnel {
+                let team = try await AuthManager.shared.getAuthenticatedTeam()
+                guard overrideProfile.bundleIdentifier == effectiveBundleId,
+                      let validated = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: nil,
+                                                                  bundleID: effectiveBundleId, team: team),
+                      validated.uuid == overrideProfile.uuid else {
+                    throw OperationError.invalidParameters("The selected zLoader profile must match the app identifier, signing certificate, team, device and required capabilities. Import matching profiles for the host and each extension separately.")
+                }
+                for appExtension in appExtensions {
+                    guard let identifier = PacketTunnelProvisioning.extensionBundleIdentifier(
+                        appExtension.bundleIdentifier, parent: targetAppBundle.bundleIdentifier, resolvedParent: effectiveBundleId
+                    ), let profile = await reusableEmbeddedProfile(for: appExtension, parentAppBundle: targetAppBundle,
+                                                                  bundleID: identifier, team: team) else {
+                        throw OperationError.invalidParameters("No compatible profile for extension \(appExtension.bundleIdentifier). A host profile cannot be used for its extensions. Import that extension's profile and the matching signing certificate with private key.")
+                    }
+                    profiles[identifier] = profile
+                }
+                self.setProgress(100)
+                return profiles
+            }
             if !self.context.useMainProfile, !appExtensions.isEmpty {
                 for appExtension in appExtensions {
                     let updatedExtensionBundleId = appExtension.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: effectiveBundleId)
@@ -86,7 +106,7 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             for appExtension in appExtensions {
                 group.addTask {
                     self.verboseLog("[FetchProvisioningProfiles] Preparing extension profile for \(appExtension.bundleIdentifier)...")
-                    let extProfile = try await self.provisionAndFetchProfile(for: appExtension, parentAppBundle: targetAppBundle, team: team)
+                    let extProfile = try await self.provisionAndFetchProfile(for: appExtension, parentAppBundle: targetAppBundle, team: team, resolvedParentID: profile.bundleIdentifier)
                     // Use customized bundle ID if applicable
                     let updatedExtensionBundleId = appExtension.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: effectiveBundleId)
                     self.verboseLog("[FetchProvisioningProfiles] Extension profile prepared for \(updatedExtensionBundleId)")
@@ -157,9 +177,11 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
     
     private func provisionAndFetchProfile(for targetAppBundle: ALTApplication,
                                           parentAppBundle: ALTApplication?,
-                                          team: ALTTeam) async throws -> ALTProvisioningProfile {
+                                          team: ALTTeam, resolvedParentID: String? = nil) async throws -> ALTProvisioningProfile {
         let parentID: String
-        if let preferredBundleID = await self.getPreferredBundleID(for: targetAppBundle, team: team) {
+        if let resolvedParentID {
+            parentID = resolvedParentID
+        } else if let preferredBundleID = await self.getPreferredBundleID(for: targetAppBundle, team: team) {
             parentID = preferredBundleID
         } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
                   let profile = targetAppBundle.provisioningProfile,
@@ -177,11 +199,12 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
 
         let bundleID: String
         if let parentAppBundle = parentAppBundle {
-            guard targetAppBundle.bundleIdentifier.hasPrefix(parentAppBundle.bundleIdentifier + ".") else {
+            guard let resolvedExtensionID = PacketTunnelProvisioning.extensionBundleIdentifier(
+                targetAppBundle.bundleIdentifier, parent: parentAppBundle.bundleIdentifier, resolvedParent: parentID
+            ) else {
                 throw OperationError.invalidApp(reason: "Extension bundle ID '\(targetAppBundle.bundleIdentifier)' does not start with parent bundle ID '\(parentAppBundle.bundleIdentifier)'.")
             }
-            let suffix = String(targetAppBundle.bundleIdentifier.dropFirst(parentAppBundle.bundleIdentifier.count))
-            bundleID = parentID + suffix
+            bundleID = resolvedExtensionID
             self.debugLog("[FetchProvisioningProfiles] Extension bundleID with suffix: \(bundleID)")
         } else {
             bundleID = parentID
@@ -269,6 +292,14 @@ private extension FetchProvisioningProfilesOperation{
               let validUntil = certificate.certificate.notAfter, validUntil > Date() else { return nil }
 
         var candidates = [app.provisioningProfile].compactMap { $0 }
+        if parentAppBundle == nil, let overrideProfile = context.overrideProvisioningProfile {
+            candidates = [overrideProfile]
+        }
+        // Each extension needs its own profile. Imported profiles are candidates,
+        // never blanket overrides; the same strict authorization checks apply.
+        if parentAppBundle != nil || context.overrideProvisioningProfile == nil {
+            candidates.append(contentsOf: ProfileManager.shared.getAllLocalProfiles())
+        }
         // An unsigned update may omit profiles; the running installation can supply its own.
         if let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
             let current = ([running] + running.appExtensions).first { $0.bundleIdentifier == bundleID }

@@ -6,6 +6,11 @@ enum PacketTunnelProvisioning {
     static let provider = "packet-tunnel-provider"
     static let extensionPoint = "com.apple.networkextension.packet-tunnel"
 
+    static func extensionBundleIdentifier(_ child: String, parent: String, resolvedParent: String) -> String? {
+        guard child.hasPrefix(parent + ".") else { return nil }
+        return resolvedParent + child.dropFirst(parent.count)
+    }
+
     static func isProvider(_ infoPlist: [String: Any]) -> Bool {
         (infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String == extensionPoint
     }

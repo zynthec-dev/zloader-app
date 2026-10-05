@@ -3,6 +3,10 @@ import Foundation
 @main
 struct EmbeddedProfileReuseTests {
     static func main() {
+        precondition(PacketTunnelProvisioning.extensionBundleIdentifier("example.app.tunnel", parent: "example.app", resolvedParent: "example.app") == "example.app.tunnel")
+        precondition(PacketTunnelProvisioning.extensionBundleIdentifier("example.app.tunnel", parent: "example.app", resolvedParent: "example.app.TEAM") == "example.app.TEAM.tunnel")
+        precondition(PacketTunnelProvisioning.extensionBundleIdentifier("example.application.tunnel", parent: "example.app", resolvedParent: "example.app.TEAM") == nil)
+        print("PASS extension identities follow the resolved host; prefix collisions rejected")
         let now = Date(timeIntervalSince1970: 1000)
         let original = Data([1, 2, 3]) // Synthetic certificate bytes, not an Apple certificate.
         let values: [String: Any] = [PacketTunnelProvisioning.entitlement: [PacketTunnelProvisioning.provider],

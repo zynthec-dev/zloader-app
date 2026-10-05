@@ -51,3 +51,28 @@ physical pairing was run by the agent.
 Apple references:
 - [Configuring network extensions](https://developer.apple.com/documentation/xcode/configuring-network-extensions/)
 - [Network Extensions entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.networking.networkextension)
+
+## 0.7.7: consistent extension identities and imported profiles
+
+The extension provisioning path now derives its parent identifier from the actual
+host profile, including when a first self-refresh preserves the existing host ID
+without a matching InstalledApp record. Previously that path could append a team
+suffix to extensions while preserving the host identity.
+
+For zLoader, locally imported profiles are now candidates alongside embedded and
+running-installation profiles. Each candidate must match the exact bundle ID,
+team, signing certificate, device, expiry, App Groups and Network Extension
+requirements. A selected host override is validated and no longer copied to every
+extension: each extension must have its own compatible profile.
+
+A signed IPA contains public certificates and provisioning profiles, not the
+signing private key. To reuse Xcode profiles inside zLoader, import the matching
+password-protected P12 through Certificates and select it as the active signing
+certificate. Import each needed profile through Provisioning Profiles when it is
+not already embedded. Keep these files private. Generating a different signing
+certificate does not authorize it in existing profiles; Apple must issue new
+profiles for that certificate. No profile authorization is edited or bypassed.
+
+These changes have local regression coverage. On-device self-refresh, current
+Apple portal responses and successful post-refresh extension launch still require
+verification with the user's actual installed variant and signing identity.

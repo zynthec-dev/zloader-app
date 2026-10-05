@@ -190,3 +190,24 @@ Minimuxer's SideStore default. See [ONBOARDING-PAIRING.md](ONBOARDING-PAIRING.md
 
 New visible pairing name on the physical target, installation and self-refresh
 remain unverified here. Existing pairing records are retained.
+
+
+## 0.7.7 (2026-10-06)
+
+- All six local validations passed: transport, App Groups, context, tunnel
+  provisioning, profile reuse and Settings storyboard checks. Profile reuse
+  coverage also verifies extension identifiers for preserved and migrated hosts
+  and rejects parent-prefix collisions.
+- Final unsigned Release/device build and the Apple-signed packaging device build
+  passed with zero warning/error diagnostics. No warning categories were disabled.
+- Apple signature/profile verification passed for host, widget, tunnel and nested
+  backup. Full resignable packaging preserved every original profile and XML
+  entitlement slot; it still requires actual Apple signing before installation.
+- The Apple-signed 0.7.7 build was installed and launched through CoreDevice on
+  the user's connected iPhone running iOS 27.0.1. A subsequent process query found
+  the app running. This proves initial launch, not Settings interaction or VPN
+  consent. No automatic Apple account authentication, certificate import or
+  private-key export was performed.
+- Actual VPN authorization/connection, pairing, account-backed self-refresh and
+  cellular-only behavior remain pending device interaction and error feedback.
+- Existing project.pbxproj and Info.plist user changes were preserved.
