@@ -26,6 +26,12 @@ struct EmbeddedProfileReuseTests {
                         profile(entitlements: [PacketTunnelProvisioning.entitlement: [PacketTunnelProvisioning.provider]])] {
             precondition(!EmbeddedProfileReuse.accepts(invalid, for: target, now: now))
         }
+        let rotated = Data([4, 5, 6])
+        let rotatedTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+                                                     certificate: rotated, deviceID: target.deviceID, entitlements: values)
+        precondition(!EmbeddedProfileReuse.accepts(profile(), for: rotatedTarget, now: now))
+        precondition(EmbeddedProfileReuse.accepts(profile(certificates: [rotated]), for: rotatedTarget, now: now))
+        print("PASS certificate rotation requires a newly authorized profile; original Xcode key is not required")
         precondition(EmbeddedProfileReuse.accepts(profile(devices: ["SYNTHETIC-DEVICE"]), for: target, now: now))
         print("PASS embedded profile reuse: exact identity/team/certificate, expiry/device and all required capabilities; seven incompatible cases rejected")
     }

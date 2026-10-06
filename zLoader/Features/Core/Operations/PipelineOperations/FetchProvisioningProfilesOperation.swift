@@ -185,11 +185,9 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             parentID = preferredBundleID
         } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
                   let profile = targetAppBundle.provisioningProfile,
-                  let certificate = context.targetSigningCertificate,
                   profile.bundleIdentifier == context.targetBundleIdentifier,
-                  profile.teamIdentifier == team.identifier,
-                  profile.certificates.contains(where: { $0.rawDER == certificate.certificate.rawDER }) {
-            // Keep an established identity when re-signing our own app with its original certificate.
+                  profile.teamIdentifier == team.identifier {
+            // A certificate change within the same team does not require a new app identity.
             parentID = context.targetBundleIdentifier
         } else if self.context.appendTeamID {
             parentID = "\(self.context.targetBundleIdentifier).\(team.identifier)"
@@ -233,11 +231,18 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         let updatedAppID = try await self.updateFeatures(for: appID, targetAppBundle: targetAppBundle, team: team)
         
         self.debugLog("[FetchProvisioningProfiles] Updating app groups for App ID \(updatedAppID.bundleIdentifier)...")
-        let groupAppID = try await self.updateAppGroups(for: updatedAppID, targetAppBundle: targetAppBundle, team: team)
+        let (groupAppID, requiredGroups) = try await self.updateAppGroups(for: updatedAppID, targetAppBundle: targetAppBundle, team: team)
         
         verboseLog(targetAppBundle.dumpMachOInfo())
         self.debugLog("[FetchProvisioningProfiles] Fetching provisioning profile from Apple for App ID \(groupAppID.bundleIdentifier)...")
-        let profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
+        let isEmbeddedTunnelApp = requiresPacketTunnelCapability(for: targetAppBundle) ||
+            parentAppBundle.map { requiresPacketTunnelCapability(for: $0) } == true
+        let profile: ALTProvisioningProfile
+        if isEmbeddedTunnelApp {
+            profile = try await createCertificateBoundProfile(for: groupAppID, app: targetAppBundle, requiredGroups: requiredGroups, team: team)
+        } else {
+            profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
+        }
         self.debugLog("[FetchProvisioningProfiles] Provisioning profile fetched for \(groupAppID.bundleIdentifier) (Name: \(profile.name), Expiration: \(String(describing: profile.expirationDate)))")
         if requiresPacketTunnelCapability(for: targetAppBundle),
            !PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) {
@@ -285,6 +290,67 @@ private extension FetchProvisioningProfilesOperation{
         }
     }
     
+    /// Ask Apple to issue a separate profile for the actual active key, rather
+    /// than downloading an automatically managed Xcode profile for another key.
+    func createCertificateBoundProfile(for appID: ALTAppID, app: ALTApplication, requiredGroups: [String],
+                                       team: ALTTeam) async throws -> ALTProvisioningProfile {
+        guard team.type != .free, let signing = context.targetSigningCertificate else {
+            throw OperationError.invalidParameters("Embedded Network Extensions require a paid team and an active signing certificate with its private key.")
+        }
+        let certificates = try await DeveloperPortalProxy.shared.fetchCertificates(team: team)
+        guard let certificate = certificates.first(where: { $0.rawDER == signing.certificate.rawDER }),
+              let certificateID = certificate.identifier, !certificateID.isEmpty else {
+            throw OperationError.invalidParameters("The active signing certificate is not registered in the selected Apple team. Select its team or an eligible certificate from that team.")
+        }
+        let device = try await TaskChainCoalescer.shared.coalesce(key: "zloader_profile_device_" + team.identifier) {
+            let udid: String
+            do {
+                udid = try await safeFetchUDID()
+            } catch {
+                throw OperationError.invalidParameters("Cannot authorize this device because its UDID could not be read through the active pairing transport. A valid Remote Pairing file is sufficient for Remote Pairing mode; a separate Lockdown file is not required. Underlying device-service error: " + error.localizedDescription)
+            }
+            let devices = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
+            if let existing = devices.first(where: { $0.identifier.caseInsensitiveCompare(udid) == .orderedSame }) {
+                return existing
+            }
+            return try await DeveloperPortalProxy.shared.registerDevice(name: "zLoader device", identifier: udid, team: team)
+        }
+        guard let deviceID = device.deviceID, !deviceID.isEmpty else {
+            throw OperationError.invalidParameters("Apple did not return a registered device ID for this iPhone. Device registration must complete before provisioning.")
+        }
+        if let status = device.status, status.lowercased().contains("disabled") || status.lowercased().contains("ineligible") {
+            throw OperationError.invalidParameters("This device is not eligible for provisioning in the selected Apple team (\(status)). Check its registration in Certificates, Identifiers & Profiles.")
+        }
+        let isDistribution = certificate.name.lowercased().contains("distribution") ||
+            certificate.certificateType?.lowercased().contains("distribution") == true
+        #if os(tvOS)
+        let profileType: ALTProfileType = isDistribution ? .tvOSAdHoc : .tvOS
+        #else
+        let profileType: ALTProfileType = isDistribution ? .adHoc : .iOS
+        #endif
+        let profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
+            name: "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8)),
+            appID: appID, certificateIDs: [certificateID], deviceIDs: [deviceID], type: profileType, team: team
+        )
+        var required = PacketTunnelProvisioning.requestedEntitlements([:], required: requiresPacketTunnelCapability(for: app))
+        if !requiredGroups.isEmpty { required["com.apple.security.application-groups"] = requiredGroups }
+        let target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
+                                              certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
+        guard EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
+            bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
+            certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
+        ), for: target) else {
+            throw OperationError.invalidParameters("Apple's newly issued profile is incompatible with the selected signing certificate, device, app identity or required capabilities. " + PacketTunnelProvisioning.failureMessage(for: appID.bundleIdentifier))
+        }
+        if let groups = app.entitlements["com.apple.security.application-groups"] as? [String], !groups.isEmpty,
+           (profile.entitlements["com.apple.security.application-groups"] as? [String] ?? []).isEmpty {
+            throw OperationError.invalidParameters("Apple's newly issued profile omits the App Groups required by " + appID.bundleIdentifier)
+        }
+        // Retain the issued profile for subsequent refreshes with this key.
+        _ = try ProfileManager.shared.importProfile(data: profile.data)
+        return profile
+    }
+
     func reusableEmbeddedProfile(for app: ALTApplication, parentAppBundle: ALTApplication?,
                                  bundleID: String, team: ALTTeam) async -> ALTProvisioningProfile? {
         guard app.isZLoaderApp || parentAppBundle?.isZLoaderApp == true,
@@ -408,7 +474,7 @@ private extension FetchProvisioningProfilesOperation{
         }
     }
     
-    func updateAppGroups(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> ALTAppID {
+    func updateAppGroups(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> (ALTAppID, [String]) {
         let bundleID = targetAppBundle.bundleIdentifier
         var entitlements = self.context.customEntitlementsByBundleID[bundleID]
             ?? targetAppBundle.entitlements
@@ -420,7 +486,7 @@ private extension FetchProvisioningProfilesOperation{
             verboseLog("[FetchProvisioningProfiles] App ID \(appID.bundleIdentifier) has no app groups, skipping assignment.")
             // Assigning an App ID to an empty app group array fails,
             // so just do nothing if there are no app groups.
-            return appID
+            return (appID, [])
         }
         
         for group in applicationGroups {
@@ -430,7 +496,7 @@ private extension FetchProvisioningProfilesOperation{
             }
         }
         
-        if targetAppBundle.isZLoaderApp {
+        if targetAppBundle.isZLoaderApp, targetAppBundle.provisioningProfile?.teamIdentifier != team.identifier {
             verboseLog("[FetchProvisioningProfiles] Application groups before modifying for zLoader: \(applicationGroups)")
             
             // Remove app groups that contain ZLoader since they can be problematic (cause ZLoader to expire early)
@@ -513,7 +579,7 @@ private extension FetchProvisioningProfilesOperation{
             let groupIDs = groups.map { $0.groupIdentifier }
             self.debugLog("[FetchProvisioningProfiles] Assigned App ID \(appID.bundleIdentifier) to App Groups \(groupIDs.description).")
             
-            return appID
+            return (appID, groupIDs)
         } catch {
             let groupIDs = Array(seenGroupIDs.isEmpty ? Set(applicationGroups.map { $0 + "." + team.identifier }) : seenGroupIDs)
             self.debugLog("[FetchProvisioningProfiles] Failed to assign/create App Groups \(groupIDs) for App ID \(appID.bundleIdentifier): \(error.localizedDescription)")
@@ -522,12 +588,10 @@ private extension FetchProvisioningProfilesOperation{
     }
 
     func adjustedGroupIdentifier(for groupIdentifier: String, appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> String {
-        // Currently Build.xconfig for debug appends suffix as TEAMID already
-        #if DEBUG
-        if groupIdentifier.contains(Bundle.baseZLoaderAppGroupID) && groupIdentifier.contains(team.identifier) {
+        if groupIdentifier.hasSuffix("." + team.identifier) ||
+            self.context.sharedContext.appGroups?.contains(where: { $0.groupIdentifier == groupIdentifier }) == true {
             return groupIdentifier
         }
-        #endif
 
         let rawGroupID = groupIdentifier.hasPrefix("group.") ? String(groupIdentifier.dropFirst("group.".count)) : groupIdentifier
         let targetBundleID = targetAppBundle.bundleIdentifier

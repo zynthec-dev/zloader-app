@@ -76,3 +76,37 @@ profiles for that certificate. No profile authorization is edited or bypassed.
 These changes have local regression coverage. On-device self-refresh, current
 Apple portal responses and successful post-refresh extension launch still require
 verification with the user's actual installed variant and signing identity.
+
+## 0.7.8: active-certificate provisioning, independent of installer
+
+For an embedded-tunnel app, zLoader now asks Apple to create a distinct profile
+for the host and each extension using the active certificate's portal identifier
+and the actual registered device's portal identifier. It no longer relies on an
+implicitly generated Xcode Team Profile. Development keys request development
+profiles; iOS distribution keys request device-bound Ad Hoc profiles. New profiles
+are checked for exact bundle identity, team, certificate DER, current expiry,
+device eligibility, required Network Extensions and the exact assigned App Groups.
+Only validated Apple-issued bytes are retained for subsequent refreshes.
+
+Changing the certificate within the same team preserves an established host
+identity and its registered App Groups. Team suffixes are not appended twice to
+extension groups, including Release builds. Generating a key inside zLoader does
+not require importing the original Xcode P12. The generated key must still be
+valid and registered in the selected paid team; arbitrary, revoked, wrong-team,
+macOS-only or unauthorized certificates are not made eligible by this change.
+
+Device-service failures while retrieving the UDID are distinguished from Apple
+profile authorization. Remote Pairing mode does not require an additional
+Lockdown record. Disabled/ineligible Apple registrations are reported rather than
+silently changed or bypassed. A missing UDID is never guessed from a host UUID or
+from the first device listed in a profile.
+
+SideInstaller, SideStore, AltStore and iLoader are not used as identity checks.
+The final installed host and extensions must nevertheless have actual valid
+signatures and profiles authorizing the necessary capabilities. Account membership
+alone is insufficient if an installer drops an extension, replaces its profile or
+strips its entitlement. A running unentitled host cannot grant itself Network
+Extension authorization. Live Apple issuance and physical self-refresh remain
+unverified until the updated operation is exercised with the user's account.
+
+[Apple: provisioning profiles bind certificates, devices and a bundle ID](https://developer.apple.com/documentation/appstoreconnectapi/profiles).
