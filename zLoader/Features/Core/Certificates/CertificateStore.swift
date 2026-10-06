@@ -22,7 +22,8 @@ public enum CertificateStore {
     /// Exports an ALTCertificate to PKCS#12 data. If password is provided, encrypts PKCS#12 with password; if nil, exports unencrypted PKCS#12.
     public static func export(_ cert: ALTCertificate, password: String?) throws -> Data {
         if let password = password {
-            return try cert.encryptedP12Data(password: password)
+            guard let certificate = cert.data else { throw PortablePKCS12.Failure.invalidKey }
+            return try PortablePKCS12.build(certificate: certificate, key: cert.privateKey, password: password, name: cert.machineName ?? cert.name)
         } else {
             return try cert.unencryptedP12Data()
         }

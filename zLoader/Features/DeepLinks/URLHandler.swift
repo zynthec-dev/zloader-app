@@ -6,6 +6,7 @@
 //  Copyright © 2026 SideStore. All rights reserved.
 
 @preconcurrency import UIKit
+import SwiftUI
 
 @MainActor
 class URLHandler {
@@ -73,6 +74,15 @@ class URLHandler {
             }
             return true
             
+        case "local-pairing":
+            Task { @MainActor in
+                guard let presenter = UIApplication.shared.topViewController() else { return }
+                if presenter is UIHostingController<WirelessPairView> { return }
+                let controller = UIHostingController(rootView: NavigationStack { WirelessPairView() })
+                presenter.present(controller, animated: true)
+            }
+            return true
+
         case "pairing":
             let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
             guard let callbackTemplate = queryItems["urlname"]?.removingPercentEncoding ?? queryItems["urlName"]?.removingPercentEncoding else { return false }

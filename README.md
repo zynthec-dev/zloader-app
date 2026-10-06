@@ -30,6 +30,8 @@ sh zLoader/scripts/test-embedded-profile-reuse.sh
 sh zLoader/scripts/test-pairing-import.sh
 python3 zLoader/scripts/test-settings-storyboard.py
 python3 zLoader/scripts/test-project-config.py
+sh zLoader/scripts/test-certificate-export.sh
+sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/build-unsigned.sh
 ```
 
@@ -58,6 +60,7 @@ is for inspection and does not establish device installability.
 - [Private Apple-signed IPA and preserving profiles](docs/zloader/APPLE-SIGNED.md)
 - [Xcode installation and self-refresh profiles](docs/zloader/SELF-REFRESH-SIGNING.md)
 - [Settings and onboarding wireless pairing](docs/zloader/ONBOARDING-PAIRING.md)
+- [Pairing, key vault and P12 export changes in 0.7.13](docs/zloader/PAIRING-CERTIFICATES-0713.md)
 - [Transport and iOS constraints](docs/zloader/TRANSPORT.md)
 - [Build validation and device acceptance](docs/zloader/VALIDATION.md)
 - [App Group startup and signing](docs/zloader/APP-GROUPS.md)

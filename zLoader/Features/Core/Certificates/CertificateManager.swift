@@ -48,7 +48,8 @@ public final class CertificateManager: @unchecked Sendable {
 
     public static func convert(_ cert: ALTCertificate, password: String?) throws -> Data {
         if let password = password {
-            return try cert.encryptedP12Data(password: password)
+            guard let certificate = cert.data else { throw PortablePKCS12.Failure.invalidKey }
+            return try PortablePKCS12.build(certificate: certificate, key: cert.privateKey, password: password, name: cert.machineName ?? cert.name)
         } else {
             return try cert.unencryptedP12Data()
         }

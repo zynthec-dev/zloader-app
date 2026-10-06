@@ -15,7 +15,9 @@ struct WirelessPairView: View {
 
     init(startsAsClient: Bool = false, onPairingFileReady: ((URL) throws -> Void)? = nil) {
         self.startsAsClient = startsAsClient
-        _viewModel = StateObject(wrappedValue: WirelessPairViewModel(onPairingFileReady: onPairingFileReady))
+        let model = WirelessPairViewModel.shared
+        model.onPairingFileReady = onPairingFileReady
+        _viewModel = StateObject(wrappedValue: model)
     }
     
     private let spring = Animation.spring(response: 0.35, dampingFraction: 0.68)
@@ -23,6 +25,18 @@ struct WirelessPairView: View {
     
     var body: some View {
         VStack(spacing: 24) {
+            SwiftUI.Button("Einstellungen zum Pairen öffnen") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+            }
+            Text("In Einstellungen zu Entwickler → Remote Pairing wechseln. Die PIN erscheint in der Live-Aktivität. Der iOS-Link öffnet zunächst die zLoader-App-Einstellungen.")
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+            if viewModel.isSavingLockdown { ProgressView("Lockdown wird gekoppelt…") }
+            else {
+                SwiftUI.Button("Lockdown separat koppeln") { Task { await viewModel.pairLockdown() } }
+            }
+            if let confirmation = viewModel.confirmationMessage {
+                Text(confirmation).font(.footnote).textSelection(.enabled).padding(.horizontal)
+            }
             // Pulsing Status Orb
                 ZStack {
                     // Outer breathing glow
@@ -144,7 +158,7 @@ struct WirelessPairView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 32)
         }
-        .navigationTitle("Wireless Pairing")
+        .navigationTitle("Lokales Pairing")
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -168,7 +182,7 @@ struct WirelessPairView: View {
             debugLog("[WirelessPairView] onAppear (isAdvertising=\(viewModel.isAdvertising), serviceID=\(viewModel.serviceID ?? "nil"), port=\(viewModel.port.map(String.init) ?? "nil"))")
         }
         .onDisappear {
-            if viewModel.isAdvertising { viewModel.stopPairing() }
+            // Keep the shared pairing session alive while opening Settings.
             viewModel.stopDiscovery()
             debugLog("[WirelessPairView] onDisappear (isAdvertising=\(viewModel.isAdvertising))")
         }
@@ -213,11 +227,7 @@ struct WirelessPairView: View {
         } message: {
             Text("Enter the 6-digit code displayed on your Apple TV / device screen.")
         }
-        .sheet(isPresented: $viewModel.isShareSheetPresented) {
-            if let fileURL = viewModel.shareSheetURL {
-                ActivityViewController(activityItems: [fileURL])
-            }
-        }
+
     }
     
     private func togglePairing() {

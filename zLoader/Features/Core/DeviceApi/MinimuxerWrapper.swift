@@ -170,7 +170,7 @@ func bindConnectionConfig() async {
         setTunnelIfaceSubnetMask: { value in Task { @MainActor in config.tunnelIfaceSubnetMask = value } },
         getRemoteServerIp: { config.remoteServerIp },
         setRemoteReachable: { value in Task { @MainActor in config.remoteReachable = value } },
-        getOverrideTunnelPeerIp: { config.overrideTunnelPeerIp },
+        getOverrideTunnelPeerIp: { config.useLocalVPN ? "10.7.0.1" : config.overrideTunnelPeerIp },
         setOverrideTunnelPeerReachable: { value in Task { @MainActor in config.overrideTunnelPeerReachable = value } },
         getConnectionMode: { config.useLocalVPN ? .localVPN : .remoteServer },
         resolveServicePort: { failed in

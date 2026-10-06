@@ -386,3 +386,24 @@ wrong input for this installer path.
   device/capabilities; same-team app identity/group preservation is independent
   of retaining Xcode's original private key. Arbitrary certificates cannot grant
   capabilities absent from Apple's profiles.
+
+
+## 0.7.13 (0713), 2026-10-06
+
+See [pairing/certificate changes and remaining device limits](PAIRING-CERTIFICATES-0713.md).
+
+- Eight existing validation scripts PASS; Apple/OpenSSL certificate export and
+  pinned CodeSignKit import compatibility scripts PASS (ten total).
+- Release iOS build PASS, zero warnings/errors (`/tmp/zloader-0713-device-final2.log`).
+- arm64 Debug Simulator build PASS, zero warnings/errors (`/tmp/zloader-0713-simulator.log`).
+- Separate native macOS SwiftPM compatibility harness PASS, with unsuppressed
+  upstream BoringSSL integer-conversion warnings.
+- Resignable IPA SHA256: `1a83985790901b409f3211bb1fd23efb8299967232f603a195bde4cb050376c8`.
+- Unsigned IPA SHA256: `f62c438f1030cfecbba5b1abc243a30344239de785364ea0c03e69be1793fc36`.
+- Embedded Widget/Tunnel retained; Backup packaging completed. Resignable
+  means ad-hoc capability-bearing installer input, not an Apple-authorized IPA.
+- No new Apple signing/install: Mac reports zero valid code-signing identities.
+- Cellular-only endpoint/refresh, both native pairing exchanges, Keychain UI
+  persistence, Feather import, Light Mode UI and Dynamic Island require device
+  acceptance. Cellular is not reported as fixed from compilation alone.
+- Unrelated user project settings and Info.plist display-name ordering preserved.

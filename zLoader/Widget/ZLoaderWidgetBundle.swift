@@ -13,6 +13,7 @@ import WidgetKit
 struct ZLoaderWidgetBundle: WidgetBundle
 {
     var body: some Widget {
+        PairingLiveActivity()
         AppDetailWidget()
         
         IconLockScreenWidget()

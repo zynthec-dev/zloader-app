@@ -22,6 +22,7 @@ struct CertificatesView: View {
         ["key", "pem", "der"].compactMap { UTType(filenameExtension: $0) }
     }
     
+    @State private var showKeyMaterials = false
     @State private var showCreateSheet            = false
     @State private var showFileImporter           = false
     @State private var showRevokeConfirmation     = false
@@ -48,6 +49,9 @@ struct CertificatesView: View {
     var body: some View {
         ZStack {
             List {
+                Section {
+                    SwiftUI.Button("Keys & Local Signing Requests…") { showKeyMaterials = true }
+                }
                 ActiveCertSectionView(
                     viewModel: viewModel,
                     hasCopiedActiveSerial: $hasCopiedActiveSerial,
@@ -82,7 +86,7 @@ struct CertificatesView: View {
                     }
                 }
             }
-            .navigationTitle("Certificates")
+            .navigationTitle("Certificates & Keys")
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     SwiftUI.Button {
@@ -120,6 +124,9 @@ struct CertificatesView: View {
             SwiftUI.Button("OK", role: .cancel) { viewModel.errorMessage = nil }
         } message: {
             Text(viewModel.errorMessage ?? "An unknown error occurred.")
+        }
+        .sheet(isPresented: $showKeyMaterials) {
+            NavigationStack { LocalKeyMaterialView() }
         }
         .sheet(isPresented: $showCreateSheet) {
             CreateCertificateSheetView(

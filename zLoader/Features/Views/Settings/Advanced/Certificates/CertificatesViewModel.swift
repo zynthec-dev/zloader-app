@@ -239,8 +239,18 @@ class CertificatesViewModel: ObservableObject {
                 failedImportsList.append("\(pending.filename): Duplicate certificate (already imported).")
                 importFailedCount += 1
             } else {
-                CertificateManager.shared.saveX509Certificate(rawCert)
-                recordSuccessfulImport(serial: rawCert.serialNumber, hasPrivateKey: false, filename: pending.filename)
+                do {
+                    if let key = try LocalKeyMaterialStore.matchingPrivateKey(certificate: certData) {
+                        saveLocalCertificate(ALTCertificate(x509: rawCert, privateKey: key))
+                        recordSuccessfulImport(serial: rawCert.serialNumber, hasPrivateKey: true, filename: pending.filename)
+                    } else {
+                        CertificateManager.shared.saveX509Certificate(rawCert)
+                        recordSuccessfulImport(serial: rawCert.serialNumber, hasPrivateKey: false, filename: pending.filename)
+                    }
+                } catch {
+                    failedImportsList.append("\(pending.filename): " + error.localizedDescription)
+                    importFailedCount += 1
+                }
             }
             currentImportIndex += 1
             processNextImport()
@@ -644,6 +654,8 @@ class CertificatesViewModel: ObservableObject {
     func importPrivateKey(data: Data, for cert: ALTX509Certificate) {
         do {
             let key = try validateAndFormatPrivateKey(data: data)
+            guard let certificate = cert.data else { throw PortablePKCS12.Failure.invalidKey }
+            try PortablePKCS12.validate(certificate: certificate, key: key)
             let signable = ALTCertificate(x509: cert, privateKey: key)
             saveLocalCertificate(signable)
             self.loadCertificates(presentingViewController: nil)

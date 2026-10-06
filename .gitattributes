@@ -1,0 +1,2 @@
+# Patches must retain exact upstream context whitespace as data.
+zLoader/Patches/*.patch whitespace=-blank-at-eol

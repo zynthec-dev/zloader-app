@@ -69,6 +69,9 @@ struct WirelessPairTarget: Identifiable, Hashable {
 
 @MainActor
 final class WirelessPairViewModel: ObservableObject {
+    static let shared = WirelessPairViewModel()
+    @Published var confirmationMessage: String?
+    @Published var isSavingLockdown = false
     // Server Advertising State
     @Published var statusText = "Ready to pair"
     @Published var subStatusText = "Tap Start to advertise this device on the local network."
@@ -95,9 +98,6 @@ final class WirelessPairViewModel: ObservableObject {
     @Published var enteredPin = ""
     private var pinPromptCallback: ((String) -> Void)?
     
-    // Share Sheet State
-    @Published var shareSheetURL: URL? = nil
-    @Published var isShareSheetPresented = false   
     
     private let pairingServiceTypes = [
         "_remotepairing-manual-pairing._tcp",
@@ -127,7 +127,7 @@ final class WirelessPairViewModel: ObservableObject {
         return (ip: ip, port: port)
     }
     
-    private let onPairingFileReady: ((URL) throws -> Void)?
+    var onPairingFileReady: ((URL) throws -> Void)?
 
     init(onPairingFileReady: ((URL) throws -> Void)? = nil) {
         self.onPairingFileReady = onPairingFileReady
@@ -142,15 +142,17 @@ final class WirelessPairViewModel: ObservableObject {
                 self.serviceID = serviceID
                 self.port = port
                 self.statusText = "Advertising server..."
-                self.subStatusText = "Ensure both devices are on the same Wi-Fi."
+                self.subStatusText = "Open Settings → Developer → Remote Pairing on this device."
+                PairingActivityController.shared.update(status: self.statusText, pin: nil)
             }
         }
         
         wirelessPairing.onPinReceived = { [weak self] (pin: String) in
-            debugLog("[WirelessPairViewModel] onPinReceived callback received: pin='\(pin)'")
+            debugLog("[WirelessPairViewModel] Pairing PIN received")
             Task { @MainActor in
                 guard let self = self else { return }
                 self.pinCode = pin
+                PairingActivityController.shared.update(status: "Pairing-PIN eingeben", pin: pin)
                 self.statusText = "Device Connected"
                 self.subStatusText = "Enter the pairing code shown below on your other device settings screen."
             }
@@ -172,7 +174,7 @@ final class WirelessPairViewModel: ObservableObject {
     func submitEnteredPin() {
         let pin = enteredPin.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalPin = pin.isEmpty ? "000000" : pin
-        debugLog("[WirelessPairViewModel] submitEnteredPin() sending PIN '\(finalPin)' to gateway")
+        debugLog("[WirelessPairViewModel] Submitting pairing PIN")
         pinPromptCallback?(finalPin)
         pinPromptCallback = nil
         isPinPromptPresented = false
@@ -489,9 +491,13 @@ final class WirelessPairViewModel: ObservableObject {
     }
     
     func startPairing() {
-        guard pairingTask == nil else { return }
+        guard pairingTask == nil, !isSavingLockdown else { return }
         let docsPath = FileManager.default.documentsDirectory.path
         debugLog("[WirelessPairViewModel] startPairing() starting advertisement with base path: '\(docsPath)'")
+        PairingActivityController.shared.start { [weak self] in
+            self?.stopPairing()
+            self?.errorMessage = "iOS ended background pairing. Open zLoader and start Local Pairing again."
+        }
         isAdvertising = true
         pinCode = nil
         errorMessage = nil
@@ -523,6 +529,7 @@ final class WirelessPairViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                     self.statusText = "Pairing Failed"
                     self.subStatusText = "An error occurred during pairing."
+                    PairingActivityController.shared.finish(status: "Pairing fehlgeschlagen", success: false)
                 }
             }
         }
@@ -532,6 +539,7 @@ final class WirelessPairViewModel: ObservableObject {
         debugLog("[WirelessPairViewModel] stopPairing() stopping advertisement and tearing down session")
         pairingTask?.cancel()
         wirelessPairing.stop()
+        PairingActivityController.shared.finish(status: "Pairing beendet", success: false)
         
         isAdvertising = false
         statusText = "Ready to pair"
@@ -609,19 +617,59 @@ final class WirelessPairViewModel: ObservableObject {
     private func acceptPairedDevice(_ device: MinimuxerPairedDevice) {
         let url = URL(fileURLWithPath: device.pairingFilePath)
         do {
-            // Onboarding imports the real generated record before reporting success.
+            try PairingFileManager.shared.importPairingFile(from: url)
             try onPairingFileReady?(url)
             pairedDevice = device
-            statusText = "Success!"
-            subStatusText = "Wireless pairing completed."
-            if onPairingFileReady == nil {
-                shareSheetURL = url
-                isShareSheetPresented = true
+            statusText = "Remote Pairing gespeichert"
+            subStatusText = "Die erzeugte Datei wurde direkt in zLoader übernommen."
+            confirmationMessage = "Remote Pairing wurde in zLoader gespeichert. Lockdown wird jetzt separat gekoppelt."
+            Task {
+                do {
+                    let (content, parsed) = try PairingFileManager.shared.inspectPairingFile(from: url)
+                    try await minimuxerStart(content, preferred: parsed.mode)
+                    await pairLockdown()
+                } catch {
+                    confirmationMessage = "Pairing-Datei gespeichert, Aktivierung fehlgeschlagen: " + error.localizedDescription
+                    PairingActivityController.shared.finish(status: "Datei gespeichert · Verbindung prüfen", success: false)
+                }
             }
         } catch {
             errorMessage = error.localizedDescription
             statusText = "Pairing File Import Failed"
-            subStatusText = "The generated file could not be activated. You can retry or import it manually."
+            PairingActivityController.shared.finish(status: "Import fehlgeschlagen", success: false)
+        }
+    }
+
+    func pairLockdown() async {
+        guard !isSavingLockdown else { return }
+        isSavingLockdown = true
+        PairingActivityController.shared.update(status: "Lockdown koppeln · ggf. Vertrauen bestätigen", pin: nil)
+        defer { isSavingLockdown = false }
+        func identity(_ key: String) -> String {
+            if let saved = UserDefaults.standard.string(forKey: key) { return saved }
+            let value = UUID().uuidString
+            UserDefaults.standard.set(value, forKey: key)
+            return value
+        }
+        let hostID = identity("localPairingHostID"), buid = identity("localPairingSystemBUID")
+        let useLocal = ConnectionConfig.shared.useLocalVPN
+        let target = useLocal ? "10.7.0.1" : ConnectionConfig.shared.remoteServerIp
+        do {
+            let operation = {
+                try await minimuxer.gateway.createLockdownPairing(targetIP: target, hostName: "zLoader", hostID: hostID, systemBUID: buid)
+            }
+            let data = try await useLocal ? ZLoaderTransport.withLease(operation) : operation()
+            let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+            let xml = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            guard let content = String(data: xml, encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            _ = try PairingFileManager.shared.savePairingFile(contents: content, preferred: .lockdown)
+            let hasRemote = PairingFileManager.shared.hasPairingFile(for: .rppairing)
+            confirmationMessage = hasRemote ? "Remote- und Lockdown-Pairing wurden in zLoader gespeichert." : "Lockdown-Pairing wurde in zLoader gespeichert."
+            statusText = hasRemote ? "Beide Pairing-Verfahren gespeichert" : "Lockdown-Pairing gespeichert"
+            PairingActivityController.shared.finish(status: "Pairing gespeichert", success: true)
+        } catch {
+            confirmationMessage = "Remote Pairing bleibt gespeichert. Lockdown konnte nicht gekoppelt werden: " + error.localizedDescription + " Bestätige ggf. Vertrauen und versuche Lockdown erneut oder importiere den Lockdown-Datensatz aus iLoader."
+            PairingActivityController.shared.finish(status: "Remote gespeichert · Lockdown prüfen", success: false)
         }
     }
 

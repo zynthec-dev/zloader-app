@@ -18,19 +18,20 @@ enum CertificateExporter {
     
     static func sharePublicCertAsPEM(_ cert: ALTX509Certificate, onShare: ((URL) -> Void)? = nil, onError: @escaping (String) -> Void) {
         guard let data = cert.data else { onError("Public certificate data is missing."); return }
-        share(data: data, filename: (cert.machineName ?? cert.name) + ".pem", onShare: onShare, onError: onError)
+        share(data: PortablePKCS12.pem(PortablePKCS12.der(data), label: "CERTIFICATE"), filename: (cert.machineName ?? cert.name) + ".pem", onShare: onShare, onError: onError)
     }
     
     static func copyPublicCertAsPEM(_ cert: ALTX509Certificate, onError: @escaping (String) -> Void) {
         #if !os(tvOS)
         guard let data = cert.data else { onError("Public certificate data is missing."); return }
-        UIPasteboard.general.string = String(data: data, encoding: .utf8) ?? data.base64EncodedString()
+        UIPasteboard.general.string = String(data: PortablePKCS12.pem(PortablePKCS12.der(data), label: "CERTIFICATE"), encoding: .utf8)
         #endif
     }
     
     static func shareP12(_ cert: ALTCertificate, password: String, onShare: ((URL) -> Void)? = nil, onError: @escaping (String) -> Void) {
         do {
-            let p12Data = try cert.encryptedP12Data(password: password)
+            guard let certificate = cert.data else { throw PortablePKCS12.Failure.invalidKey }
+            let p12Data = try PortablePKCS12.build(certificate: certificate, key: cert.privateKey, password: password, name: cert.machineName ?? cert.name)
             share(data: p12Data, filename: (cert.machineName ?? cert.name) + ".p12", onShare: onShare, onError: onError)
         } catch {
             debugLog("[CertificateExporter] Failed to build encrypted p12 data: \(error)")
@@ -57,9 +58,11 @@ enum CertificateExporter {
     }
     
     private static func share(data: Data, filename: String, onShare: ((URL) -> Void)? = nil, onError: @escaping (String) -> Void) {
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let tempURL = directory.appendingPathComponent(URL(fileURLWithPath: filename).lastPathComponent)
         do {
-            try data.write(to: tempURL)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
         } catch {
             onError("Failed to write temp export file: " + error.localizedDescription)
             return

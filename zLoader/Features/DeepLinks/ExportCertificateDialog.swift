@@ -44,7 +44,7 @@ public enum ExportCertificateDialog {
                 return
             }
             
-            debugLog("[ExportCertificateDialog] Opening certificate callback URL: \(callbackURL.absoluteString)")
+            debugLog("[ExportCertificateDialog] Opening authorized certificate callback")
             UIApplication.shared.open(callbackURL)
         }
         

@@ -11,11 +11,91 @@ index 2501584..5d67b58 100644
          appId: String,
          bundlePath: String? = nil,
          executableName: String? = nil,
+diff --git a/DeviceGateway/DeviceGatewayAPI.swift b/DeviceGateway/DeviceGatewayAPI.swift
+index 0a581fb..93fd936 100644
+--- a/DeviceGateway/DeviceGatewayAPI.swift
++++ b/DeviceGateway/DeviceGatewayAPI.swift
+@@ -59,6 +59,8 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
+ 
+     func performHeartbeat(interval: UInt64) async throws -> UInt64
+ 
++    func createLockdownPairing(targetIP: String, hostName: String, hostID: String, systemBUID: String) async throws -> Data
++
+     func startWirelessPair(
+         hostName: String,
+         hostModel: String,
+@@ -84,6 +86,10 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
+ }
+ 
+ public extension DeviceGatewayAPI {
++    func createLockdownPairing(targetIP: String, hostName: String, hostID: String, systemBUID: String) async throws -> Data {
++        throw NSError(domain: "Minimuxer.LockdownPairing", code: 1, userInfo: [NSLocalizedDescriptionKey: "Local Lockdown pairing requires the Idevice backend. Existing Lockdown files can still be imported."])
++    }
++
+     func start(pairingFileContent: String, preferred: PairingProtocol? = nil) async throws {
+         try await start(pairingFileContent: pairingFileContent, preferred: preferred)
+     }
 diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
-index e9310d0..9bcdc7b 100644
+index e9310d0..e5cbdaa 100644
 --- a/DeviceGateway/idevice/IdeviceGateway.swift
 +++ b/DeviceGateway/idevice/IdeviceGateway.swift
-@@ -2014,7 +2014,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -126,6 +126,55 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         try await super.stop()
+     }
+ 
++    public func createLockdownPairing(targetIP: String, hostName: String, hostID: String, systemBUID: String) async throws -> Data {
++        try await withFFIDispatch {
++            func check(_ error: UnsafeMutablePointer<IdeviceFfiError>?) throws {
++                if let error {
++                    defer { idevice_error_free(error) }
++                    throw IdeviceGatewayError(.serviceError, reason: self.getErrorMessage(from: error))
++                }
++            }
++            var device: OpaquePointer?
++            try self.withSockaddr(ip: targetIP, port: MinimuxerConstants.lockdowndPort) { address, length in
++                try address.withMemoryRebound(to: idevice_sockaddr.self, capacity: 1) {
++                    try check(idevice_new_tcp_socket($0, length, hostName, &device))
++                }
++            }
++            guard let device else { throw IdeviceGatewayError(.noConnection) }
++            // lockdownd_new consumes the device handle, including its error path.
++            var client: OpaquePointer?
++            try check(lockdownd_new(device, &client))
++            guard let client else { throw IdeviceGatewayError(.noConnection) }
++            defer { lockdownd_client_free(client) }
++            var pairing: OpaquePointer?
++            try check(lockdownd_pair(client, hostID, systemBUID, hostName, &pairing))
++            guard let pairing else { throw IdeviceGatewayError(.serviceError, reason: "Lockdown returned no pairing record") }
++            defer { idevice_pairing_file_free(pairing) }
++            var bytes: UnsafeMutablePointer<UInt8>?
++            var count: UInt = 0
++            try check(idevice_pairing_file_serialize(pairing, &bytes, &count))
++            guard let bytes else { throw IdeviceGatewayError(.serviceError, reason: "Lockdown returned no serialized record") }
++            defer { idevice_data_free(bytes, count) }
++            let serialized = Data(bytes: bytes, count: Int(count))
++            guard var record = try PropertyListSerialization.propertyList(from: serialized, options: [], format: nil) as? [String: Any] else {
++                throw IdeviceGatewayError(.serviceError, reason: "Lockdown returned an invalid pairing record")
++            }
++            // Native records can omit host-side device metadata. Read it from
++            // the real device; never synthesize a UDID or Wi-Fi identity.
++            for (recordKey, deviceKey) in [("UDID", "UniqueDeviceID"), ("WiFiMACAddress", "WiFiAddress")] where record[recordKey] == nil {
++                var node: plist_t?
++                try check(lockdownd_get_value(client, deviceKey, nil, &node))
++                guard let node else { throw IdeviceGatewayError(.serviceError, reason: "Missing device metadata: " + deviceKey) }
++                defer { plist_free(node) }
++                guard let value = self.getRustPlistString(node), !value.isEmpty else {
++                    throw IdeviceGatewayError(.serviceError, reason: "Invalid device metadata: " + deviceKey)
++                }
++                record[recordKey] = value
++            }
++            return try PropertyListSerialization.data(fromPropertyList: record, format: .xml, options: 0)
++        }
++    }
++
+     public override func setLogging(_ enabled: Bool) {
+         let lowerBoundLevel = IdeviceLogLevel(rawValue: 0)
+         #if DEBUG
+@@ -2014,7 +2063,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          hostModel: String,
          outPath: String,
          resolveFileName: ((String, String) -> String)?,
@@ -24,7 +104,7 @@ index e9310d0..9bcdc7b 100644
      ) throws -> PairedDeviceRecord {
          debugLog("[IdeviceGateway] triggerWirelessPair() called, targetIp: \(targetIp), targetPort: \(targetPort), hostName: \(hostName), hostModel: \(hostModel), outPath: \(outPath)")
          
-@@ -2027,8 +2027,8 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2027,8 +2076,8 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
  
          class PinContext {
@@ -35,7 +115,7 @@ index e9310d0..9bcdc7b 100644
                  self.onRequestPin = onRequestPin
              }
          }
-@@ -2051,18 +2051,24 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2051,18 +2100,24 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
                          guard let context = context else { return nil }
                          let ctxObj = Unmanaged<PinContext>.fromOpaque(context).takeUnretainedValue()
                          let sema = DispatchSemaphore(value: 0)
@@ -63,7 +143,7 @@ index e9310d0..9bcdc7b 100644
                          return UnsafePointer(p)
                      },
                      pinContextPtr,
-@@ -2134,7 +2140,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2134,7 +2189,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
              if let err = err {
                  let msg = self.getErrorMessage(from: err)
                  debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container failed: \(msg)")
@@ -72,7 +152,7 @@ index e9310d0..9bcdc7b 100644
                  throw IdeviceGatewayError(.serviceError, reason: "Failed to vend container for \(bundleId), error: (\(msg))")
              }
              debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container succeeded")
-@@ -2157,7 +2163,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2157,7 +2212,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          if let err = err {
              let msg = self.getErrorMessage(from: err)
              debugLog("[IdeviceGateway] afcListDirectory() afc_list_directory failed for: \(path), error: (\(msg))")
@@ -81,7 +161,7 @@ index e9310d0..9bcdc7b 100644
              throw IdeviceGatewayError(.serviceError, reason: "Failed to list directory: \(path), error: (\(msg))")
          }
          var items: [String] = []
-@@ -2220,7 +2226,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2220,7 +2275,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
          if let err = err {
              debugLog("[IdeviceGateway] afcGetFileInfo() afc_get_file_info failed for: \(path)")
@@ -90,7 +170,7 @@ index e9310d0..9bcdc7b 100644
              throw IdeviceGatewayError(.serviceError, reason: "Failed to get info for path: \(path)")
          }
          defer {
-@@ -2268,7 +2274,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2268,7 +2323,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
          if let err = err {
              verboseLog("[IdeviceGateway] afcRemovePathRecursive() afc_remove_path failed for: \(path)")
@@ -134,7 +214,7 @@ index 44de525..522cef1 100644
              plist_dict_set_item(plist, "Command", plist_new_string("Pico"))
  
 diff --git a/Sources/Services/DeviceConnectionManager.swift b/Sources/Services/DeviceConnectionManager.swift
-index 01b6e27..7878211 100644
+index 01b6e27..c052040 100644
 --- a/Sources/Services/DeviceConnectionManager.swift
 +++ b/Sources/Services/DeviceConnectionManager.swift
 @@ -102,7 +102,6 @@ actor DeviceConnectionManager {
@@ -145,3 +225,29 @@ index 01b6e27..7878211 100644
                  let lastReportedPeer = reportedPeerIp
                  let lastDerivedPeer = derivedPeerIp
                  let lastDerivedPeerMask = derivedPeerSubnetMask
+@@ -208,7 +207,7 @@ actor DeviceConnectionManager {
+             .compactMap { $0 as? TunnelNetInfo }
+             .filter { 
+                 $0.tunnelType == .utun && 
+-                !$0.interfaceAddresses.v4.isEmpty && $0.interfaceAddresses.v6.isEmpty 
++                !$0.interfaceAddresses.v4.isEmpty 
+             }
+             .sorted { $0.name < $1.name }
+     }
+@@ -218,6 +217,16 @@ actor DeviceConnectionManager {
+     }
+ 
+     private func resolveLocalVPNTunnel(from interfaces: Set<NetInfo>) async -> (tunnel: TunnelNetInfo?, candidatePeer: CandidatePeer?, isReachable: Bool) {
++        // An embedded provider supplies an exact routed peer. Do not discard it
++        // merely because route-table inference sees IPv6 or unrelated utuns.
++        if let configured = connectionConfigCache?.getOverrideTunnelPeerIp(), !configured.isEmpty {
++            let tunnels = Self.resolveCandidateTunnels(from: interfaces)
++            let owned = tunnels.first { $0.interfaceAddresses.v4.contains { $0.host == "10.7.1.1" } }
++            if let tunnel = owned ?? tunnels.first,
++               await tcpProbe(configured) {
++                return (tunnel, CandidatePeer(tunnel: tunnel, ip: configured, mask: "255.255.255.255"), true)
++            }
++        }
+         // pick all candidate peer ips
+         let candidates = Self.resolveCandidatePeers(from: interfaces)
+         guard !candidates.isEmpty else { return (nil, nil, false) }
