@@ -6,6 +6,11 @@ enum PacketTunnelProvisioning {
     static let provider = "packet-tunnel-provider"
     static let extensionPoint = "com.apple.networkextension.packet-tunnel"
 
+    static func preservedHostIdentity(bundleID: String, profileTeam: String?, selectedTeam: String) -> String? {
+        guard !bundleID.isEmpty, !selectedTeam.isEmpty, profileTeam == selectedTeam else { return nil }
+        return bundleID
+    }
+
     static func extensionBundleIdentifier(_ child: String, parent: String, resolvedParent: String) -> String? {
         guard child.hasPrefix(parent + ".") else { return nil }
         return resolvedParent + child.dropFirst(parent.count)

@@ -181,6 +181,14 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         let parentID: String
         if let resolvedParentID {
             parentID = resolvedParentID
+        } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
+                  let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL),
+                  let identity = PacketTunnelProvisioning.preservedHostIdentity(
+                    bundleID: running.bundleIdentifier, profileTeam: running.provisioningProfile?.teamIdentifier,
+                    selectedTeam: team.identifier
+                  ) {
+            // The Release update's ID must not replace the running Debug/custom ID.
+            parentID = identity
         } else if let preferredBundleID = await self.getPreferredBundleID(for: targetAppBundle, team: team) {
             parentID = preferredBundleID
         } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
@@ -336,11 +344,14 @@ private extension FetchProvisioningProfilesOperation{
         if !requiredGroups.isEmpty { required["com.apple.security.application-groups"] = requiredGroups }
         let target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
                                               certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
-        guard EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
+        let snapshot = EmbeddedProfileSnapshot(
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
-        ), for: target) else {
-            throw OperationError.invalidParameters("Apple's newly issued profile is incompatible with the selected signing certificate, device, app identity or required capabilities. " + PacketTunnelProvisioning.failureMessage(for: appID.bundleIdentifier))
+        )
+        let failures = EmbeddedProfileReuse.incompatibilities(snapshot, for: target)
+        guard failures.isEmpty else {
+            throw OperationError.invalidParameters("Apple's newly issued profile for " + appID.bundleIdentifier +
+                " was rejected: " + failures.joined(separator: "; ") + ". No signing permissions were bypassed.")
         }
         if let groups = app.entitlements["com.apple.security.application-groups"] as? [String], !groups.isEmpty,
            (profile.entitlements["com.apple.security.application-groups"] as? [String] ?? []).isEmpty {
@@ -400,6 +411,17 @@ private extension FetchProvisioningProfilesOperation{
         )
     }
 
+    /// Unsigned self-update IPAs cannot declare their installed shared container.
+    /// Restore it only for our host/widget within the same authorized team.
+    func runningOwnAppGroups(for app: ALTApplication, team: ALTTeam) -> [String] {
+        let point = (app.infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String
+        guard context.targetAppBundle?.isZLoaderApp == true,
+              app.isZLoaderApp && point == nil || point == "com.apple.widgetkit-extension",
+              let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL),
+              running.provisioningProfile?.teamIdentifier == team.identifier else { return [] }
+        return running.provisioningProfile?.entitlements[ALTEntitlement.appGroups.rawValue] as? [String] ?? []
+    }
+
     func updateFeatures(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> ALTAppID {
         let bundleID = targetAppBundle.bundleIdentifier
         var entitlements = self.context.customEntitlementsByBundleID[bundleID]
@@ -408,6 +430,9 @@ private extension FetchProvisioningProfilesOperation{
             entitlements[key] = value
         }
         
+        let installedGroups = runningOwnAppGroups(for: targetAppBundle, team: team)
+        if !installedGroups.isEmpty { entitlements[ALTEntitlement.appGroups.rawValue] = installedGroups }
+
         // Cached/custom entitlements cannot remove a requirement of an embedded provider.
         entitlements = PacketTunnelProvisioning.requestedEntitlements(
             entitlements, required: requiresPacketTunnelCapability(for: targetAppBundle)
@@ -482,6 +507,9 @@ private extension FetchProvisioningProfilesOperation{
             entitlements[key] = value
         }
                 
+        let installedGroups = runningOwnAppGroups(for: targetAppBundle, team: team)
+        let preservesRunningGroups = !installedGroups.isEmpty
+        if preservesRunningGroups { entitlements[ALTEntitlement.appGroups.rawValue] = installedGroups }
         guard var applicationGroups = entitlements[ALTEntitlement.appGroups.rawValue] as? [String], !applicationGroups.isEmpty else {
             verboseLog("[FetchProvisioningProfiles] App ID \(appID.bundleIdentifier) has no app groups, skipping assignment.")
             // Assigning an App ID to an empty app group array fails,
@@ -496,7 +524,7 @@ private extension FetchProvisioningProfilesOperation{
             }
         }
         
-        if targetAppBundle.isZLoaderApp, targetAppBundle.provisioningProfile?.teamIdentifier != team.identifier {
+        if !preservesRunningGroups, targetAppBundle.isZLoaderApp, targetAppBundle.provisioningProfile?.teamIdentifier != team.identifier {
             verboseLog("[FetchProvisioningProfiles] Application groups before modifying for zLoader: \(applicationGroups)")
             
             // Remove app groups that contain ZLoader since they can be problematic (cause ZLoader to expire early)

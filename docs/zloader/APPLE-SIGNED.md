@@ -142,3 +142,25 @@ installation's profile lacks the capability. A paid membership and an additional
 certificate do not retroactively change an installed profile.
 
 VPN consent, actual pairing and in-app refresh remain separate device checks.
+
+## Self-refresh across Debug/Release packages: 0.7.10
+
+The running host's Apple-authorized identity takes precedence over downloaded
+Release IDs and stale database identity metadata when the selected team matches.
+Extensions derive their IDs from that resolved parent. Host and Widget restore
+the running host profile's shared App Groups before feature/group provisioning,
+including when an unsigned update omits signing entitlements. Other apps and
+other teams do not inherit these identities/groups.
+
+A returned profile is rejected with the actual failed checks: app identity, team,
+expiry, certificate, device, Network Extension values or App Groups. The previous
+catch-all error incorrectly asserted missing packet-tunnel authorization for any
+failure and could not establish the actual cause of the reported 0.7.9 rejection.
+
+Third-party installers remain an independent signing boundary. Retaining files in
+an input IPA does not establish what iLoader, SideStore or another version of a
+signer writes to its final output. Their final signed IPA and physical install
+must be checked; changing the host/App Group IDs can create new containers and
+stripping an extension/capability can make the embedded VPN unusable. The current
+work verifies zLoader's own policy and the local Apple recovery artifact; it does
+not claim successful installation/self-refresh through every third-party tool.

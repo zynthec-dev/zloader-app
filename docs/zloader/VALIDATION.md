@@ -272,3 +272,28 @@ No signed IPA, profile, credentials or pairing data were published or committed.
 - Post-install CoreDevice inventory confirms 0.7.9/0709 under the same installed
   bundle ID and shared App Group. The user's pending VPN/refresh result remains
   the runtime acceptance criterion.
+
+## Self-update identity and precise profile errors: 0.7.10 (0710)
+
+The user's 0.7.9 screenshot reached newly issued profile validation and showed a
+Release-derived ID instead of the running Debug identity. The old validation error
+appended a packet-tunnel warning for every failed predicate, so that screenshot
+alone did not establish which certificate/device/group/capability check failed.
+
+- Own host identity now follows the running Apple-profile identity for the same
+  team before stale database/downloaded Release identities. Extension IDs derive
+  from this resolved host.
+- Host/Widget App Groups are recovered from the running authorized profile before
+  portal feature and group updates, including unsigned updates without entitlements.
+- Validation reports actual failing fields without disclosing certificates or
+  device IDs, and keeps every existing authorization predicate.
+- All seven local scripts: PASS. Added same-team/different-team identity checks,
+  and exact device/group error checks that reject misleading VPN attribution.
+- Final Apple recovery build: PASS, zero warnings/errors. Host/Widget/Tunnel/Backup
+  signatures, Apple profiles and requested installation identity/group checked.
+- CoreDevice update installation and launch on the user's iPhone: PASS. Actual
+  in-app refresh is pending a user device test. No third-party installer roundtrip
+  is claimed from the local Apple-signing check.
+
+Private Apple-recovery IPA SHA-256:
+`6443fe32a814072761a9ededb45c58e633d0e3927e4bfb49cedf6148db9395db`.
