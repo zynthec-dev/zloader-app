@@ -55,7 +55,7 @@ class NavigationBar: UINavigationBar
         
         if let tintColor = self.barTintColor
         {
-            let textAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+            let textAttributes = [NSAttributedString.Key.foregroundColor: tintColor.contrastingText]
             
             standardAppearance.backgroundColor = tintColor
             standardAppearance.titleTextAttributes = textAttributes
@@ -74,7 +74,7 @@ class NavigationBar: UINavigationBar
         #else
         if let tintColor = self.barTintColor {
             self.barTintColor = tintColor
-            self.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+            self.titleTextAttributes = [NSAttributedString.Key.foregroundColor: tintColor.contrastingText]
         }
         #endif
     }

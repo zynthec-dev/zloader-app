@@ -68,12 +68,12 @@ class ReviewPermissionsViewController: UICollectionViewController
         
         #if !os(tvOS)
         let buttonAppearance = UIBarButtonItemAppearance(style: .plain)
-        buttonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white]
+        buttonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.label]
         
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .settingsBackground
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
         appearance.buttonAppearance = buttonAppearance
         self.navigationItem.standardAppearance = appearance
         #endif

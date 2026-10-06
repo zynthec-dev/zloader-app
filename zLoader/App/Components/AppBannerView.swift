@@ -372,7 +372,7 @@ private extension AppBannerView
         self.layer.cornerRadius = 22
         
         let tintColor = self.originalTintColor ?? self.tintColor
-        self.subtitleLabel.textColor = tintColor
+        self.subtitleLabel.textColor = .secondaryLabel
         
         switch self.style
         {
@@ -386,8 +386,8 @@ private extension AppBannerView
             
             self.button.style = .pill
             
-            self.backgroundEffectView.contentView.backgroundColor = UIColor(resource: .blurTint)
-            self.backgroundEffectView.backgroundColor = tintColor
+            self.backgroundEffectView.contentView.backgroundColor = .clear
+            self.backgroundEffectView.backgroundColor = .settingsHighlighted
             
         case .source:
             self.directionalLayoutMargins.trailing = 20
@@ -395,7 +395,8 @@ private extension AppBannerView
             self.iconImageViewHeightConstraint.constant = 44
             self.iconImageView.style = .circular
             
-            self.titleLabel.textColor = .white
+            self.titleLabel.textColor = tintColor?.adjustedForDisplay.contrastingText
+            self.subtitleLabel.textColor = tintColor?.adjustedForDisplay.contrastingText.withAlphaComponent(0.85)
             
             self.button.style = .custom
             

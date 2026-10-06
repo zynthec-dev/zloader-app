@@ -109,7 +109,7 @@ class PillButton: UIButton
                     var outgoing = incoming
                     outgoing.font = font
                     if let self = self {
-                        outgoing.foregroundColor = (self.progress == nil && !self.isIndicatingActivity) ? UIColor.white : UIColor.clear
+                        outgoing.foregroundColor = (self.progress == nil && !self.isIndicatingActivity) ? self.tintColor.contrastingText : UIColor.clear
                     }
                     return outgoing
                 }
@@ -203,7 +203,7 @@ class PillButton: UIButton
         self.accessibilityTraits.formUnion([.updatesFrequently, .button])
         
         self.activityIndicatorView.style = .medium
-        self.activityIndicatorView.color = .white
+        self.activityIndicatorView.color = self.tintColor.contrastingText
         self.activityIndicatorView.isUserInteractionEnabled = false
         
         self.progressView.progress = 0
@@ -325,7 +325,7 @@ private extension PillButton
     {
         if self.progress == nil && !self.isIndicatingActivity
         {
-            self.setTitleColor(.white, for: .normal)
+            self.setTitleColor(self.tintColor.contrastingText, for: .normal)
             self.backgroundColor = self.tintColor
             self.progressView.progressTintColor = self.progressTintColor ?? self.tintColor
             self.layer.borderColor = self.borderColor?.cgColor
@@ -366,7 +366,7 @@ private extension PillButton
                 var outgoing = incoming
                 outgoing.font = font
                 if let self = self {
-                    outgoing.foregroundColor = (self.progress == nil && !self.isIndicatingActivity) ? UIColor.white : UIColor.clear
+                    outgoing.foregroundColor = (self.progress == nil && !self.isIndicatingActivity) ? self.tintColor.contrastingText : UIColor.clear
                 }
                 return outgoing
             }

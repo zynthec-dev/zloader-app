@@ -161,7 +161,7 @@ private struct WelcomeStep: View {
             SwiftUI.Button(action: onNext) {
                 Text(NSLocalizedString("Get Started", comment: ""))
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.accentColor)
@@ -240,9 +240,9 @@ private struct PairingFileStep: View {
                 #if !os(tvOS)
                     if #available(iOS 26.0, *) {
                         SwiftUI.Button(action: { isShowingWirelessPairing = true }) {
-                            Label("Wireless Pairing on Device", systemImage: "antenna.radiowaves.left.and.right")
+                            Label("Lokales Pairing", systemImage: "antenna.radiowaves.left.and.right")
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color(uiColor: UIColor.altPrimary.contrastingText))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
                                 .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 12))
@@ -290,7 +290,7 @@ private struct PairingFileStep: View {
                 SwiftUI.Button(action: onNext) {
                     Text(NSLocalizedString("Continue", comment: ""))
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(hasPairingFile ? Color.accentColor : Color.gray.opacity(0.4))
@@ -316,7 +316,7 @@ private struct PairingFileStep: View {
         }) {
             if #available(iOS 26.0, *) {
                 NavigationStack {
-                    WirelessPairView(startsAsClient: true, onPairingFileReady: { url in
+                    WirelessPairView(startsAsClient: false, onPairingFileReady: { url in
                         try PairingFileManager.shared.importPairingFile(from: url, preferred: .rppairing)
                         PairingFileManager.shared.preferredProtocol = .rppairing
                         hasPairingFile = PairingFileManager.shared.hasPairingFile()
@@ -453,7 +453,7 @@ private struct AppleIDStep: View {
                         Text(NSLocalizedString("Sign In with Apple ID", comment: ""))
                     }
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.accentColor)
@@ -478,7 +478,7 @@ private struct AppleIDStep: View {
                 SwiftUI.Button(action: onNext) {
                     Text(NSLocalizedString("Continue", comment: ""))
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(isAuthenticated ? Color.accentColor : Color.gray.opacity(0.4))
@@ -562,7 +562,7 @@ private struct CompleteStep: View {
             SwiftUI.Button(action: onFinish) {
                 Text(NSLocalizedString("Open zLoader", comment: ""))
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.accentColor)

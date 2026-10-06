@@ -15,7 +15,7 @@ public struct ThemePreset: Identifiable, Equatable {
     public let hex: String
     
     public var color: UIColor {
-        UIColor(hex: hex) ?? .defaultAltPrimary
+        id == "classic" ? .defaultAltPrimary : (UIColor(hex: hex) ?? .defaultAltPrimary)
     }
     
     public static let presets: [ThemePreset] = [
@@ -50,7 +50,8 @@ public final class ThemeManager: ObservableObject {
     private init() {
         if let hex = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
            let color = UIColor(hex: hex) {
-            self.primaryColor = color
+            // Older versions persisted one resolved side of the dynamic mint.
+            self.primaryColor = ["#207C65", "#74DDB5"].contains(hex.uppercased()) ? .defaultAltPrimary : color
         } else {
             self.primaryColor = .defaultAltPrimary
         }
