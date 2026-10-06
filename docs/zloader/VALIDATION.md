@@ -291,9 +291,18 @@ alone did not establish which certificate/device/group/capability check failed.
   and exact device/group error checks that reject misleading VPN attribution.
 - Final Apple recovery build: PASS, zero warnings/errors. Host/Widget/Tunnel/Backup
   signatures, Apple profiles and requested installation identity/group checked.
-- CoreDevice update installation and launch on the user's iPhone: PASS. Actual
-  in-app refresh is pending a user device test. No third-party installer roundtrip
+- CoreDevice update installation and launch on the user's iPhone: PASS. The user confirmed successful
+  in-app refresh on this device. No third-party installer roundtrip
   is claimed from the local Apple-signing check.
 
 Private Apple-recovery IPA SHA-256:
 `6443fe32a814072761a9ededb45c58e633d0e3927e4bfb49cedf6148db9395db`.
+
+- User acceptance: "Refresh funktioniert" after the final 0.7.10 installation.
+  Post-refresh CoreDevice inventory confirms the same installed app ID, shared
+  App Group and version/build 0.7.10/0710. This is a successful device self-refresh
+  report, distinct from testing every certificate, third-party installer or
+  cellular-only transport. App data contents were not inspected.
+- Final unsigned Release build/package: PASS, zero warnings/errors. Full import
+  package: PASS all original profile bytes, complete entitlements and XML slots
+  preserved; ad-hoc import metadata still requires proper Apple re-signing.
