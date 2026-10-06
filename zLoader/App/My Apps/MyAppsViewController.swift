@@ -345,7 +345,8 @@ private extension MyAppsViewController
             
             cell.blurView.layer.cornerRadius = 20
             cell.blurView.layer.masksToBounds = true
-            cell.blurView.backgroundColor = .altPrimary
+            cell.blurView.backgroundColor = .settingsHighlighted
+            cell.textLabel.textColor = .label
             
             cell.button.addTarget(self, action: #selector(MyAppsViewController.showHiddenUpdatesAlert(_:)), for: .primaryActionTriggered)
             

@@ -21,7 +21,6 @@ final class Button: UIButton
     {
         super.awakeFromNib()
         
-        self.setTitleColor(.white, for: .normal)
         
         self.layer.masksToBounds = true
         self.layer.cornerRadius = 8
@@ -53,6 +52,8 @@ private extension Button
 {
     func update()
     {
+        self.setTitleColor(self.tintColor.contrastingText, for: .normal)
+        self.setTitleColor(UIColor.lightGray.contrastingText, for: .disabled)
         if self.isEnabled
         {
             self.backgroundColor = self.tintColor

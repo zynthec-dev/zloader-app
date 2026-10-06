@@ -372,6 +372,8 @@ private extension AppBannerView
         self.layer.cornerRadius = 22
         
         let tintColor = self.originalTintColor ?? self.tintColor
+        // Render semantic labels directly; vibrancy can wash them out in Light Mode.
+        self.vibrancyView.effect = nil
         self.subtitleLabel.textColor = .secondaryLabel
         
         switch self.style
@@ -396,29 +398,14 @@ private extension AppBannerView
             self.iconImageView.style = .circular
             
             self.titleLabel.textColor = tintColor?.adjustedForDisplay.contrastingText
-            self.subtitleLabel.textColor = tintColor?.adjustedForDisplay.contrastingText.withAlphaComponent(0.85)
+            self.subtitleLabel.textColor = tintColor?.adjustedForDisplay.contrastingText
             
             self.button.style = .custom
             
             self.backgroundEffectView.contentView.backgroundColor = tintColor?.adjustedForDisplay
             self.backgroundEffectView.backgroundColor = nil
             
-            #if !os(tvOS)
-            if let tintColor, tintColor.isTooBright
-            {
-                let textVibrancyEffect = UIVibrancyEffect(blurEffect: .init(style: .systemChromeMaterialLight), style: .fill)
-                self.vibrancyView.effect = textVibrancyEffect
-            }
-            else
-            {
-                // Thinner == more dull
-                let textVibrancyEffect = UIVibrancyEffect(blurEffect: .init(style: .systemThinMaterialDark), style: .secondaryLabel)
-                self.vibrancyView.effect = textVibrancyEffect
-            }
-            #else
-            let textVibrancyEffect = UIVibrancyEffect(blurEffect: UIBlurEffect(style: .dark))
-            self.vibrancyView.effect = textVibrancyEffect
-            #endif
+
         }
     }
 }

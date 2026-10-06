@@ -407,3 +407,31 @@ See [pairing/certificate changes and remaining device limits](PAIRING-CERTIFICAT
   persistence, Feather import, Light Mode UI and Dynamic Island require device
   acceptance. Cellular is not reported as fixed from compilation alone.
 - Unrelated user project settings and Info.plist display-name ordering preserved.
+
+
+## 0.7.14 (0714), 2026-10-06: Light Mode follow-up
+
+- 51 Settings storyboard text colors now use semantic labels; fixed white text
+  was still present after 0.7.13 and is removed in this release. Headers/footers,
+  separators and inset selection/background states adapt to appearance too.
+- Settings Highlighted asset changed from inherited purple to pale/deep mint.
+  Black/light and white/dark title contrast is 17.21:1 / 11.69:1 on these solid
+  backgrounds. Blur compositing and secondary labels need visual inspection.
+- App/source subtitle vibrancy and No Updates vibrancy are removed so semantic
+  foregrounds render directly. The No Updates label no longer uses the same tint
+  as its background. Filled legacy buttons use contrast-aware text.
+- Eight existing validation scripts PASS; Settings selectors/outlets/resources
+  and all target entitlements remain valid. Crypto/signing code is unchanged.
+- Final unsigned Release device build PASS, zero warnings/errors:
+  `/tmp/zloader-0714-device-final.log`.
+- arm64 Simulator build PASS, zero warnings/errors; final resource check log:
+  `/tmp/zloader-0714-simulator-final.log`.
+- Actual Settings storyboard displayed by debugger root replacement in a fresh
+  isolated iOS 27 simulator. Visible titles, static rows and footer text are
+  readable in Light/Dark screenshots under `.build/ThemeReview`. A notification
+  consent dialog overlays part of the screen, so this is partial visual coverage,
+  not a full screen-by-screen device acceptance. No runtime root change is shipped.
+- Resignable IPA SHA256:
+  `91a9a40a0f3b5e780fe82e6cc18e75bdbebca43c6f5ca2a2d4c3a32efa09797b`.
+- ZIP packaging and embedded extensions retained. No Apple signing or physical
+  device test is claimed. Unrelated project/Info.plist edits remain unstaged.

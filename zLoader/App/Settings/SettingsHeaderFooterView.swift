@@ -48,6 +48,9 @@ final class SettingsHeaderFooterView: UITableViewHeaderFooterView
     override func awakeFromNib()
     {
         super.awakeFromNib()
+        primaryLabel.textColor = .secondaryLabel
+        secondaryLabel.textColor = .secondaryLabel
+        button.setTitleColor(.altPrimary, for: .normal)
         configureLayout()
     }
 
