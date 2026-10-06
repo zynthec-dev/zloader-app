@@ -263,3 +263,12 @@ so its successful signing/launch checks did not repair this installation.
 Private artifact: `outputs/zLoader-0.7.9-Apple-recovery.ipa`.
 SHA-256: `b4ad66f9788b765eb9c8269b6abe157986a7a46398fa05b11431c1fce44f9d4a`.
 No signed IPA, profile, credentials or pairing data were published or committed.
+
+- Final unsigned Release build and package: PASS, zero warnings/errors,
+  `/tmp/zloader-079-unsigned.log`.
+- Full 0.7.9 resignable import package regenerated from the verified recovery IPA:
+  PASS original profile bytes and all entitlements preserved, XML entitlement slots
+  checked. This derivative is ad-hoc metadata and needs proper Apple re-signing.
+- Post-install CoreDevice inventory confirms 0.7.9/0709 under the same installed
+  bundle ID and shared App Group. The user's pending VPN/refresh result remains
+  the runtime acceptance criterion.
