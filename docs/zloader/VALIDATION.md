@@ -306,3 +306,45 @@ Private Apple-recovery IPA SHA-256:
 - Final unsigned Release build/package: PASS, zero warnings/errors. Full import
   package: PASS all original profile bytes, complete entitlements and XML slots
   preserved; ad-hoc import metadata still requires proper Apple re-signing.
+
+## iLoader double suffix and package separation: 0.7.11
+
+The user identified iLoader with the previous resignable IPA as the latest
+installer. The package preserved the already team-suffixed Xcode Debug identity;
+the inspected isideload generic path appends the team ID unconditionally.
+CoreDevice confirmed a host and shared group both ending in two copies of the
+team ID. The user screenshot confirms the installed profile lacks packet-tunnel
+permission. An IPA that preserves an already signed identity is therefore the
+wrong input for this installer path.
+
+- Generic/iLoader packages now always use the base host and child identities,
+  without team-bound profiles. Versioned iLoader/resignable aliases are produced.
+- Profile-preserving packages have distinct names/alias and cannot overwrite
+  iLoader/generic import packages. Existing versioned older outputs are historical.
+- zLoader's own fallback team suffix is idempotent; existing double-suffixed
+  identities are deliberately not normalized into different containers.
+- All seven validation scripts passed. Release build: PASS, zero warnings/errors.
+  Generic IPA checks confirmed base host/Widget/Tunnel/Backup IDs, no embedded
+  team profiles, retained extension capabilities and ZIP/signature metadata.
+- Xcode Apple build for the canonical once-suffixed iLoader target IDs: PASS,
+  zero warnings/errors; all target signatures/profiles and required capabilities
+  verified. `zLoader-0.7.11-Apple-iloader-ID.ipa` is kept privately. This prepares
+  these App IDs in the selected paid team; an actual iLoader re-sign/install still
+  requires a separate check of the profiles/signatures it returns.
+
+- Current double-suffixed installation repaired with exact existing host/extension
+  IDs and App Group, rather than silently changing containers. Apple build and
+  full profile/signature verification: PASS, zero warnings/errors. CoreDevice
+  update installation and launch: PASS. No app deletion was performed; app data
+  contents were not inspected. VPN consent and self-refresh after this iLoader
+  repair need a new physical-device test; the earlier successful 0.7.10 refresh
+  preceded the user's external iLoader re-sign/install.
+- Profile-preserving package check: PASS all target entitlements/profile bytes
+  retained and generic iLoader input SHA unchanged before/after packaging.
+- Private current-identity repair IPA SHA-256:
+  `3f062967a111a531173aea704b21d8bd0f6e82030b60340cb3bc191bf473269a`.
+- zLoader-created signing certificates need not equal Xcode's certificate. The
+  profile reuse/issuance policy checks the actual selected certificate DER and
+  device/capabilities; same-team app identity/group preservation is independent
+  of retaining Xcode's original private key. Arbitrary certificates cannot grant
+  capabilities absent from Apple's profiles.

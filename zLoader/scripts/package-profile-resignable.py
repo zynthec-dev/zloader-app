@@ -67,7 +67,7 @@ def main():
             require(xml_entitlements(bundle) == before[bundle.name][0], 'SideSign XML import would lose entitlements')
             require((bundle / 'embedded.mobileprovision').read_bytes() == before[bundle.name][1], 'Apple profile bytes changed')
         version = signing['info'](host)['CFBundleShortVersionString']
-        destination = ROOT / 'outputs' / f'zLoader-{version}-resignable.ipa'
+        destination = ROOT / 'outputs' / f'zLoader-{version}-profile-resignable.ipa'
         signing['pack'](temporary / 'Payload', destination)
         manifest = {'artifact': destination.name, 'version': version,
                     'sha256': hashlib.sha256(destination.read_bytes()).hexdigest(),
@@ -76,7 +76,7 @@ def main():
                     'signing': 'Ad-hoc import metadata; Apple re-signing required before installation',
                     'required': 'Matching private key and valid device-authorized profiles; other signers may replace metadata'}
         destination.with_suffix('.json').write_text(json.dumps(manifest, indent=2) + '\n')
-        for alias in ['zLoader-resignable', 'zLoader-iLoader']:
+        for alias in ['zLoader-profile-resignable']:
             shutil.copy2(destination, destination.with_name(alias + '.ipa'))
             destination.with_name(alias + '.json').write_text(json.dumps({**manifest, 'artifact': alias + '.ipa'}, indent=2) + '\n')
         print(json.dumps(manifest, indent=2))

@@ -38,6 +38,9 @@ leaves the original dependency gitlinks intact.
 
 For installing through iLoader, use `outputs/zLoader-iLoader.ipa` and read
 [the verified iLoader signing limitations](docs/zloader/ILOADER.md).
+Both installer inputs use the base app IDs without an existing team suffix.
+Profile-preserving inputs are separate `outputs/zLoader-profile-resignable.ipa`
+artifacts and must not be fed to a signer that unconditionally appends the team ID.
 For importing into SideStore, `outputs/zLoader-resignable.ipa` has the same metadata. It contains
 ad-hoc signatures preserving capability requests for the importer. It still
 requires valid Apple provisioning and signing, including its widget and tunnel.

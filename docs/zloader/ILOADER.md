@@ -127,3 +127,29 @@ Opening a pairing file through zLoader imports every contained protocol and star
 reloading the selected transport. An import can succeed while device connection
 fails; that failure is shown separately. Pairing keys are never put in URL query
 parameters or sent to a server.
+
+## Package identities corrected in 0.7.11
+
+The user installed the earlier profile-preserving Debug package through iLoader.
+Its input host ID already ended in the team ID; the inspected iLoader generic
+signer appended that same ID again. CoreDevice confirmed the double-suffixed host
+and shared App Group. The user screenshot also establishes missing installed
+packet-tunnel authorization; the repeated suffix alone is not a VPN entitlement.
+
+Use `outputs/zLoader-0.7.11-iLoader.ipa` (or `zLoader-iLoader.ipa`) as installer
+input. Its host is `com.zynthec.zLoader`, with `.Widget` and `.Tunnel` children,
+base shared group declarations and no team-bound embedded profiles. iLoader then
+applies its one team suffix. The nested Backup IPA also uses its base identity.
+All extension/capability declarations remain present as ad-hoc signing metadata.
+
+Profile-preserving packages now have distinct `*-profile-resignable.ipa` names
+and a `zLoader-profile-resignable.ipa` alias. They no longer overwrite the generic
+or iLoader aliases. These packages are intended for signers preserving existing
+identities/profiles, not an installer that unconditionally appends a team ID.
+Old versioned 0.7.10 resignable outputs retain their historical meaning.
+
+zLoader's own fallback suffix operation is now idempotent. Already-installed
+identities, including an existing double suffix, are retained rather than silently
+normalized into another data container. Switching a previously installed Debug
+or double-suffixed app to the base-ID installer output can create a different
+container. No app was deleted or reinstalled as part of this packaging correction.

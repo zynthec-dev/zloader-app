@@ -34,6 +34,9 @@ app = staging / 'Payload/zLoader.app'
 shutil.copytree(source, app, symlinks=True)
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
+# Installer-neutral input: no Apple profiles tied to a previous team/identity.
+for profile in app.rglob('embedded.mobileprovision'):
+    profile.unlink()
 group = 'group.' + info['CFBundleIdentifier']
 app_groups_key = 'com.apple.security.application-groups'
 ne_key = 'com.apple.developer.networking.networkextension'
@@ -110,6 +113,8 @@ with zipfile.ZipFile(ipa) as archive:
     assert archive.testzip() is None
 manifest = {
     'artifact': ipa.name,
+    'version': info['CFBundleShortVersionString'],
+    'inputBundleIdentifier': info['CFBundleIdentifier'],
     'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
     'appGroup': group,
     'capabilitiesByBundle': {str(path.relative_to(staging / 'Payload')): requirements for path, requirements in expected.items()},
@@ -121,6 +126,9 @@ manifest = {
 # signatures with signatures and entitlements from its downloaded profiles.
 iloader_ipa = out / 'zLoader-iLoader.ipa'
 shutil.copy2(ipa, iloader_ipa)
+version = info['CFBundleShortVersionString']
+for name in [f'zLoader-{version}-iLoader.ipa', f'zLoader-{version}-resignable.ipa']:
+    shutil.copy2(ipa, out / name)
 iloader_manifest = {**manifest, 'artifact': iloader_ipa.name}
 (out / 'zLoader-iLoader.json').write_text(json.dumps(iloader_manifest, indent=2) + '\n')
 shutil.rmtree(staging)

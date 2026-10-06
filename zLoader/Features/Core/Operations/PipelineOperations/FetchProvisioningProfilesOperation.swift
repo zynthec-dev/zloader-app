@@ -198,7 +198,7 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             // A certificate change within the same team does not require a new app identity.
             parentID = context.targetBundleIdentifier
         } else if self.context.appendTeamID {
-            parentID = "\(self.context.targetBundleIdentifier).\(team.identifier)"
+            parentID = PacketTunnelProvisioning.appendingTeamOnce(to: context.targetBundleIdentifier, teamID: team.identifier)
         } else {
             parentID = self.context.targetBundleIdentifier
         }

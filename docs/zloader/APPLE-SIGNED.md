@@ -39,10 +39,10 @@ information are not written into tracked files.
 ## In-app re-signing
 
 zLoader reuses compatible embedded profiles for its own host/extensions when
-bundle ID, team, original signing certificate DER, expiration, device eligibility
+bundle ID, team, currently selected signing certificate DER, expiration, device eligibility
 and required App Group/Network Extension values match. An unsigned update can
-use a compatible profile from the running installation. Original own-app IDs are
-kept when signing with their original certificate. Each extension is evaluated
+use a compatible profile from the running installation. Running own-app IDs are
+kept within the same eligible team, including when the signing certificate changes. Each extension is evaluated
 separately. If a profile is incompatible or device identity cannot be confirmed,
 the normal Apple provisioning path remains active, with its authorization checks.
 Explicit user-selected override profiles continue to use the override path.
