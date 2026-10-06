@@ -40,7 +40,7 @@ final class ChangeAppIconOperation: BasePipelineOperation<InstallAppOperationCon
         }
         
         self.setProgress(40)
-        let iconScale = await MainActor.run { Int(UIScreen.main.scale) }
+        let iconScale = await MainActor.run { Int(UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen.scale }.max() ?? 3) }
         guard let icon = image.resizing(toFill: CGSize(width: 60 * iconScale, height: 60 * iconScale)),
               let iconData = icon.pngData()
         else {

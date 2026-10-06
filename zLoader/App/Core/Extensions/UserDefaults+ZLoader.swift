@@ -220,14 +220,6 @@ public extension UserDefaults
         get { self.bool(forKey: #function) }
         set { self.set(newValue, forKey: #function) }
     }
-    @objc var turnOffDataShortcutName: String {
-        get { self.string(forKey: #function) ?? "TurnOffData" }
-        set { self.set(newValue, forKey: #function) }
-    }
-    @objc var turnOnDataShortcutName: String {
-        get { self.string(forKey: #function) ?? "TurnOnData" }
-        set { self.set(newValue, forKey: #function) }
-    }
     
     var customizeAppExtensions: AppExtensionCustomization {
         get {
@@ -583,8 +575,6 @@ public extension UserDefaults
             #keyPath(UserDefaults.isRotateLogsOnStartupEnabled): true,
             #keyPath(UserDefaults.recreateDatabaseOnNextStart): false,
             #keyPath(UserDefaults.isCellularRefreshEnabled): true,
-            #keyPath(UserDefaults.turnOffDataShortcutName): "TurnOffData",
-            #keyPath(UserDefaults.turnOnDataShortcutName): "TurnOnData",
             #keyPath(UserDefaults.isPairingReset): true,
             #keyPath(UserDefaults.isDebugModeEnabled): false,
             #keyPath(UserDefaults.isDeviceRegistered): false,

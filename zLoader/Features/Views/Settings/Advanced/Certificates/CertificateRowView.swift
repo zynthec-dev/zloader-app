@@ -31,17 +31,11 @@ struct CertificateRowView: View {
                     .font(.headline)
                 
                 let displaySerial = viewModel.displaySerial(for: cert)
-                (
-                    Text("Serial: ").font(.system(size: 11))
-                    + Text(displaySerial).font(.system(size: 11, design: .monospaced))
-                )
+                Text("\(Text("Serial: ").font(.system(size: 11)))\(Text(displaySerial).font(.system(size: 11, design: .monospaced)))")
                 .foregroundColor(.secondary)
                 
                 if let displayIdent = viewModel.displayIdentifier(for: cert) {
-                    (
-                        Text("ID: ").font(.system(size: 10))
-                        + Text(displayIdent).font(.system(size: 10, design: .monospaced))
-                    )
+                    Text("\(Text("ID: ").font(.system(size: 10)))\(Text(displayIdent).font(.system(size: 10, design: .monospaced)))")
                     .foregroundColor(.gray)
                 }
                 
@@ -51,26 +45,17 @@ struct CertificateRowView: View {
                 
                 if let displayReq = viewModel.displayRequester(for: cert) {
                     let isHidden = displayReq.contains("•")
-                    (
-                        Text("Requester: ").font(.system(size: 10))
-                        + Text(displayReq).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10))
-                    )
+                    Text("\(Text("Requester: ").font(.system(size: 10)))\(Text(displayReq).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
                     .foregroundColor(.secondary)
                 }
                 
                 if let createdBy = viewModel.displayCreatedBy(for: cert) {
                     let isHidden = createdBy.contains("•")
-                    (
-                        Text("Created By: ").font(.system(size: 10))
-                        + Text(createdBy).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10))
-                    )
+                    Text("\(Text("Created By: ").font(.system(size: 10)))\(Text(createdBy).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
                     .foregroundColor(.secondary)
                 }
                 
-                (
-                    Text("Keys: ").font(.system(size: 10))
-                    + Text(hasPrivateKey ? "public + private" : "public").font(.system(size: 10))
-                )
+                Text("\(Text("Keys: ").font(.system(size: 10)))\(Text(hasPrivateKey ? "public + private" : "public").font(.system(size: 10)))")
                 .foregroundColor(.secondary)
             }
             
@@ -133,23 +118,14 @@ private struct CertBriefInfoView: View {
         let isTypeHidden     = displayType.contains("•")
         let isValidityHidden = displayValidity.contains("•")
         Group {
-            (
-                Text("Type: ").font(.system(size: 10))
-                + Text(displayType).font(isTypeHidden ? .system(size: 10, design: .monospaced) : .system(size: 10))
-            )
+            Text("\(Text("Type: ").font(.system(size: 10)))\(Text(displayType).font(isTypeHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
             .foregroundColor(.secondary)
             if let typeName = viewModel.displayCertificateTypeName(for: cert) {
                 let isTypeNameHidden = typeName.contains("•")
-                (
-                    Text("Type Name: ").font(.system(size: 10))
-                    + Text(typeName).font(isTypeNameHidden ? .system(size: 10, design: .monospaced) : .system(size: 10))
-                )
+                Text("\(Text("Type Name: ").font(.system(size: 10)))\(Text(typeName).font(isTypeNameHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
                 .foregroundColor(.secondary)
             }
-            (
-                Text("Validity: ").font(.system(size: 10))
-                + Text(displayValidity).font(isValidityHidden ? .system(size: 10, design: .monospaced) : .system(size: 10))
-            )
+            Text("\(Text("Validity: ").font(.system(size: 10)))\(Text(displayValidity).font(isValidityHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
             .foregroundColor(.secondary)
         }
     }

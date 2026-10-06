@@ -1,5 +1,43 @@
 # Validation and device acceptance
 
+## Current project audit — 0.7.12 (0712), 2026-10-06
+
+- Full clean arm64 iOS Release: PASS, zero warnings/errors,
+  `/tmp/zloader-audit-clean-release.log`; unsigned and capability-metadata
+  installer packages generated and ZIP-checked.
+- Full arm64 iOS Simulator Debug build: PASS, zero warnings/errors,
+  `/tmp/zloader-audit-clean-simulator.log`; no simulator UI or physical device
+  acceptance was performed.
+- All eight README test scripts: PASS (transport, App Groups, Core Data context,
+  provisioning, embedded profile reuse, pairing imports, Settings storyboards,
+  cross-target project configuration).
+- Expanded Apple-signed IPA validation: PASS on existing private
+  `zLoader-0.7.11-Apple-recovery.ipa`, including nested Backup, exact child IDs,
+  shared group, certificate/profile authorization and same team. This is not a
+  new 0.7.12 signed build or a portal revocation check.
+- Apple-signed Debug build: BLOCKED, `/tmp/zloader-audit-signed-final.log`: Xcode
+  reports No Accounts and no development certificate/private key. macOS reports
+  zero signing identities. No 0.7.12 device install was performed.
+- Deployment minimum is now iOS 26.5 to match the actual pinned binary
+  dependencies. Rebuilding dependencies is necessary for older iOS support.
+- Direct source endpoint request: HTTP 403; live feed verification unavailable
+  from this audit client, with no server changes.
+
+Local 0.7.12 artifact SHA-256 values:
+
+- `outputs/zLoader-unsigned.ipa`: `6228d2caa83fca06e8e0d67175f5e25a254872a6d41c8eaef5dace6183dbc19e`.
+- `outputs/zLoader-0.7.12-resignable.ipa`: `adebe0f218c2b140e2feb072fc16c7c5e4793c6857d6436b11f64140fa7f376e`.
+
+The audit removed inherited linker `-w`; earlier zero-warning logs did **not**
+show all linker diagnostics. The exposed dependency deployment mismatches and
+subsequent API deprecations were corrected, rather than suppressed. Older
+results below remain historical and are not evidence for current device behavior.
+
+See [PROJECT-AUDIT.md](PROJECT-AUDIT.md) for installation steps and hardware
+acceptance limits.
+
+## Historical evidence
+
 2026-10-05, local Apple Silicon macOS, Xcode 27.0 (27A266a), zLoader 0.7.1 (0701).
 
 | Check | Result |

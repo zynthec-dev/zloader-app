@@ -27,7 +27,7 @@ final class InstructionsViewController: UIViewController
     {
         super.viewDidLoad()
         
-        if UIScreen.main.isExtraCompactHeight
+        if (view.window?.windowScene?.screen.isExtraCompactHeight ?? (view.bounds.height < 600))
         {
             self.contentStackView.layoutMargins.top = 0
             self.contentStackView.layoutMargins.bottom = self.contentStackView.layoutMargins.left

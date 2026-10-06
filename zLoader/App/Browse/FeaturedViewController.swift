@@ -542,7 +542,7 @@ extension FeaturedViewController
             let indexPath = IndexPath(item: 0, section: indexPath.section)
             let storeApp = self.dataSource.item(at: indexPath)
             
-            var content = UIListContentConfiguration.plainHeader()
+            var content = UIListContentConfiguration.header()
             content.text = storeApp.source?.name ?? NSLocalizedString("Unknown Source", comment: "")
             content.textProperties.numberOfLines = 1
             

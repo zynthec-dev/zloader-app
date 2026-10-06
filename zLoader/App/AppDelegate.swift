@@ -249,11 +249,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: AppDelegate.importAppDeepLinkNotification, object: nil, userInfo: [AppDelegate.importAppDeepLinkURLKey: url])
     }
 
-    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any]) -> Bool
-    {
-        return self.open(url)
-    }
-    
     #if !os(tvOS)
     func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any?
     {

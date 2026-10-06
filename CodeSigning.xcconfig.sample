@@ -1,7 +1,10 @@
-// Local zLoader signing configuration. Never commit the filled-in copy.
+// Copy to CodeSigning.xcconfig (ignored by Git).
 DEVELOPMENT_TEAM = YOUR_TEAM_ID
 CODE_SIGN_IDENTITY = Apple Development
-DEVELOPER_ACCOUNT_PAID = YES
-// Keep each target's own CODE_SIGN_ENTITLEMENTS file. Host/tunnel require
-// packet-tunnel-provider; host/widget require a shared App Group.
-// Provision all target bundle IDs and capabilities in the same paid team.
+// For an existing installation, use its exact host ID and App Group here.
+// Do not shorten a historical team suffix when preserving its containers.
+// MAIN_BUNDLE_IDENTIFIER = YOUR_EXISTING_HOST_ID
+// APP_GROUP_IDENTIFIER = YOUR_EXISTING_GROUP_WITHOUT_GROUP_PREFIX
+// Host/Backup/Widget/Tunnel derive their IDs from MAIN_BUNDLE_IDENTIFIER.
+// Keep each target's own entitlement file; do not override it globally.
+// An eligible paid team must provision host/tunnel Network Extensions and groups.

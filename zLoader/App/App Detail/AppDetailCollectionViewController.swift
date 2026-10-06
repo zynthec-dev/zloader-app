@@ -109,7 +109,7 @@ class AppDetailCollectionViewController: UICollectionViewController
         self.collectionView.register(UICollectionViewListCell.self, forCellWithReuseIdentifier: CellContentGenericCellIdentifier)
         
         self.headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(elementKind: UICollectionView.elementKindSectionHeader) { [weak self] (headerView, elementKind, indexPath) in
-            var configuration = UIListContentConfiguration.plainHeader()
+            var configuration = UIListContentConfiguration.header()
             
             // Match parent table view section headers.
             configuration.textProperties.font = UIFont.systemFont(ofSize: 22, weight: .bold) // .boldSystemFont(ofSize:) returns *semi-bold* color smh.

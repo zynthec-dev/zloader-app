@@ -42,10 +42,7 @@ struct ActiveCertSectionView: View {
                         }
                         
                         let displaySerial = viewModel.displayActiveSerial(activeSerial)
-                        (
-                            Text("SN: ").font(.footnote)
-                            + Text(displaySerial).font(.system(size: 13, design: .monospaced))
-                        )
+                        Text("\(Text("SN: ").font(.footnote))\(Text(displaySerial).font(.system(size: 13, design: .monospaced)))")
                         .foregroundColor(.secondary)
                         #if !os(tvOS)
                         .onTapGesture {

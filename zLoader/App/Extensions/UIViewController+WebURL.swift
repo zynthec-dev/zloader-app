@@ -26,9 +26,6 @@ public extension UIViewController {
     func makeWebViewController(for url: URL, preferredTintColor: UIColor? = nil) -> UIViewController {
         #if !os(tvOS)
         let safariViewController = SFSafariViewController(url: url)
-        if let preferredTintColor {
-            safariViewController.preferredControlTintColor = preferredTintColor
-        }
         return safariViewController
         #else
         let fallbackVC = UIViewController()

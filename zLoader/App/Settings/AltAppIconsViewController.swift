@@ -173,7 +173,7 @@ private extension AltAppIconsViewController
                 cell.accessories = []
             }
             
-            var backgroundConfiguration = UIBackgroundConfiguration.listPlainCell()
+            var backgroundConfiguration = UIBackgroundConfiguration.listCell()
             backgroundConfiguration.backgroundColorTransformer = UIConfigurationColorTransformer { [weak cell] c in
                 if let state = cell?.configurationState, state.isHighlighted 
                 {

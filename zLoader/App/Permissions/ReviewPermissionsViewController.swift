@@ -240,7 +240,7 @@ extension ReviewPermissionsViewController
                 cell.contentConfiguration = content
             }
             
-            var backgroundConfig = UIBackgroundConfiguration.listGroupedCell()
+            var backgroundConfig = UIBackgroundConfiguration.listCell()
             backgroundConfig.backgroundColor = .settingsHighlighted
             backgroundConfig.visualEffect = nil
             cell.backgroundConfiguration = backgroundConfig

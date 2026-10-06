@@ -81,7 +81,7 @@ final class AuthenticationViewController: UIViewController
         self.passwordTextField.borderStyle = .roundedRect
         #endif
 
-        if UIScreen.main.isExtraCompactHeight
+        if (view.window?.windowScene?.screen.isExtraCompactHeight ?? (view.bounds.height < 600))
         {
             self.contentStackView.spacing = 20
         }
@@ -255,7 +255,7 @@ extension AuthenticationViewController: UITextFieldDelegate
     
     func textFieldDidBeginEditing(_ textField: UITextField)
     {
-        guard UIScreen.main.isExtraCompactHeight else { return }
+        guard (view.window?.windowScene?.screen.isExtraCompactHeight ?? (view.bounds.height < 600)) else { return }
         
         // Position all the controls within visible frame.
         var contentOffset = self.scrollView.contentOffset

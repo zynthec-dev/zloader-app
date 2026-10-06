@@ -29,8 +29,14 @@ sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 sh zLoader/scripts/test-embedded-profile-reuse.sh
 sh zLoader/scripts/test-pairing-import.sh
 python3 zLoader/scripts/test-settings-storyboard.py
+python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/build-unsigned.sh
 ```
+
+Requires iOS 26.5+ to match the pinned binary dependencies.
+For data-preserving Xcode installation, copy `CodeSigning.xcconfig.sample` to the
+ignored `CodeSigning.xcconfig` and keep the installed host ID and App Group.
+See [the audited Xcode setup](docs/zloader/PROJECT-AUDIT.md).
 
 Open `zLoader.xcodeproj`, scheme `zLoader`. The dependency patch must also be
 applied before a direct Xcode build. It is tracked separately, idempotent and

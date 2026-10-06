@@ -94,15 +94,7 @@ private struct AppDetailWidgetView: View
                                     }
                                 }()
                                 
-                                (
-                                    Text("Expires in\n")
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundColor(Color.white.opacity(0.45)) +
-                                    
-                                    expirationText
-                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                        .foregroundColor(.white)
-                                )
+                                Text("\(Text("Expires in\n").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(Color.white.opacity(0.45)))\(expirationText.font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(.white))")
                                 .lineLimit(2)
                                 .lineSpacing(1.0)
                                 .minimumScaleFactor(0.5)

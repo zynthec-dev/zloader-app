@@ -1,4 +1,4 @@
-"""Check iLoader's resulting signed IPA, without changing it or reading credentials.
+"""Check a resulting Apple-signed IPA, without changing it or reading credentials.
 
 Requires macOS codesign/security. Does not contact Apple or establish device launch.
 """
@@ -86,8 +86,26 @@ def verify(ipa):
             require('packet-tunnel-provider' in declared[bundle].get(NETWORK, []),
                     f'{bundle.name}: packet-tunnel-provider was omitted by the signer')
         teams = {check_profile(bundle, requested) for bundle, requested in declared.items()}
-        require(len(teams) == 1, 'Host and extensions are signed by different teams')
-        print('PASS Apple-signed integrity, all extension entitlements, authorized certificates, current profiles, shared App Group and tunnel capability')
+        backup_ipa = host / 'zLoaderBackup.ipa'
+        require(backup_ipa.is_file(), 'Embedded Backup IPA was removed')
+        with zipfile.ZipFile(backup_ipa) as archive:
+            require(archive.testzip() is None, 'Invalid embedded Backup ZIP')
+        backup_root = root / 'Backup'
+        subprocess.run(['ditto', '-x', '-k', str(backup_ipa), str(backup_root)], check=True)
+        backups = list((backup_root / 'Payload').glob('*.app'))
+        require(len(backups) == 1, 'Expected one embedded Backup app')
+        backup = backups[0]
+        subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic', str(backup)], check=True)
+        backup_entitlements = entitlements(backup)
+        teams.add(check_profile(backup, backup_entitlements))
+        require(set(declared[host].get(GROUPS, [])) == set(backup_entitlements.get(GROUPS, [])),
+                'Host and Backup must retain the same signed App Group')
+        host_id = plistlib.loads((host / 'Info.plist').read_bytes())['CFBundleIdentifier']
+        for child, suffix in [(widget, '.Widget'), (tunnel, '.Tunnel'), (backup, '.Backup')]:
+            child_id = plistlib.loads((child / 'Info.plist').read_bytes())['CFBundleIdentifier']
+            require(child_id == host_id + suffix, f'{child.name}: identity is not derived from host')
+        require(len(teams) == 1, 'Host, extensions and Backup are signed by different teams')
+        print('PASS Apple-signed integrity, all extensions and embedded Backup, authorized certificates, current profiles, shared App Group and tunnel capability')
         print('Registered-device eligibility and physical launch still require device validation.')
 
 

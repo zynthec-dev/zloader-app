@@ -66,7 +66,7 @@ class IconButtonCollectionReusableView: UICollectionReusableView
         self.iconButton.clipsToBounds = true
         self.iconButton.layer.cornerRadius = iconHeight / 2
         
-        let content = UIListContentConfiguration.plainHeader()
+        let content = UIListContentConfiguration.header()
         self.titleButton = UIButton(type: .system)
         self.titleButton.translatesAutoresizingMaskIntoConstraints = false
         self.titleButton.titleLabel?.font = content.textProperties.font
