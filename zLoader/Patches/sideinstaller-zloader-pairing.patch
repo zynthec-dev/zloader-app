@@ -1,0 +1,21 @@
+--- a/ios-app/PairingTargets.swift
++++ b/ios-app/PairingTargets.swift
+@@ -16,7 +16,7 @@
+     /// Where SideStore lives in this app, for the apps that carry it.
+     var sideStoreHome: SideStoreHome? {
+         switch name {
+-        case "SideStore":     return .standalone
++        case "SideStore", "zLoader": return .standalone
+         case "LiveContainer": return .liveContainer
+         default:              return nil
+         }
+@@ -26,6 +26,9 @@
+     /// reached only through the bundle-id check in `PairingTargets.match`.
+     static let all: [PairingTargetApp] = [
+         .init(name: "SideStore",
++              remoteRelativePath: "ALTPairingFile.mobiledevicepairing",
++              bundleIDContains: nil),
++        .init(name: "zLoader",
+               remoteRelativePath: "ALTPairingFile.mobiledevicepairing",
+               bundleIDContains: nil),
+         .init(name: "LiveContainer",

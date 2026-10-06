@@ -39,7 +39,7 @@ public final class AppBootManager {
             try await startEMProxy()
         }
 
-        let preferred = PairingFileManager.shared.preferredProtocol
+        let preferred = try PairingFileManager.shared.parse(content: pairingFile).mode
         try await minimuxerStart(pairingFile, preferred: preferred)
         
         // Validate the pairing by trying to fetch the UDID
@@ -129,6 +129,7 @@ public final class AppBootManager {
         async let minimuxerCheck: Void = {
             debugLog("[AppBootManager] performBootSequence(): Minimuxer check starting")
             defer { debugLog("[AppBootManager] performBootSequence(): Minimuxer check completed") }
+            PairingFileManager.shared.importTransferredPairingFiles()
             guard let pf = PairingFileManager.shared.fetchPairingFile() else {
                 #if !targetEnvironment(simulator)
                 self.needsPairingPrompt = true

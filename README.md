@@ -27,6 +27,7 @@ sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/test-context.sh
 sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 sh zLoader/scripts/test-embedded-profile-reuse.sh
+sh zLoader/scripts/test-pairing-import.sh
 python3 zLoader/scripts/test-settings-storyboard.py
 sh zLoader/scripts/build-unsigned.sh
 ```

@@ -211,3 +211,29 @@ remain unverified here. Existing pairing records are retained.
 - Actual VPN authorization/connection, pairing, account-backed self-refresh and
   cellular-only behavior remain pending device interaction and error feedback.
 - Existing project.pbxproj and Info.plist user changes were preserved.
+
+## 0.7.8 (2026-10-06)
+
+- Existing six regression checks passed; new `test-pairing-import.sh` passed using
+  the actual manager and Minimuxer parser with synthetic records. Covered combined
+  iLoader data, binary plists, both protocol records, selected Lockdown, remote-only
+  fallback and retention of invalid input. No real pairing credentials are fixtures.
+- Profile reuse tests verify that rotating the key rejects the old profile and
+  accepts a newly authorized profile for the new key. Live Apple profile issuance
+  is not simulated as a success by these tests and still requires account testing.
+- Final Apple packaging/device build passed with zero warning/error diagnostics;
+  signed host, widget, tunnel and nested backup profile checks passed. Full
+  resignable packaging preserves profiles and entitlements but remains ad-hoc
+  metadata until an eligible signer signs it.
+- iLoader and SideInstaller patches passed context/application checks. The actual
+  patched SideInstaller matching code was compiled in an isolated harness and
+  found zLoader with base, team-suffixed and custom IDs; existing SideStore matched.
+  No upstream messages, submissions or external application installs were made.
+- Pairing document registration and File Sharing flags were checked. StikPair
+  share-sheet appearance, direct third-party placement, real trust authorization,
+  device registration, cellular-only refresh and self-resign remain device/account
+  acceptance checks, distinct from builds and signature checks.
+
+- Apple-signed 0.7.8 was physically installed and launched via CoreDevice on the
+  user's connected iPhone. This verifies initial launch, not the new live-account
+  profile issuance or VPN/Share Sheet interaction.

@@ -57,7 +57,7 @@ final class PairingFileManager: NSObject {
         if let mode = persistedActiveProtocol, hasPairingFile(for: mode) {
             return true
         }
-        return false
+        return hasPairingFile(for: .rppairing) || hasPairingFile(for: .lockdown)
     }
 
     nonisolated func metadata(for mode: PairingProtocol) -> PairingFileMetadata {
@@ -78,7 +78,7 @@ final class PairingFileManager: NSObject {
         let fileURL = pairingFileURL(for: mode)
         let fm = FileManager.default
         if fm.fileExists(atPath: fileURL.path),
-           let contents = try? String(contentsOf: fileURL), !contents.isEmpty 
+           let contents = try? String(contentsOf: fileURL, encoding: .utf8), !contents.isEmpty
         {
             return contents
         }
@@ -91,27 +91,31 @@ final class PairingFileManager: NSObject {
         if let targetPreferred, let contents = fetchPairingFile(for: targetPreferred) {
             return contents
         }
-        if let persisted = persistedActiveProtocol {
-            return fetchPairingFile(for: persisted)
+        if let persisted = persistedActiveProtocol, let content = fetchPairingFile(for: persisted) {
+            return content
         }
-        return nil
+        return fetchPairingFile(for: .rppairing) ?? fetchPairingFile(for: .lockdown)
     }
     
     @discardableResult
     nonisolated func parse(content: String, preferred: PairingProtocol? = nil) throws -> any PairingFile {
-        try PairingFileParser.parse(content: content, preferred: preferred)
+        if let preferred { return try PairingFileParser.parse(content: content, preferred: preferred) }
+        // iLoader combines both protocols in one plist. Keep both credentials;
+        // resolve the active protocol explicitly instead of rejecting ambiguity.
+        if let requested = preferredProtocol,
+           let parsed = try? PairingFileParser.parse(content: content, preferred: requested) { return parsed }
+        if let remote = try? PairingFileParser.parse(content: content, preferred: .rppairing) { return remote }
+        return try PairingFileParser.parse(content: content, preferred: .lockdown)
     }
 
     @discardableResult
     func savePairingFile(contents: String, preferred: PairingProtocol? = nil) throws -> any PairingFile {
         let parsed = try parse(content: contents, preferred: preferred)
-        let destinationURL = pairingFileURL(for: parsed.mode)
-        let fm = FileManager.default
-        if fm.fileExists(atPath: destinationURL.path) {
-            try? fm.removeItem(at: destinationURL)
+        for mode in [PairingProtocol.rppairing, .lockdown] {
+            guard (try? PairingFileParser.parse(content: contents, preferred: mode)) != nil else { continue }
+            try contents.write(to: pairingFileURL(for: mode), atomically: true, encoding: .utf8)
         }
-        try contents.write(to: destinationURL, atomically: true, encoding: .utf8)
-        debugLog("[PairingFile] Saved \(parsed.mode.rawValue) pairing file to: \(destinationURL.path)")
+        debugLog("[PairingFile] Saved all available pairing protocols; active selection: \(parsed.mode.rawValue)")
         UserDefaults.standard.isPairingReset = false
         return parsed
     }
@@ -124,7 +128,9 @@ final class PairingFileManager: NSObject {
             }
         }
         let data = try Data(contentsOf: url)
-        guard let content = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else {
+        let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+        let xml = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        guard let content = String(data: xml, encoding: .utf8) else {
             throw CocoaError(.fileReadInapplicableStringEncoding)
         }
         let parsed = try parse(content: content, preferred: nil)
@@ -135,6 +141,21 @@ final class PairingFileManager: NSObject {
         let (content, _) = try inspectPairingFile(from: url)
         let parsed = try savePairingFile(contents: content, preferred: preferred)
         persistedActiveProtocol = parsed.mode
+    }
+
+    /// Recognizes explicit iLoader/File Sharing imports on every app boot.
+    /// Invalid inputs remain available for diagnosis; never delete them on failure.
+    func importTransferredPairingFiles() {
+        for name in [AppConstants.Pairing.legacyPairingFileName, "pairingFile.plist", "rp_pairing_file.plist"] {
+            let url = FileManager.default.documentsDirectory.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            do {
+                try importPairingFile(from: url)
+                try FileManager.default.removeItem(at: url)
+            } catch {
+                debugLog("[PairingFile] Transferred pairing file could not be imported: \(error.localizedDescription)")
+            }
+        }
     }
 
     func deletePairingFile(for mode: PairingProtocol) {

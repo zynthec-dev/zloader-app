@@ -1,0 +1,19 @@
+--- a/src-tauri/src/pairing.rs
++++ b/src-tauri/src/pairing.rs
+@@ -36,6 +36,7 @@
+ 
+ const PAIRING_APPS: &[(&str, &str)] = &[
+     ("SideStore", "ALTPairingFile.mobiledevicepairing"),
++    ("zLoader", "ALTPairingFile.mobiledevicepairing"),
+     (
+         "LiveContainer",
+         "SideStore/Documents/ALTPairingFile.mobiledevicepairing",
+@@ -526,7 +527,7 @@
+             .and_then(|x| x.get("CFBundleDisplayName").and_then(|x| x.as_string()))
+             .ok_or(AppError::Misc("Failed to parse installed apps".to_string()))?;
+ 
+-        if n == "SideStore" || (live_container && n == "LiveContainer") {
++        if n == "SideStore" || n == "zLoader" || (live_container && n == "LiveContainer") {
+             return Ok(Some(PairingAppInfo {
+                 name: n.to_string(),
+                 bundle_id: bundle_id.to_string(),

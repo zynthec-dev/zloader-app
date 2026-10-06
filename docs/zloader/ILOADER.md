@@ -71,3 +71,59 @@ This is not a device acceptance test. Profile expiry, registered-device eligibil
 VPN consent, actual container access, pairing, cellular-only install/refresh and
 physical launch remain to be tested on the iPhone. No Apple account/device was used
 for the local build and package verification.
+
+## Pairing transfer (0.7.8)
+
+The [official iLoader implementation](https://github.com/nab138/iloader/blob/main/src-tauri/src/pairing.rs)
+combines Lockdown and Remote Pairing credentials in one property list. zLoader now
+accepts the combined file and preserves both available protocols. Remote-only and
+Lockdown-only files remain supported, including binary plists. Existing selected
+protocols are respected when available; Remote Pairing is the default when no
+selection is available. A stale Lockdown selection no longer prevents a remote-only
+file from being loaded.
+
+Import the exported file through zLoader's pairing-file picker, or transfer it into
+zLoader's Documents folder using Files/File Sharing. Recognized incoming names:
+`ALTPairingFile.mobiledevicepairing`, `pairingFile.plist`, `rp_pairing_file.plist`.
+On each app boot, valid transferred data is stored in the canonical files for every
+contained protocol. Source files are consumed only after a successful import;
+invalid input is kept. On-device wireless pairing creates Remote Pairing credentials;
+it does not manufacture a Lockdown certificate/private-key record.
+
+The official iLoader GUI currently filters destinations with a hardcoded app-name
+allowlist that excludes zLoader. This cannot be changed by zLoader's own IPA.
+`zLoader/Patches/iloader-zloader-pairing.patch` adds zLoader to that allowlist and
+its SideStore-style destination lookup, retaining all other apps. Applying the
+patch to iLoader and rebuilding enables direct placement to
+`Documents/ALTPairingFile.mobiledevicepairing`. The patch was checked against the
+read-only fetched iLoader source, but a patched iLoader binary was not built or
+installed. With the official binary, export/import is the supported path.
+
+No actual pairing records or keys are included in this repository. Pairing import
+regressions use synthetic, nonfunctional values; successful parsing does not prove
+trust authorization or device-service access on hardware.
+
+## StikPair and SideInstaller destinations
+
+zLoader declares Pairing File document handling for property lists, XML and the
+legacy mobiledevicepairing UTI, in addition to IPA handling. StikPair's current
+[Export Pairing File](https://github.com/StikDebug/StikPair/blob/main/App/ContentView.swift)
+uses the iOS share sheet. zLoader can therefore be offered as an Open-In destination
+once iOS registers the installed app's document types. Actual share-sheet placement
+on the user's phone remains a runtime check; declaring the type does not promise
+that every share sheet immediately refreshes its cached choices.
+
+SideInstaller's [PairingTargets](https://github.com/FrizzleM/SideInstaller/blob/main/ios-app/PairingTargets.swift)
+is a fixed display-name table. `sideinstaller-zloader-pairing.patch` adds zLoader
+and gives it the standalone AltStore-family handoff conversion and Documents path.
+The patched target matching was compiled and tested locally with original,
+team-suffixed and customized bundle IDs; existing SideStore discovery was preserved.
+Neither patch was submitted upstream, and the official external applications have
+not been changed. Direct automatic destination lists require the respective app
+to integrate the patch. These are integration artifacts for the user's private
+setup, not claims of endorsement or released upstream support.
+
+Opening a pairing file through zLoader imports every contained protocol and starts
+reloading the selected transport. An import can succeed while device connection
+fails; that failure is shown separately. Pairing keys are never put in URL query
+parameters or sent to a server.

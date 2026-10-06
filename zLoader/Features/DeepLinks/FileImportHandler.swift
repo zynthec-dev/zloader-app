@@ -86,6 +86,18 @@ public final class FileImportHandler {
         do {
             try PairingFileManager.shared.importPairingFile(from: fileURL)
             debugLog("[FileImportHandler] Successfully saved imported pairing file")
+            if let mode = PairingFileManager.shared.persistedActiveProtocol {
+                Task { @MainActor in
+                    do {
+                        try await minimuxerSwitchPairingProtocol(to: mode)
+                    } catch {
+                        debugLog("[FileImportHandler] Pairing was saved but device connection failed: \(error.localizedDescription)")
+                        if let topVC = UIApplication.shared.topViewController() {
+                            ToastView(text: "Pairing File Saved", detailText: error.localizedDescription).show(in: topVC)
+                        }
+                    }
+                }
+            }
             if let topVC = UIApplication.shared.topViewController() {
                 let toast = ToastView(text: NSLocalizedString("Pairing File Imported Successfully!", comment: ""), detailText: nil)
                 toast.show(in: topVC)
