@@ -237,3 +237,29 @@ remain unverified here. Existing pairing records are retained.
 - Apple-signed 0.7.8 was physically installed and launched via CoreDevice on the
   user's connected iPhone. This verifies initial launch, not the new live-account
   profile issuance or VPN/Share Sheet interaction.
+
+## Installed-identity repair: 0.7.9 (0709), 2026-10-06
+
+CoreDevice confirmed that the failing installation used a team-suffixed Debug
+identity. The previous Apple-signed 0.7.8 IPA used the unsuffixed Debug identity,
+so its successful signing/launch checks did not repair this installation.
+
+- Xcode issued development profiles for the actual installed host, Tunnel,
+  Widget and Backup IDs. The host and Tunnel profiles authorize
+  `packet-tunnel-provider`; host/Widget retain the installed shared App Group.
+- Apple recovery Debug build: PASS, zero warning/error diagnostics in
+  `.build/apple-recovery-build.log`. A local Xcode Widget version override was
+  corrected to inherit the host version after the first build reported a mismatch.
+- Recovery package: PASS Apple-anchored seals, active profile/certificate
+  authorization, exact requested bundle IDs and host/Widget group preservation,
+  independently Apple-signed embedded Backup, and ZIP integrity.
+- All seven local validation scripts: PASS, including distinct installed-profile
+  failure cases. Generic LocalDevVPN recovery advice was removed.
+- CoreDevice installation over the existing team-suffixed app and initial launch:
+  PASS. No app deletion was performed. Data access, VPN consent/connection,
+  actual pairing, live-account self-refresh and cellular-only operation have not
+  been established by these checks.
+
+Private artifact: `outputs/zLoader-0.7.9-Apple-recovery.ipa`.
+SHA-256: `b4ad66f9788b765eb9c8269b6abe157986a7a46398fa05b11431c1fce44f9d4a`.
+No signed IPA, profile, credentials or pairing data were published or committed.

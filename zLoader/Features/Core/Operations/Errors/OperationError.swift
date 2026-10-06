@@ -84,7 +84,7 @@ public enum OperationError: LocalizedError, CustomNSError, Sendable, Equatable {
         case .invalidResponse(let reason):
             return "Invalid server response: \(reason)"
         case .invalidVPN(let reason):
-            return "VPN Connection Error:\n\(reason)\n\nPlease make sure LocalDevVPN is connected and running properly."
+            return "VPN Connection Error:\n\(reason)\n\nOpen Settings → Connection to configure the embedded zLoader VPN. If the installed profile lacks its capability, install a correctly Apple-signed build; refresh cannot repair it before the VPN starts."
         case .minimuxerNotStarted(let reason):
             return "Minimuxer has not been started yet: \(reason)\n\nPlease complete pairing or start minimuxer before performing operations."
         case .missingAppBundle(let reason):
@@ -102,7 +102,7 @@ public enum OperationError: LocalizedError, CustomNSError, Sendable, Equatable {
         case .noDevice(let reason):
             return "zLoader is unable to reach the device endpoint:\n\(reason)\n\nPlease check your Connection Configuration in Settings."
         case .noVPN(let reason):
-            return "VPN Connection Error:\n\(reason)\n\nPlease make sure LocalDevVPN is connected and running properly."
+            return "VPN Connection Error:\n\(reason)\n\nOpen Settings → Connection to configure the embedded zLoader VPN. If the installed profile lacks its capability, install a correctly Apple-signed build; refresh cannot repair it before the VPN starts."
         case .notReachable(let reason):
             return reason.isEmpty ? "Device is not reachable at the specified IP or Endpoint." : reason
         case .openAppFailed(let name):
@@ -131,7 +131,7 @@ public enum OperationError: LocalizedError, CustomNSError, Sendable, Equatable {
         case .invalidPairingFile:
             return NSLocalizedString("Import a valid mobiledevicepairing file.", comment: "")
         case .invalidVPN, .noVPN:
-            return NSLocalizedString("Make sure LocalDevVPN is connected and running!", comment: "")
+            return NSLocalizedString("Check the embedded zLoader VPN in Settings → Connection and the installed signing profiles.", comment: "")
         case .noConnection:
             return NSLocalizedString("Connect to a Wi-Fi network, Bridge or a Wired network connection!", comment: "")
         default:

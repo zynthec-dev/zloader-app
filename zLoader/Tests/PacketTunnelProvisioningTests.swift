@@ -3,6 +3,12 @@ import Foundation
 @main
 struct PacketTunnelProvisioningTests {
     static func main() {
+        for (missing, expired, expected) in [(true, false, "no embedded"), (false, true, "expired"), (false, false, "does not authorize")] {
+            let message = PacketTunnelProvisioning.installedProfileFailure(for: "example.app", missing: missing, expired: expired)
+            precondition(message.contains(expected) && message.contains("in-app refresh cannot repair"))
+            precondition(!message.contains("LocalDevVPN"))
+        }
+        print("PASS installed profile failures distinguish missing, expired and unauthorized profiles")
         let tunnel: [String: Any] = ["NSExtension": ["NSExtensionPointIdentifier": PacketTunnelProvisioning.extensionPoint]]
         let widget: [String: Any] = ["NSExtension": ["NSExtensionPointIdentifier": "com.apple.widgetkit-extension"]]
         precondition(PacketTunnelProvisioning.requiresCapability(infoPlist: [:], extensions: [tunnel, widget]))

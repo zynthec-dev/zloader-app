@@ -111,3 +111,34 @@ profiles and complete entitlements remain preserved. Use the versioned 0.7.6
 outputs for new pairing attempts; the generic resignable/iLoader aliases also
 point to the new complete resignable output. Hashes and build evidence are in
 [VALIDATION.md](VALIDATION.md). No physical pairing session was performed here.
+
+## Repairing an already installed team-suffixed variant
+
+A successful signature check on an IPA with another bundle ID does not repair the
+running app. In the reported 0.7.8 failure, CoreDevice found the team-suffixed
+Debug installation, while the previous private signed IPA used the unsuffixed
+Debug identity. Its VPN preflight failed before provisioning could run.
+
+Use the actual installed bundle ID and shared App Group (not a newly chosen ID):
+
+```sh
+python3 zLoader/scripts/build-apple-recovery.py \
+  --bundle-id YOUR_INSTALLED_BUNDLE_ID --app-group YOUR_INSTALLED_APP_GROUP
+```
+
+The script builds a temporary sibling Xcode project with target identities derived
+from that host. It preserves the original project and its local signing settings,
+requests development profiles from Apple through Xcode, packages the independently
+Apple-signed Backup IPA, and checks host/Widget/Tunnel/Backup signing. It checks
+that the host identity and shared group match the requested installation. Output
+is private and ignored by Git. Xcode needs a configured eligible paid team and its
+local private key; profile creation can fail if the account/capability is unavailable.
+
+Install the resulting Apple-recovery IPA directly with an installer that preserves
+its existing Apple signatures, or install the corresponding signed Xcode product.
+Re-signing it with a tool that drops Network Extension authorization can recreate
+the failure. The installed app cannot bootstrap its own local VPN when that
+installation's profile lacks the capability. A paid membership and an additional
+certificate do not retroactively change an installed profile.
+
+VPN consent, actual pairing and in-app refresh remain separate device checks.

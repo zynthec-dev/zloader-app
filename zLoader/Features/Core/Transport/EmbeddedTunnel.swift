@@ -39,7 +39,10 @@ final class EmbeddedTunnel {
             guard let profile = app.provisioningProfile,
                   profile.expirationDate > Date(),
                   PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) else {
-                throw OperationError.invalidVPN(reason: PacketTunnelProvisioning.failureMessage(for: app.bundleIdentifier))
+                throw OperationError.invalidVPN(reason: PacketTunnelProvisioning.installedProfileFailure(
+                    for: app.bundleIdentifier, missing: app.provisioningProfile == nil,
+                    expired: app.provisioningProfile.map { $0.expirationDate <= Date() } ?? false
+                ))
             }
         }
         let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
