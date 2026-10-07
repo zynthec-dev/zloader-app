@@ -348,21 +348,56 @@ private extension FetchProvisioningProfilesOperation{
         let target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
                                               certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
         let managedName = "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8))
+        func compatible(_ profile: ALTProvisioningProfile) -> Bool {
+            let snapshot = EmbeddedProfileSnapshot(
+                bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
+                certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
+            )
+            return EmbeddedProfileReuse.accepts(snapshot, for: target, requiredDevices: registeredUDIDs)
+        }
+        // Check actual authorization, not profile names. An update can reuse the
+        // installed profile even when the downloaded IPA contains no profile.
+        var localCandidates = [app.provisioningProfile, context.overrideProvisioningProfile].compactMap { $0 }
+        localCandidates.append(contentsOf: ProfileManager.shared.getAllLocalProfiles())
+        if context.targetAppBundle?.isZLoaderApp == true,
+           let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL),
+           let installed = ([running] + running.appExtensions).first(where: { $0.bundleIdentifier == appID.bundleIdentifier }),
+           let profile = installed.provisioningProfile {
+            localCandidates.insert(profile, at: 0)
+        }
+        if let profile = localCandidates.first(where: compatible) {
+            self.debugLog("[FetchProvisioningProfiles] Reusing compatible installed/local profile without issuing a profile.")
+            return profile
+        }
         let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
-        // Regenerate one owned profile by its ID. Names are not unique in the
-        // portal and deleting/recreating under a shared name can fail with code 35.
-        let owned = existing.filter {
-            ManagedProfileNaming.isOwned($0.name, base: managedName) && $0.identifier != nil
+        let candidates = existing.filter {
+            $0.identifier != nil && ($0.bundleIdentifier == appID.bundleIdentifier ||
+                $0.bundleIdentifier == nil || ManagedProfileNaming.isOwned($0.name, base: managedName))
         }.sorted { ($0.identifier ?? "") < ($1.identifier ?? "") }
         var selectedID: String?
-        for item in owned {
+        var downloadError: Error?
+        for item in candidates {
             guard let identifier = item.identifier else { continue }
-            let candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
-            guard candidate.bundleIdentifier == appID.bundleIdentifier,
-                  candidate.teamIdentifier == team.identifier else { continue }
-            selectedID = identifier
-            break
+            let candidate: ALTProvisioningProfile
+            do {
+                candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
+            } catch {
+                downloadError = error
+                continue
+            }
+            if compatible(candidate) {
+                _ = try ProfileManager.shared.importProfile(data: candidate.data)
+                self.debugLog("[FetchProvisioningProfiles] Reusing compatible portal profile without regenerating it.")
+                return candidate
+            }
+            // Only an incompatible profile owned by this flow may be regenerated.
+            // Continue searching: another duplicate or Xcode profile may already fit.
+            if selectedID == nil, ManagedProfileNaming.isOwned(item.name, base: managedName),
+               candidate.bundleIdentifier == appID.bundleIdentifier, candidate.teamIdentifier == team.identifier {
+                selectedID = identifier
+            }
         }
+        if let downloadError { throw downloadError }
         let profile: ALTProvisioningProfile
         if let identifier = selectedID {
             profile = try await DeveloperPortalProxy.shared.updateProvisioningProfile(

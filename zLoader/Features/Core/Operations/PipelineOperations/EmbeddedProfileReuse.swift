@@ -62,6 +62,12 @@ enum EmbeddedProfileReuse {
         return (requested as? NSObject)?.isEqual(allowed) == true
     }
 
+    static func accepts(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements,
+                        requiredDevices: Set<String>, now: Date = Date()) -> Bool {
+        accepts(profile, for: target, now: now) &&
+            Set(requiredDevices.map { $0.lowercased() }).isSubset(of: Set(profile.devices.map { $0.lowercased() }))
+    }
+
     static func accepts(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements, now: Date = Date()) -> Bool {
         incompatibilities(profile, for: target, now: now).isEmpty
     }

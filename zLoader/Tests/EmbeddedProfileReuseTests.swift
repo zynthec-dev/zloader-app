@@ -33,6 +33,11 @@ struct EmbeddedProfileReuseTests {
                                     certificates: certificates, devices: devices, entitlements: entitlements)
         }
         precondition(EmbeddedProfileReuse.accepts(profile(), for: target, now: now))
+        precondition(EmbeddedProfileReuse.accepts(profile(), for: target, requiredDevices: ["SYNTHETIC-DEVICE"], now: now))
+        precondition(!EmbeddedProfileReuse.accepts(profile(), for: target, requiredDevices: ["synthetic-device", "sharing-device"], now: now))
+        precondition(EmbeddedProfileReuse.accepts(profile(devices: ["synthetic-device", "SHARING-DEVICE"]), for: target,
+            requiredDevices: ["synthetic-device", "sharing-device"], now: now))
+        print("PASS existing profiles reused only when all requested devices are authorized")
         for invalid in [profile(bundle: "example.other"), profile(team: "other-team"), profile(expiry: 999),
                         profile(certificates: [Data([4])]), profile(devices: ["other-device"]),
                         profile(entitlements: [:]),
