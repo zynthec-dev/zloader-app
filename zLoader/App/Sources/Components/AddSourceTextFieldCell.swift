@@ -78,6 +78,15 @@ class AddSourceTextFieldCell: UICollectionViewCell
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func didMoveToWindow()
+    {
+        super.didMoveToWindow()
+        // UIAppearance is applied on attachment; keep the nested field neutral.
+        self.textField.backgroundColor = .clear
+        self.textField.textColor = .label
+        self.textField.viewWithTag(77500)?.removeFromSuperview()
+    }
+
     override func layoutSubviews()
     {
         super.layoutSubviews()
