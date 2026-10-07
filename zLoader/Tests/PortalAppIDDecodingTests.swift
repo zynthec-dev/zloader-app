@@ -16,6 +16,17 @@ struct PortalAppIDDecodingTests {
             _ = try JSONDecoder().decode(AppID.self, from: Data(#"{"features":{"push":[]}}"#.utf8))
             fatalError("Unsupported values must not silently clear capability flags")
         } catch is DecodingError { }
+        var requested = app
+        requested.features[.networkExtensions] = "false"
+        requested.features[.associatedDomains] = "true"
+        requested.features[.appGroups] = " TRUE "
+        requested.features[.siri] = "false"
+        let changes = requested.changedFeatures(comparedTo: app)
+        precondition(changes.count == 2)
+        precondition(changes[.networkExtensions] == "false")
+        precondition(changes[.associatedDomains] == "true")
+        precondition(changes[Feature(rawValue: "numeric")] == nil)
+        precondition(app.changedFeatures(comparedTo: app).isEmpty)
         print("PASS: mixed Apple capability values, absent features and invalid responses")
     }
 }

@@ -81,6 +81,33 @@ index c43fd90..697a28a 100644
  
              verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
  
+diff --git a/Sources/DeveloperPortal/AppIDs.swift b/Sources/DeveloperPortal/AppIDs.swift
+index efb5c44..a97c5c5 100644
+--- a/Sources/DeveloperPortal/AppIDs.swift
++++ b/Sources/DeveloperPortal/AppIDs.swift
+@@ -69,11 +69,20 @@ public extension DeveloperPortal {
+         debugLog("[SideSign] updateAppID starting...")
+         verboseLog("[SideSign] AppID: \(appID.bundleIdentifier), Team: \(team.name)")
+ 
++        // Fetch the current state instead of replaying Apple's entire response
++        // dictionary as write parameters (including unchanged, read-only services).
++        let currentIDs = try await fetchAppIDs(for: team, session: session)
++        guard let current = currentIDs.first(where: { $0.identifier == appID.identifier }) else {
++            throw DeveloperPortalError.appIDDoesNotExist(identifier: appID.identifier)
++        }
++        let changes = appID.changedFeatures(comparedTo: current)
++        guard !changes.isEmpty else { return current }
+         var parameters: [String: any Sendable] = [
+-            "appIdId": appID.identifier
++            "appIdId": appID.identifier,
++            "entitlements": appID.entitlements
+         ]
+ 
+-        for (feature, value) in appID.features {
++        for (feature, value) in changes {
+             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+             if trimmed.lowercased() == "true" {
+                 parameters[feature.rawValue] = true
 diff --git a/Sources/DeveloperPortal/Certificates.swift b/Sources/DeveloperPortal/Certificates.swift
 index 6127e16..4adc43b 100644
 --- a/Sources/DeveloperPortal/Certificates.swift
@@ -202,7 +229,7 @@ index 6127e16..4adc43b 100644
 +    let data: CertificatesResponseDeveloperPortal.Item
 +}
 diff --git a/Sources/DeveloperPortal/DeveloperPortalAPI.swift b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
-index dfea7cc..546e019 100644
+index dfea7cc..e999075 100644
 --- a/Sources/DeveloperPortal/DeveloperPortalAPI.swift
 +++ b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
 @@ -308,7 +308,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
@@ -233,6 +260,15 @@ index dfea7cc..546e019 100644
          guard !data.isEmpty else {
              if statusCode == HTTPStatusCodes.noContent || T.self == EmptyResponse.self {
                  if let empty = EmptyResponse() as? T {
+@@ -379,7 +384,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+                     throw customError
+                 }
+                 debugLog("[SideSign] processResponse error: \(message) (code: \(code))")
+-                throw ServerError.underlyingError(code: code, message: message)
++                throw ServerError.underlyingError(code: code, message: "\(message) [\(requestURL.lastPathComponent)]")
+             }
+         }
+ 
 @@ -404,6 +409,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
                                             resultCodeHandler: ((Int, String) -> Error?)? = nil) async throws -> T
      {
@@ -277,11 +313,37 @@ index dfea7cc..546e019 100644
          guard !data.isEmpty else {
              if isDelete || isNoContent || T.self == EmptyResponse.self {
                  verboseLog("[SideSign] sendServicesRequest: successful empty response for DELETE or \(HTTPStatusCodes.noContent)")
+@@ -493,7 +512,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+                     throw customError
+                 }
+                 debugLog("[SideSign] processResponse error: \(message) (code: \(code))")
+-                throw ServerError.underlyingError(code: code, message: message)
++                throw ServerError.underlyingError(code: code, message: "\(message) [\(methodOverride) \(request.url?.lastPathComponent ?? "Developer Portal")]")
+             }
+         }
+ 
 diff --git a/Sources/Models/AppID.swift b/Sources/Models/AppID.swift
-index 62b2f78..4b4caf4 100644
+index 62b2f78..66e349f 100644
 --- a/Sources/Models/AppID.swift
 +++ b/Sources/Models/AppID.swift
-@@ -51,13 +51,10 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -32,6 +32,16 @@ public struct AppID: Sendable, Codable, Identifiable {
+         self.entitlements = entitlements
+     }
+ 
++    /// Only changed service values belong in updateAppId.action. The list API
++    /// also returns metadata and legacy capabilities which are not writable flags.
++    public func changedFeatures(comparedTo current: AppID) -> [Feature: String] {
++        features.filter { feature, value in
++            let requested = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
++            let existing = current.features[feature]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "false"
++            return requested != existing
++        }
++    }
++
+     public func copy() -> AppID {
+         self
+     }
+@@ -51,13 +61,10 @@ public struct AppID: Sendable, Codable, Identifiable {
          self.bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? ""
          self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
  
@@ -299,7 +361,7 @@ index 62b2f78..4b4caf4 100644
          self.entitlements = [:]
      }
  
-@@ -69,3 +66,21 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -69,3 +76,21 @@ public struct AppID: Sendable, Codable, Identifiable {
          try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
      }
  }
