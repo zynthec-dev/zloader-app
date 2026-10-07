@@ -51,23 +51,12 @@ public final class ThemeManager: ObservableObject {
         }
     }
 
-    @Published public var customSymbolColor: UIColor? = UserDefaults.standard.string(forKey: "zLoader.symbolColor").flatMap { UIColor(hex: $0) } {
-        didSet { persistColor(customSymbolColor, key: "zLoader.symbolColor") }
-    }
-    @Published public var customFieldColor: UIColor? = UserDefaults.standard.string(forKey: "zLoader.fieldColor").flatMap { UIColor(hex: $0) } {
-        didSet { persistColor(customFieldColor, key: "zLoader.fieldColor") }
-    }
-    public var symbolColor: UIColor { customSymbolColor ?? primaryColor }
-    public var fieldColor: UIColor { customFieldColor ?? .secondarySystemGroupedBackground }
-
-    private func persistColor(_ color: UIColor?, key: String) {
-        if let color { UserDefaults.standard.set(color.hexString, forKey: key) }
-        else { UserDefaults.standard.removeObject(forKey: key) }
-        NotificationCenter.default.post(name: Self.themeDidChangeNotification, object: nil)
-        DispatchQueue.main.async { self.refreshVisibleAppearance() }
-    }
+    public var symbolColor: UIColor { primaryColor }
+    public var fieldColor: UIColor { .secondarySystemGroupedBackground }
 
     private init() {
+        UserDefaults.standard.removeObject(forKey: "zLoader.symbolColor")
+        UserDefaults.standard.removeObject(forKey: "zLoader.fieldColor")
         if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             for name in ["light.jpg", "dark.jpg"] {
                 let obsoleteImage = support.appendingPathComponent("Appearance").appendingPathComponent(name)
@@ -246,7 +235,7 @@ extension ThemeManager {
                 field.viewWithTag(77500)?.removeFromSuperview()
             } else {
                 field.backgroundColor = .settingsField
-                field.textColor = customFieldColor == nil ? .label : fieldColor.contrastingText
+                field.textColor = .label
                 #if !os(tvOS)
                 if #available(iOS 26.0, *) {
                     let glass: UIVisualEffectView
@@ -262,7 +251,7 @@ extension ThemeManager {
                         field.insertSubview(glass, at: 0)
                     }
                     let effect = UIGlassEffect(style: .regular)
-                    effect.tintColor = customFieldColor
+                    effect.tintColor = nil
                     glass.effect = effect
                     field.backgroundColor = .clear
                 }

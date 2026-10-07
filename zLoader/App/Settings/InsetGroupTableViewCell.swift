@@ -55,6 +55,24 @@ class InsetGroupTableViewCell: UITableViewCell
         self.contentView.backgroundColor = .clear
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Match the 22-point symbols and 30/62-point leading positions used
+        // by storyboard rows decorated in SettingsViewController.
+        guard let icon = imageView, icon.tag == 77023, icon.image != nil,
+              let label = textLabel else { return }
+        icon.contentMode = .scaleAspectFit
+        icon.frame = CGRect(x: 30, y: (contentView.bounds.height - 22) / 2, width: 22, height: 22)
+        let trailing = label.frame.maxX
+        label.frame.origin.x = 62
+        label.frame.size.width = max(0, trailing - 62)
+        if let detail = detailTextLabel {
+            let detailTrailing = detail.frame.maxX
+            detail.frame.origin.x = 62
+            detail.frame.size.width = max(0, detailTrailing - 62)
+        }
+    }
+
     override func awakeFromNib()
     {
         super.awakeFromNib()

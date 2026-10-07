@@ -27,26 +27,6 @@ struct ThemePickerView: View {
                     Text("Used for buttons, switches and selections throughout zLoader. Backgrounds and text follow the system Light and Dark appearance.")
                 }
             }.listRowBackground(ZLoaderGlassBackground())
-            Section {
-                ColorPicker("Symbol Color", selection: Binding(
-                    get: { Color(uiColor: theme.symbolColor) },
-                    set: { theme.customSymbolColor = UIColor($0) }
-                ), supportsOpacity: false)
-                if theme.customSymbolColor != nil {
-                    SwiftUI.Button("Use Accent Color for Symbols") { theme.customSymbolColor = nil }
-                }
-                ColorPicker("Text Field Background", selection: Binding(
-                    get: { Color(uiColor: theme.fieldColor) },
-                    set: { theme.customFieldColor = UIColor($0) }
-                ), supportsOpacity: false)
-                if theme.customFieldColor != nil {
-                    SwiftUI.Button("Use System Text Field Background") { theme.customFieldColor = nil }
-                }
-            } footer: {
-                Group {
-                    Text("Symbol and text field colors are independent of the accent color. Resetting text fields to System restores their automatic Light and Dark appearance.")
-                }
-            }.listRowBackground(ZLoaderGlassBackground())
             presetsSection
             Section {
                 Picker(selection: $selectedLanguage) {
