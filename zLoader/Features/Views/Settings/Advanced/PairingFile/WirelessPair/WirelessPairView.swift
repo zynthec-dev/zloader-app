@@ -34,7 +34,7 @@ struct WirelessPairView: View {
             } else {
         VStack(spacing: 24) {
             if selfPairing {
-            Text("Start Pairing opens Settings when the server is ready. Go to Privacy & Security → Developer Mode. The PIN appears in the Live Activity and, with your permission, a notification. After pairing, tap the notification or Live Activity to return to zLoader.")
+            Text("Start Pairing starts the server and shows instructions. Open Settings manually to finish pairing. The PIN appears in the Live Activity and, with your permission, a notification.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
             if let confirmation = viewModel.confirmationMessage {
                 Text(confirmation).font(.footnote).textSelection(.enabled).padding(.horizontal)
@@ -200,7 +200,7 @@ struct WirelessPairView: View {
             debugLog("[WirelessPairView] onAppear (isAdvertising=\(viewModel.isAdvertising), serviceID=\(viewModel.serviceID ?? "nil"), port=\(viewModel.port.map(String.init) ?? "nil"))")
         }
         .onDisappear {
-            // Keep the shared pairing session alive while opening Settings.
+            // Keep the shared pairing session alive while the user switches to Settings manually.
             viewModel.stopDiscovery()
             debugLog("[WirelessPairView] onDisappear (isAdvertising=\(viewModel.isAdvertising))")
         }
@@ -232,6 +232,11 @@ struct WirelessPairView: View {
                     .interactiveDismissDisabled(true)
                 }
             }
+        }
+        .alert("Complete Self-Pairing", isPresented: $viewModel.showSelfPairingInstructions) {
+            SwiftUI.Button("Got It", role: .cancel) { }
+        } message: {
+            Text("1. Leave zLoader and open Settings on this device.\n\n2. Go to Privacy & Security → Developer Mode, open the pairing controls and select zLoader.\n\n3. Enter your device passcode if requested, then the 6-digit pairing PIN shown in the Live Activity or notification.\n\n4. When pairing is complete, tap the notification or Live Activity to return to zLoader. Your pairing file is saved automatically.")
         }
         .alert("Enter Pairing PIN", isPresented: $viewModel.isPinPromptPresented) {
             TextField("6-digit PIN", text: $viewModel.enteredPin)
@@ -271,7 +276,7 @@ struct WirelessPairView: View {
             if viewModel.isAdvertising {
                 viewModel.stopPairing()
             } else {
-                if selfPairing { viewModel.startLocalPairingAndOpenSettings() }
+                if selfPairing { viewModel.startLocalPairingWithInstructions() }
                 else { viewModel.openServerDialog() }
             }
         }

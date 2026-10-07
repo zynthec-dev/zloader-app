@@ -167,9 +167,9 @@ final class WirelessPairViewModel: ObservableObject {
                 self.statusText = NSLocalizedString("Pairing Server Ready", comment: "")
                 self.subStatusText = self.isSelfPairing ? "Open Settings → Privacy & Security → Developer Mode on this device." : "Open the pairing settings on the other device and select zLoader."
                 PairingActivityController.shared.update(status: self.statusText, pin: nil)
-                if self.openSettingsWhenReady {
-                    self.openSettingsWhenReady = false
-                    self.openPairingSettings()
+                if self.showInstructionsWhenReady {
+                    self.showInstructionsWhenReady = false
+                    self.showSelfPairingInstructions = true
                 }
             }
         }
@@ -218,7 +218,8 @@ final class WirelessPairViewModel: ObservableObject {
     
     private var discoveryTask: Task<Void, Never>?
     private var pairingTask: Task<Void, Never>?
-    private var openSettingsWhenReady = false
+    @Published var showSelfPairingInstructions = false
+    private var showInstructionsWhenReady = false
     
     func refreshInterfaces() {
         debugLog("[WirelessPairViewModel] refreshInterfaces() scanning active interfaces...")
@@ -508,28 +509,13 @@ final class WirelessPairViewModel: ObservableObject {
         bonjour.stopInstanceSearch()
     }
     
-    func startLocalPairingAndOpenSettings() {
+    func startLocalPairingWithInstructions() {
         guard !isSavingLockdown else { return }
         Task {
             await PairingActivityController.shared.requestNotificationPermission()
-            if isAdvertising, port != nil { openPairingSettings(); return }
-            openSettingsWhenReady = true
+            if isAdvertising, port != nil { showSelfPairingInstructions = true; return }
+            showInstructionsWhenReady = true
             startPairing()
-        }
-    }
-
-    private func openPairingSettings() {
-        // Best-effort private Settings route, requested for local pairing.
-        // iOS may ignore the path while accepting the URL: `opened` confirms
-        // dispatch only, never that Developer Mode was actually displayed.
-        // Deliberately no fallback to zLoader's app-specific Settings page.
-        if let url = URL(string: "App-prefs:root=Privacy&path=DEVELOPER_MODE") {
-            UIApplication.shared.open(url) { [weak self] opened in
-                guard !opened else { return }
-                Task { @MainActor in
-                    self?.errorMessage = NSLocalizedString("Settings could not be opened. Open Settings → Privacy & Security → Developer Mode manually. The pairing server remains active.", comment: "")
-                }
-            }
         }
     }
 
@@ -563,7 +549,7 @@ final class WirelessPairViewModel: ObservableObject {
                 pairingTask = nil
                 guard !Task.isCancelled else { return }
                 isAdvertising = false
-                openSettingsWhenReady = false
+                showInstructionsWhenReady = false
                 pinCode = nil
                 serviceID = nil
                 port = nil
@@ -573,7 +559,7 @@ final class WirelessPairViewModel: ObservableObject {
                 pairingTask = nil
                 guard !Task.isCancelled else { return }
                 isAdvertising = false
-                openSettingsWhenReady = false
+                showInstructionsWhenReady = false
                 errorMessage = error.localizedDescription
                 statusText = NSLocalizedString("Pairing Failed", comment: "")
                 PairingActivityController.shared.finish(status: "Pairing Failed", success: false)
@@ -583,7 +569,8 @@ final class WirelessPairViewModel: ObservableObject {
 
     func stopPairing() {
         debugLog("[WirelessPairViewModel] stopPairing() stopping advertisement and tearing down session")
-        openSettingsWhenReady = false
+        showInstructionsWhenReady = false
+        showSelfPairingInstructions = false
         pairingTask?.cancel()
         wirelessPairing.stop()
         PairingActivityController.shared.finish(status: "Pairing Stopped", success: false)

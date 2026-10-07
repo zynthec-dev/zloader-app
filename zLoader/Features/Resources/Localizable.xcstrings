@@ -25701,6 +25701,70 @@
           }
         }
       }
+    },
+    "Start Pairing starts the server and shows instructions. Open Settings manually to finish pairing. The PIN appears in the Live Activity and, with your permission, a notification.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Pairing starts the server and shows instructions. Open Settings manually to finish pairing. The PIN appears in the Live Activity and, with your permission, a notification."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Pairing starten“ startet den Server und zeigt eine Anleitung. Öffne die Einstellungen manuell, um das Pairing abzuschließen. Die PIN erscheint in der Live-Aktivität und, mit deiner Erlaubnis, in einer Mitteilung."
+          }
+        }
+      }
+    },
+    "Complete Self-Pairing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete Self-Pairing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Self-Pairing abschließen"
+          }
+        }
+      }
+    },
+    "Got It": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got It"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verstanden"
+          }
+        }
+      }
+    },
+    "1. Leave zLoader and open Settings on this device.\n\n2. Go to Privacy & Security → Developer Mode, open the pairing controls and select zLoader.\n\n3. Enter your device passcode if requested, then the 6-digit pairing PIN shown in the Live Activity or notification.\n\n4. When pairing is complete, tap the notification or Live Activity to return to zLoader. Your pairing file is saved automatically.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Leave zLoader and open Settings on this device.\n\n2. Go to Privacy & Security → Developer Mode, open the pairing controls and select zLoader.\n\n3. Enter your device passcode if requested, then the 6-digit pairing PIN shown in the Live Activity or notification.\n\n4. When pairing is complete, tap the notification or Live Activity to return to zLoader. Your pairing file is saved automatically."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Verlasse zLoader und öffne die Einstellungen auf diesem Gerät.\n\n2. Gehe zu Datenschutz & Sicherheit → Entwicklermodus, öffne die Pairing-Einstellungen und wähle zLoader aus.\n\n3. Gib gegebenenfalls deinen Gerätecode ein und danach die sechsstellige Pairing-PIN aus der Live-Aktivität oder Mitteilung.\n\n4. Tippe nach Abschluss des Pairings auf die Mitteilung oder Live-Aktivität, um zu zLoader zurückzukehren. Deine Pairing-Datei wird automatisch gespeichert."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
