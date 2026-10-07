@@ -25,6 +25,8 @@ struct PortalSelectionView: View {
     @State private var isProcessing = false
     @State private var confirmsMutation = false
     @State private var resultMessage: String?
+    @State private var processedCount = 0
+    @State private var targetCount = 0
 
     private struct Item: Identifiable {
         let id: String
@@ -40,6 +42,15 @@ struct PortalSelectionView: View {
         case .devices: viewModel.devices.map { Item(id: $0.identifier, name: $0.name, detail: $0.identifier) }
         case .certificates: viewModel.certificates.map { Item(id: $0.serialNumber, name: $0.name, detail: $0.serialNumber) }
         }
+    }
+
+    private var allSelected: Bool {
+        !items.isEmpty && selected == Set(items.map(\.id))
+    }
+
+    private var mutationTitle: String {
+        if kind == .certificates { return allSelected ? "Revoke All" : "Revoke Selected" }
+        return allSelected ? "Delete All" : "Delete Selected"
     }
 
     var body: some View {
@@ -66,23 +77,47 @@ struct PortalSelectionView: View {
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                SwiftUI.Button(selected.count == items.count ? "Deselect All" : "Select All") {
-                    selected = selected.count == items.count ? [] : Set(items.map(\.id))
-                }.disabled(isProcessing)
-            }
-            ToolbarItem(placement: .bottomBar) {
-                SwiftUI.Button(role: .destructive) { confirmsMutation = true } label: {
-                    Label(LocalizedStringKey(kind == .certificates ? "Revoke Selected" : "Delete Selected"), systemImage: "trash")
-                }
-                .disabled(selected.isEmpty || isProcessing)
+                SwiftUI.Button {
+                    selected = allSelected ? [] : Set(items.map(\.id))
+                } label: {
+                    Text(LocalizedStringKey(allSelected ? "Deselect All" : "Select All"))
+                }.disabled(isProcessing || items.isEmpty)
             }
         }
-        .disabled(isProcessing)
-        .overlay { if isProcessing { ProgressView("Updating Developer Portal…").padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14)) } }
-        .confirmationDialog("Apply Changes to Apple Developer Portal?", isPresented: $confirmsMutation, titleVisibility: .visible) {
-            SwiftUI.Button(kind == .certificates ? "Revoke Selected" : "Delete Selected", role: .destructive) {
-                Task { await applySelection() }
+        .safeAreaInset(edge: .bottom) {
+            SwiftUI.Button(role: .destructive) { confirmsMutation = true } label: {
+                HStack {
+                    Image(systemName: "trash")
+                    Text(LocalizedStringKey(mutationTitle))
+                    Spacer()
+                    Text(selected.count, format: .number)
+                }.font(.body)
+                .frame(maxWidth: .infinity, minHeight: 32)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .disabled(selected.isEmpty || isProcessing)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
+        }
+        .disabled(isProcessing)
+        .overlay {
+            if isProcessing {
+                VStack(spacing: 12) {
+                    Text("Updating Developer Portal…")
+                    ProgressView(value: Double(processedCount), total: Double(max(targetCount, 1)))
+                    Text(String(format: NSLocalizedString("%d of %d processed", comment: ""), processedCount, targetCount))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding().frame(maxWidth: 280)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .confirmationDialog("Apply Changes to Apple Developer Portal?", isPresented: $confirmsMutation, titleVisibility: .visible) {
+            SwiftUI.Button(role: .destructive) {
+                Task { await applySelection() }
+            } label: { Text(LocalizedStringKey(mutationTitle)) }
         } message: {
             Text("This changes the selected resources on Apple's servers. Certificates and dependent installations may become unusable. This cannot be undone.")
         }
@@ -96,6 +131,8 @@ struct PortalSelectionView: View {
         isProcessing = true
         defer { isProcessing = false }
         let targets = items.filter { selected.contains($0.id) }
+        targetCount = targets.count
+        processedCount = 0
         var completed = 0
         var failures: [String] = []
         for item in targets {
@@ -113,6 +150,7 @@ struct PortalSelectionView: View {
             case .certificates:
                 if let resource = viewModel.certificates.first(where: { $0.serialNumber == item.id }) { success = await viewModel.revokeCertificate(resource) } else { success = false }
             }
+            processedCount += 1
             if success { completed += 1; selected.remove(item.id) }
             else { failures.append(item.name + ": " + (viewModel.errorMessage ?? NSLocalizedString("The portal change was not confirmed.", comment: ""))) }
         }
