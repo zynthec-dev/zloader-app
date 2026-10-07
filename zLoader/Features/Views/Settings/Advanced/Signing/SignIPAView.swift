@@ -30,7 +30,7 @@ struct SignIPAView: View {
                 }
             }.listRowBackground(ZLoaderGlassBackground())
             Section {
-                SwiftUI.Button("Sign IPA") { Task { await sign() } }
+                SwiftUI.Button("Sign App") { Task { await sign() } }
                     .disabled(ipa == nil || isSigning)
                 if isSigning { ProgressView("Signing…") }
                 if let result {
@@ -43,7 +43,7 @@ struct SignIPAView: View {
                 }
             }.listRowBackground(ZLoaderGlassBackground())
         }
-        .navigationTitle("Sign IPA")
+        .navigationTitle("Sign App")
         .labelStyle(.titleOnly)
         .disabled(isSigning)
         .fileImporter(isPresented: $importingIPA, allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data]) { selection in

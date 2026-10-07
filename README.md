@@ -1,10 +1,10 @@
 # zLoader
 
 Maintained by [zynthec-dev](https://github.com/zynthec-dev) in
-[zLoader-ios](https://github.com/zynthec-dev/zLoader-ios).
+[zloader-app](https://github.com/zynthec-dev/zloader-app).
 **Based on [SideStore](https://github.com/SideStore/SideStore)**, nightly `0dd743f7`.
 This is an independently maintained SideStore fork with its own development and releases.
-It is not endorsed by the SideStore team; the GitHub repository remains private.
+It is not endorsed by the SideStore team; the corresponding source is available in this repository.
 
 zLoader installs and refreshes apps on-device. First setup uses LocalDevVPN.
 After Apple-account login, paid developer teams may opt into on-device self-signing
@@ -38,6 +38,7 @@ sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
 sh zLoader/scripts/test-portal-app-id.sh
 sh zLoader/scripts/test-tunnel-payload.sh
+sh zLoader/scripts/test-lan-installer.sh
 sh zLoader/scripts/build-unsigned.sh
 python3 zLoader/scripts/test-bootstrap-package.py
 ```
@@ -87,3 +88,5 @@ Current setup: [LocalDevVPN bootstrap and optional managed tunnel, 0.7.17](docs/
 Latest changes: [installation certificate recovery and Signed IPAs, 0.7.18](docs/zloader/CERTIFICATES-SIGNED-IPAS-0.7.18.md).
 
 Appearance and connection corrections for 0.7.20: [validation and remaining device checks](docs/zloader/UI-TUNNEL-0.7.20.md).
+
+Sources overview and local HTTPS IPA sharing in 0.7.28: [implementation and validation](docs/zloader/LAN-INSTALLER-0.7.28.md).

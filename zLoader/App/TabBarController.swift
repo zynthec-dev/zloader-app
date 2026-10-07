@@ -42,9 +42,21 @@ final class TabBarController: UITabBarController
         super.viewDidLoad()
         debugLog("[TabBarController] viewDidLoad()")
         
-        let browseNavigationController = self.viewControllers![Tab.browse.rawValue] as! UINavigationController
-        browseNavigationController.tabBarItem.image = UIImage(systemName: "bag")
-        
+        let tabs: [(String, String, String)] = [
+            ("News", "newspaper", "newspaper.fill"),
+            ("Sources", "shippingbox", "shippingbox.fill"),
+            ("Browse", "square.grid.2x2", "square.grid.2x2.fill"),
+            ("My Apps", "a.square", "a.square.fill"),
+            ("Settings", "gearshape", "gearshape.fill")
+        ]
+        let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .regular)
+        for (index, controller) in (viewControllers ?? []).enumerated() where index < tabs.count {
+            let (title, image, selected) = tabs[index]
+            controller.tabBarItem.title = NSLocalizedString(title, comment: "")
+            controller.tabBarItem.image = UIImage(systemName: image, withConfiguration: configuration)
+            controller.tabBarItem.selectedImage = UIImage(systemName: selected, withConfiguration: configuration)
+        }
+
         let sourcesNavigationController = self.viewControllers![Tab.sources.rawValue] as! UINavigationController
         self.sourcesViewController = sourcesNavigationController.viewControllers.first as? SourcesViewController
     }

@@ -54,6 +54,13 @@ final class SourcesViewController: UICollectionViewController
         navigationItem.title = NSLocalizedString("Sources", comment: "")
         navigationController?.navigationBar.layoutMargins.left = 20
         
+        refreshSourceOrder()
+        let sortButton = UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), style: .plain,
+            target: self, action: #selector(sortSources))
+        sortButton.accessibilityLabel = NSLocalizedString("Sort Sources", comment: "")
+        let allAppsButton = UIBarButtonItem(title: NSLocalizedString("All Apps", comment: ""), style: .plain,
+            target: self, action: #selector(showAllApps))
+        navigationItem.rightBarButtonItems = [allAppsButton, sortButton] + (navigationItem.rightBarButtonItems ?? [])
         let layout = self.makeLayout()
         self.collectionView.collectionViewLayout = layout
         
@@ -193,7 +200,8 @@ private extension SourcesViewController
         // TODO: @mahee96: Need implementation to keep ZLoader-Official source always on top
         let fetchRequest = Source.fetchRequest() as NSFetchRequest<Source>
         fetchRequest.returnsObjectsAsFaults = false
-        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Source.name, ascending: true),
+        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Source.featuredSortID, ascending: true),
+                                        NSSortDescriptor(keyPath: \Source.name, ascending: true),
                                         
                                         // Can't sort by URLs or else app will crash.
                                         // NSSortDescriptor(keyPath: \Source.sourceURL, ascending: true),
@@ -441,6 +449,33 @@ private extension SourcesViewController
         }
     }
     
+    func refreshSourceOrder() {
+        let context = DatabaseManager.shared.viewContext
+        for source in Source.all(in: context) {
+            let rank = SourceOrderSettings.rank(source.identifier)
+            if source.featuredSortID != rank { source.featuredSortID = rank }
+            if source.identifier == Source.zLoaderIdentifier && source.name != "zLoader" { source.name = "zLoader" }
+        }
+        do { if context.hasChanges { try context.save() } }
+        catch { debugLog("Could not save source order: \(error.localizedDescription)") }
+    }
+
+    @objc func showAllApps() {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        guard let controller = storyboard.instantiateViewController(withIdentifier: "browseViewController") as? BrowseViewController else { return }
+        controller.showsCompactAllApps = true
+        navigationController?.pushViewController(controller, animated: true)
+    }
+
+    @objc func sortSources() {
+        let items = (dataSource.fetchedResultsController.fetchedObjects ?? []).map { SourceOrderItem(id: $0.identifier, name: $0.name) }
+        let editor = SourceOrderView(items: items) { [weak self] ids in
+            UserDefaults.standard.set(ids, forKey: SourceOrderSettings.key)
+            self?.refreshSourceOrder()
+        }
+        present(UIHostingController(rootView: editor), animated: true)
+    }
+
     @objc func showInstallingAppToastView(_ notification: Notification)
     {
         guard let app = notification.object as? StoreApp else { return }

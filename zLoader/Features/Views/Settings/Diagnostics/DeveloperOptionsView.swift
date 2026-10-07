@@ -65,6 +65,13 @@ struct DeveloperOptionsView: View {
                             .padding(.horizontal, 12)
                             .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
                     }
+                    NavigationLink(destination: WirelessIPAInstallerView()) {
+                        Text("Wireless IPA Installer")
+                            .font(.body).foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 76)
+                            .padding(.horizontal, 12)
+                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
+                    }
                 }
                 }
                 .buttonStyle(.plain)

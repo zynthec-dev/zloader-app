@@ -15,6 +15,9 @@ class BrowseViewController: UICollectionViewController
 {
     // Nil == Show apps from all sources.
     let source: Source?
+
+    /// The Sources overview uses compact cards; ordinary browsing keeps screenshots.
+    var showsCompactAllApps = false
     
     private(set) var category: StoreCategory? {
         didSet {
@@ -113,7 +116,7 @@ class BrowseViewController: UICollectionViewController
         self.dataSource.contentView = self.collectionView
         
         let collectionViewLayout = self.collectionViewLayout as! UICollectionViewFlowLayout
-        collectionViewLayout.minimumLineSpacing = 30
+        collectionViewLayout.minimumLineSpacing = showsCompactAllApps ? 12 : 30
         
         #if !os(tvOS)
         
@@ -270,7 +273,7 @@ private extension BrowseViewController
             cell.layoutMargins.right = self.view.layoutMargins.right
             
             let showSourceIcon = (self.source == nil) // Hide source icon if redundant
-            cell.configure(for: app, showSourceIcon: showSourceIcon)
+            cell.configure(for: app, showSourceIcon: showSourceIcon, compact: self.showsCompactAllApps)
             
             cell.bannerView.iconImageView.image = nil
             cell.bannerView.iconImageView.isIndicatingActivity = true
@@ -422,7 +425,7 @@ private extension BrowseViewController
         {
             tintColor = .altPrimary
             
-            self.title = NSLocalizedString("Browse", comment: "")
+            self.title = NSLocalizedString(showsCompactAllApps ? "All Apps" : "Browse", comment: "")
             
             self.titleSourceIconView.isHidden = true
             self.titleCategoryIconView.isHidden = true

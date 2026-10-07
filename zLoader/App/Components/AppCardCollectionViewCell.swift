@@ -359,9 +359,12 @@ private extension AppCardCollectionViewCell
 
 extension AppCardCollectionViewCell
 {
-    func configure(for storeApp: StoreApp, showSourceIcon: Bool = true)
+    func configure(for storeApp: StoreApp, showSourceIcon: Bool = true, compact: Bool = false)
     {
-        self.screenshots = storeApp.preferredScreenshots()
+        self.screenshots = compact ? [] : storeApp.preferredScreenshots()
+        self.screenshotsCollectionView.isHidden = compact
+        self.stackView.arrangedSubviews[1].isHidden = compact
+        self.stackView.layoutMargins.bottom = compact ? 0 : self.bannerView.layoutMargins.left
         
         // Explicitly set to false to ensure we're starting from a non-activity indicating state.
         // Otherwise, cell reuse can mess up some cached values.

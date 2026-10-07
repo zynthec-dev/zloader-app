@@ -205,6 +205,8 @@ public class Source: BaseEntity, Decodable
             
             // Updates identifier + apps & newsItems
             try self.setSourceURL(sourceURL)
+            self.featuredSortID = SourceOrderSettings.rank(self.identifier)
+            if self.identifier == Source.zLoaderIdentifier { self.name = "zLoader" }
             
             
             // NOTE: Source ID is just normalized sourceURL. coz normalized url is the primary key which needs to be unique
@@ -361,7 +363,7 @@ public extension Source
     class func makeZLoaderSource(in context: NSManagedObjectContext) -> Source
     {
         let source = Source(context: context)
-        source.name = "zLoader Source"
+        source.name = "zLoader"
         source.groupID = Source.zLoaderGroupIdentifier
         source.identifier = Source.zLoaderIdentifier
         try! source.setSourceURL(Source.zLoaderSourceURL)

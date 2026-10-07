@@ -215,6 +215,8 @@ class MyAppsViewController: UICollectionViewController
     override func viewWillDisappear(_ animated: Bool)
     {
         super.viewWillDisappear(animated)
+        statusDotView?.removeFromSuperview()
+        statusDotView = nil
     }
     
     private func findView(in view: UIView, where predicate: (UIView) -> Bool) -> UIView? {
@@ -256,8 +258,8 @@ class MyAppsViewController: UICollectionViewController
     private func updateStatusDot(isReady: Bool)
     {
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
+            guard let self = self, self.navigationController?.topViewController === self,
+                  self.view.window != nil else { return }
             guard let navigationBar = self.navigationController?.navigationBar else { return }
             
             guard let largeTitleView = self.findView(in: navigationBar, where: { NSStringFromClass(type(of: $0)).contains("LargeTitle") }) else {

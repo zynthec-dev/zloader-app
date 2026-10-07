@@ -25311,6 +25311,346 @@
           }
         }
       }
+    },
+    "Sort Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort Sources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellen sortieren"
+          }
+        }
+      }
+    },
+    "Sign App": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign App"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App signieren"
+          }
+        }
+      }
+    },
+    "Wireless IPA Installer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wireless IPA Installer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drahtloser IPA-Installer"
+          }
+        }
+      }
+    },
+    "Choose Signed IPA": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Signed IPA"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierte IPA auswählen"
+          }
+        }
+      }
+    },
+    "Signed IPA": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed IPA"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierte IPA"
+          }
+        }
+      }
+    },
+    "Share HTTPS Certificate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share HTTPS Certificate"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS-Zertifikat teilen"
+          }
+        }
+      }
+    },
+    "HTTPS Certificate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS Certificate"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS-Zertifikat"
+          }
+        }
+      }
+    },
+    "Server Running": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server Running"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server läuft"
+          }
+        }
+      }
+    },
+    "Share Installation Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share Installation Link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installationslink teilen"
+          }
+        }
+      }
+    },
+    "Transfer Complete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer Complete"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übertragung abgeschlossen"
+          }
+        }
+      }
+    },
+    "Stop Server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server stoppen"
+          }
+        }
+      }
+    },
+    "Preparing Server…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing Server…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server wird vorbereitet …"
+          }
+        }
+      }
+    },
+    "Start Server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server starten"
+          }
+        }
+      }
+    },
+    "Local Server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokaler Server"
+          }
+        }
+      }
+    },
+    "Could not create the local HTTPS certificate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not create the local HTTPS certificate."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das lokale HTTPS-Zertifikat konnte nicht erstellt werden."
+          }
+        }
+      }
+    },
+    "Connect to Wi-Fi before starting the LAN server.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to Wi-Fi before starting the LAN server."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dich mit WLAN, bevor du den LAN-Server startest."
+          }
+        }
+      }
+    },
+    "The app and every extension need an unexpired Apple provisioning profile. Sign this IPA before sharing it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app and every extension need an unexpired Apple provisioning profile. Sign this IPA before sharing it."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die App und jede Erweiterung benötigen ein gültiges Apple-Provisionierungsprofil. Signiere diese IPA, bevor du sie teilst."
+          }
+        }
+      }
+    },
+    "Install this certificate profile on the receiving device, then enable full trust in Settings → General → About → Certificate Trust Settings. Share only with devices you trust; remove the profile when you no longer need it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install this certificate profile on the receiving device, then enable full trust in Settings → General → About → Certificate Trust Settings. Share only with devices you trust; remove the profile when you no longer need it."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiere dieses Zertifikatsprofil auf dem Zielgerät und aktiviere das volle Vertrauen unter Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen. Teile es nur mit vertrauenswürdigen Geräten und entferne das Profil, wenn du es nicht mehr benötigst."
+          }
+        }
+      }
+    },
+    "The IPA was transferred. Only the receiving device can confirm installation.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The IPA was transferred. Only the receiving device can confirm installation."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die IPA wurde übertragen. Nur das Zielgerät kann die Installation bestätigen."
+          }
+        }
+      }
+    },
+    "Both devices must be on the same Wi-Fi network. Keep this screen open. The IPA must already authorize the receiving device and every required capability; HTTPS does not change its signature.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both devices must be on the same Wi-Fi network. Keep this screen open. The IPA must already authorize the receiving device and every required capability; HTTPS does not change its signature."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beide Geräte müssen im selben WLAN sein. Lass diese Ansicht geöffnet. Die IPA muss bereits für das Zielgerät und alle benötigten Capabilities autorisiert sein; HTTPS ändert ihre Signatur nicht."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
