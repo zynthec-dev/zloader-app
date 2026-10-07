@@ -27,6 +27,15 @@ struct PortalAppIDDecodingTests {
         precondition(changes[.associatedDomains] == "true")
         precondition(changes[Feature(rawValue: "numeric")] == nil)
         precondition(app.changedFeatures(comparedTo: app).isEmpty)
+        // Apple may alter an unrelated flag in readback. Only requested changes
+        // determine whether the mutation was confirmed.
+        var confirmed = requested
+        confirmed.features[Feature(rawValue: "numeric")] = "3"
+        var expectedReadback = confirmed
+        expectedReadback.features.merge(changes) { _, requested in requested }
+        precondition(expectedReadback.changedFeatures(comparedTo: confirmed).isEmpty)
+        confirmed.features[.networkExtensions] = "true"
+        precondition(Set(expectedReadback.changedFeatures(comparedTo: confirmed).keys) == Set([.networkExtensions]))
         print("PASS: mixed Apple capability values, absent features and invalid responses")
     }
 }

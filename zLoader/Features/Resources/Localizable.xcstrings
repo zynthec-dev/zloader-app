@@ -25685,6 +25685,22 @@
           }
         }
       }
+    },
+    "Apple did not confirm these capability changes:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple did not confirm these capability changes:"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple hat diese Capability-Änderungen nicht bestätigt:"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

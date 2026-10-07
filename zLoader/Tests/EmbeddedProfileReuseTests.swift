@@ -10,6 +10,16 @@ struct EmbeddedProfileReuseTests {
         precondition(PacketTunnelProvisioning.preservedHostIdentity(bundleID: "example.app.debug.TEAM", profileTeam: "TEAM", selectedTeam: "TEAM") == "example.app.debug.TEAM")
         precondition(PacketTunnelProvisioning.preservedHostIdentity(bundleID: "example.app", profileTeam: "OTHER", selectedTeam: "TEAM") == nil)
         precondition(PacketTunnelProvisioning.preservedHostIdentity(bundleID: "example.app", profileTeam: nil, selectedTeam: "TEAM") == nil)
+        let base = "zLoader example.app CERT"
+        precondition(ManagedProfileNaming.isOwned(base, base: base))
+        let first = ManagedProfileNaming.uniqueName(base: base, identity: "PROFILE1")
+        let second = ManagedProfileNaming.uniqueName(base: base, identity: "PROFILE2")
+        precondition(first != second)
+        precondition(first == ManagedProfileNaming.uniqueName(base: base, identity: "PROFILE1"))
+        precondition(ManagedProfileNaming.isOwned(first, base: base))
+        precondition(!ManagedProfileNaming.isOwned(base + "OTHER [PROFILE1]", base: base))
+        precondition(!ManagedProfileNaming.isOwned("Xcode " + first, base: base))
+        print("PASS duplicate legacy names migrate to stable per-profile names; unrelated names excluded")
         let now = Date(timeIntervalSince1970: 1000)
         let original = Data([1, 2, 3]) // Synthetic certificate bytes, not an Apple certificate.
         let values: [String: Any] = [PacketTunnelProvisioning.entitlement: [PacketTunnelProvisioning.provider],

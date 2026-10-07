@@ -66,3 +66,15 @@ enum EmbeddedProfileReuse {
         incompatibilities(profile, for: target, now: now).isEmpty
     }
 }
+
+/// Names identify only candidates; downloaded bundle/team and newly issued
+/// profile authorization must still be validated before signing.
+enum ManagedProfileNaming {
+    static func isOwned(_ name: String, base: String) -> Bool {
+        name == base || (name.hasPrefix(base + " [") && name.hasSuffix("]"))
+    }
+
+    static func uniqueName(base: String, identity: String) -> String {
+        base + " [" + identity + "]"
+    }
+}

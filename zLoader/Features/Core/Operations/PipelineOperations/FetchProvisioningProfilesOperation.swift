@@ -349,26 +349,34 @@ private extension FetchProvisioningProfilesOperation{
                                               certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
         let managedName = "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8))
         let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
-        var incompatibleManagedIDs: [String] = []
-        for item in existing where item.bundleIdentifier == appID.bundleIdentifier || item.name == managedName {
+        // Regenerate one owned profile by its ID. Names are not unique in the
+        // portal and deleting/recreating under a shared name can fail with code 35.
+        let owned = existing.filter {
+            ManagedProfileNaming.isOwned($0.name, base: managedName) && $0.identifier != nil
+        }.sorted { ($0.identifier ?? "") < ($1.identifier ?? "") }
+        var selectedID: String?
+        for item in owned {
             guard let identifier = item.identifier else { continue }
-            // Download before changing anything. A failed download must not cause deletion.
             let candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
-            _ = candidate // Download must succeed before replacing an owned profile.
-            // Issue a fresh profile after capability/group synchronization, even when
-            // the old profile appears compatible. Disabled capabilities and portal-only
-            // edits cannot be inferred from a subset comparison of IPA entitlements.
-            // Replace only the profile owned by this signing flow; preserve unrelated Xcode profiles.
-            if item.name == managedName { incompatibleManagedIDs.append(identifier) }
+            guard candidate.bundleIdentifier == appID.bundleIdentifier,
+                  candidate.teamIdentifier == team.identifier else { continue }
+            selectedID = identifier
+            break
         }
-        for identifier in incompatibleManagedIDs {
-            guard try await DeveloperPortalProxy.shared.deleteProvisioningProfile(profileID: identifier, team: team) else {
-                throw OperationError.invalidParameters("Apple did not remove the incompatible zLoader profile. Retry after checking this profile in the Developer Account.")
-            }
+        let profile: ALTProvisioningProfile
+        if let identifier = selectedID {
+            profile = try await DeveloperPortalProxy.shared.updateProvisioningProfile(
+                profileID: identifier, name: ManagedProfileNaming.uniqueName(base: managedName, identity: identifier),
+                appIDId: appID.identifier, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
+            )
+        } else {
+            // A unique first name also prevents collisions between concurrent first
+            // requests. Subsequent refreshes find this owned profile and renew its ID.
+            profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
+                name: ManagedProfileNaming.uniqueName(base: managedName, identity: UUID().uuidString),
+                appID: appID, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
+            )
         }
-        let profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
-            name: managedName, appID: appID, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
-        )
         let snapshot = EmbeddedProfileSnapshot(
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements

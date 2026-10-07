@@ -119,15 +119,25 @@ public class DeveloperPortalProxy {
     public func updateAppID(_ appID: ALTAppID, team: ALTTeam? = nil) async throws -> ALTAppID {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
+        let before = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
+        guard let current = before.first(where: { $0.identifier == appID.identifier }) else {
+            throw PortalMutationError.updateNotConfirmed
+        }
+        let changes = appID.changedFeatures(comparedTo: current)
+        guard !changes.isEmpty else { return current }
         _ = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
-        let fresh = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
-        guard let confirmed = fresh.first(where: { $0.identifier == appID.identifier }),
-              appID.features.allSatisfy({ feature, value in
-                  let expected = value.lowercased()
-                  let actual = confirmed.features[feature]?.lowercased() ?? "false"
-                  return expected == actual
-              }) else { throw PortalMutationError.updateNotConfirmed }
-        return confirmed
+        var missing = changes.keys.map(\.rawValue).sorted()
+        // Read back only requested deltas. Read-only/unchanged flags can differ
+        // between Apple's list and mutation responses and are not write failures.
+        for _ in 0..<3 {
+            let fresh = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
+            guard let confirmed = fresh.first(where: { $0.identifier == appID.identifier }) else { continue }
+            var desired = confirmed
+            desired.features.merge(changes) { _, requested in requested }
+            missing = desired.changedFeatures(comparedTo: confirmed).keys.map(\.rawValue).sorted()
+            if missing.isEmpty { return confirmed }
+        }
+        throw PortalMutationError.capabilitiesNotConfirmed(missing)
     }
 
     @discardableResult
@@ -305,8 +315,11 @@ class DeveloperPortalProxyWithAuth: DeveloperPortalProxy {
 /// confirms it. Local lists must remain unchanged on rejection/uncertainty.
 enum PortalMutationError: LocalizedError {
     case rejected, notConfirmed, updateNotConfirmed
+    case capabilitiesNotConfirmed([String])
     var errorDescription: String? {
         switch self {
+        case .capabilitiesNotConfirmed(let features):
+            return NSLocalizedString("Apple did not confirm these capability changes:", comment: "") + " " + features.joined(separator: ", ")
         case .updateNotConfirmed: return NSLocalizedString("Apple did not confirm the requested changes. Your edits were kept. Refresh the Developer Portal and try again.", comment: "")
         case .rejected: return NSLocalizedString("Apple rejected the portal change. No local item was removed.", comment: "")
         case .notConfirmed: return NSLocalizedString("Apple still lists this item after the request. The change could not be confirmed; refresh the portal and try again. The local item was preserved.", comment: "")
