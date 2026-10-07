@@ -11,7 +11,7 @@ changes to SideStore.
 - Provenance remote: https://github.com/SideStore/SideStore.git
 
 Future zLoader updates are maintained independently and distributed through
-https://altsource.zynthec.com. No automatic upstream merge or release feed is used.
+https://zloader.zynthec.com. No automatic upstream merge or release feed is used.
 Technical patches, branding and identity/source changes have separate commits.
 
 The project, host module, targets, schemes and product directories use zLoader.

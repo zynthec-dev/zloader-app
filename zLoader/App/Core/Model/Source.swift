@@ -361,7 +361,7 @@ public extension Source
     class func makeZLoaderSource(in context: NSManagedObjectContext) -> Source
     {
         let source = Source(context: context)
-        source.name = "zynthec Apps"
+        source.name = "zLoader Source"
         source.groupID = Source.zLoaderGroupIdentifier
         source.identifier = Source.zLoaderIdentifier
         try! source.setSourceURL(Source.zLoaderSourceURL)
@@ -371,7 +371,13 @@ public extension Source
     
     class func fetchZLoaderSource(in context: NSManagedObjectContext) -> Source?
     {
-        let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), Source.zLoaderIdentifier), in: context)
+        if let current = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), Source.zLoaderIdentifier), in: context) {
+            return current
+        }
+        // Reuse the original fixed source so existing installs retain app links.
+        let legacyURL = URL(string: "https://altsource.zynthec.com")!
+        guard let legacyID = try? Source.sourceID(from: legacyURL) else { return nil }
+        let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), legacyID), in: context)
         return source
     }
     

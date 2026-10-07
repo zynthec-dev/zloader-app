@@ -38,7 +38,9 @@ struct SignIPAView: View {
                     NavigationLink("IPA Library") { CacheManagementView(signedIPAsOnly: true, onInstall: onInstall) }
                 }
             } footer: {
-                Text("Signing without installation always saves the IPA in Signed IPAs. The receiving device must be authorized by every embedded profile. A wildcard profile does not grant additional capabilities.")
+                Group {
+                    Text("Signing without installation always saves the IPA in Signed IPAs. The receiving device must be authorized by every embedded profile. A wildcard profile does not grant additional capabilities.")
+                }
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Sign IPA")

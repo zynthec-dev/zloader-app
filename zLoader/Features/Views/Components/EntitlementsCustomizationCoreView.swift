@@ -28,38 +28,39 @@ public struct EntitlementsCustomizationCoreView: View {
 
     public var body: some View {
         Group {
-            if style == .sheet {
-                editor
-            } else {
-                ZStack {
-                    Color.black.opacity(0.45).ignoresSafeArea()
-                    editor.frame(maxWidth: 600, maxHeight: 720)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                        .padding()
+                if style == .sheet {
+                    editor
+                } else {
+                    ZStack {
+                        Color.black.opacity(0.45).ignoresSafeArea()
+                        editor.frame(maxWidth: 600, maxHeight: 720)
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .padding()
+                    }
                 }
             }
+            .sheet(isPresented: $viewModel.isShowingAddCustomSheet) { customEditor }
         }
-        .sheet(isPresented: $viewModel.isShowingAddCustomSheet) { customEditor }
-    }
-
-    private var editor: some View {
-        NavigationStack {
-            List {
-                Section {
-                    if viewModel.targets.count > 1 {
-                        Picker("App / Extension", selection: Binding(
-                            get: { viewModel.selectedTargetID },
-                            set: { viewModel.selectTarget(id: $0) }
-                        )) {
-                            ForEach(viewModel.targets) { Text($0.name).tag($0.id) }
+        private var editor: some View {
+            NavigationStack {
+                List {
+                    Section {
+                        if viewModel.targets.count > 1 {
+                            Picker("App / Extension", selection: Binding(
+                                get: { viewModel.selectedTargetID },
+                                set: { viewModel.selectTarget(id: $0) }
+                            )) {
+                                ForEach(viewModel.targets) { Text($0.name).tag($0.id) }
+                            }
                         }
-                    }
-                    Text(viewModel.bundleID).font(.caption).textSelection(.enabled)
-                        .foregroundStyle(.secondary)
-                    LabeledContent("Account", value: viewModel.teamType.displayName)
-                } footer: {
-                    Text("Permissions are requested separately for the app and each extension. Apple must authorize them in each profile.")
-                }.listRowBackground(ZLoaderGlassBackground())
+                        Text(viewModel.bundleID).font(.caption).textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                        LabeledContent("Account", value: viewModel.teamType.displayName)
+                    } footer: {
+                    Group {
+                        Text("Permissions are requested separately for the app and each extension. Apple must authorize them in each profile.")
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
                 Section("Entitlements (\(viewModel.filteredActiveEntries.count))") {
                     ForEach(viewModel.filteredActiveEntries) { entry in
                         entitlementRow(entry)

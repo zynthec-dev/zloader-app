@@ -41,7 +41,9 @@ struct LocalKeyMaterialView: View {
                     SettingsEntryLabel(title: "Import Key…", systemImage: "key.horizontal")
                 }
             } footer: {
-                Text("Requests are created locally without an Apple login. Private keys remain in this app's protected keychain. Import Apple's returned certificate in the certificate manager to match it to its key.")
+                Group {
+                    Text("Requests are created locally without an Apple login. Private keys remain in this app's protected keychain. Import Apple's returned certificate in the certificate manager to match it to its key.")
+                }
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Keys and Signing Requests") {
                 ForEach(items) { item in

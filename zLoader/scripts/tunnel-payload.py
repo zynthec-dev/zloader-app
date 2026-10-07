@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 
 
-def prepare_bootstrap(app, root):
+def prepare_bootstrap(app, root, *, remove_provider=True):
     provider = app / 'PlugIns/zLoaderTunnel.appex'
     if not provider.is_dir():
         raise ValueError('Build must include the provider before bootstrap packaging')
@@ -30,4 +30,5 @@ def prepare_bootstrap(app, root):
         manifest = {'version': info['CFBundleShortVersionString'], 'build': info['CFBundleVersion'],
                     'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}
         (app / 'zLoaderTunnelPayload.plist').write_bytes(plistlib.dumps(manifest))
-    shutil.rmtree(provider)
+    if remove_provider:
+        shutil.rmtree(provider)

@@ -24,7 +24,9 @@ struct SigningIdentitiesView: View {
                 }
                 NavigationLink("Add Signing Identity") { SigningIdentityEditor() }
             } footer: {
-                Text("Import a PKCS#12 certificate with its private key and the Apple-signed profiles for the app and its extensions. Removing an identity here does not revoke anything in your Developer Account.")
+                Group {
+                    Text("Import a PKCS#12 certificate with its private key and the Apple-signed profiles for the app and its extensions. Removing an identity here does not revoke anything in your Developer Account.")
+                }
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Signing Identities")
@@ -83,7 +85,9 @@ private struct SigningIdentityEditor: View {
                     showsImporter = true
                 }
             } header: { Text("Provisioning Profiles") } footer: {
-                Text("Each app and extension needs a matching profile. A wildcard profile cannot grant capabilities that Apple did not authorize.")
+                Group {
+                    Text("Each app and extension needs a matching profile. A wildcard profile cannot grant capabilities that Apple did not authorize.")
+                }
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Signing Identity")

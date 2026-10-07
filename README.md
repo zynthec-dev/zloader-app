@@ -15,7 +15,7 @@ controls have been removed from the app. No cellular-toggle Shortcuts or fixed
 operation-duration timers. Cellular-only behavior still requires iPhone validation.
 
 The fixed, non-removable default source is
-[zynthec Apps](https://altsource.zynthec.com). zLoader self-updates use its own
+[zLoader Source](https://zloader.zynthec.com). zLoader self-updates use its own
 `com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
 
 ## Build
@@ -50,15 +50,18 @@ Open `zLoader.xcodeproj`, scheme `zLoader`. The dependency patch must also be
 applied before a direct Xcode build. It is tracked separately, idempotent and
 leaves the original dependency gitlinks intact.
 
-For initial installation use `outputs/zLoader-resignable.ipa` (also aliased as
-`zLoader-iLoader.ipa`). It contains capability metadata for App Groups/widget plus
-a dormant provider archive; it needs real Apple signing by the installer, but no
-installed Network Extension. After pairing/login zLoader can optionally provision
-and self-sign the internal tunnel with an eligible paid team.
+The single sideloading release is `outputs/zLoader-resignable.ipa` (also aliased as
+`zLoader-iLoader.ipa`). It always includes the embedded tunnel extension and its
+capability metadata, plus a recovery payload if an installer removes the extension.
+An eligible Apple team and matching profiles are required to retain and use the
+internal tunnel. An installer may remove that extension; zLoader then uses an
+external local VPN tunnel and can optionally provision the internal tunnel later.
+Keeping an unauthorized extension can make iOS reject installation; inactive VPN
+configuration alone does not waive Apple's signing requirements.
 
-`outputs/zLoader-internal-resignable.ipa` includes the installed provider and requires
-Network Extension authorization initially. `zLoader-unsigned.ipa` is fully unsigned
-and intended for tools that supply their own entitlement/provisioning requirements.
+`zLoader-unsigned.ipa` has the same extension layout with all signatures removed,
+for tools that supply their own entitlement and provisioning requirements. There
+is no separate external/internal release variant.
 Read [on-device setup and limits](docs/zloader/ON-DEVICE-SETUP-0.7.17.md).
 Profile-preserving inputs must not be fed to tools that append another team suffix.
 

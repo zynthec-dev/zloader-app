@@ -8,14 +8,14 @@ import tempfile
 import zipfile
 
 root = Path(__file__).resolve().parents[2]
-for internal in [False, True]:
-    ipa = root / 'outputs' / ('zLoader-internal-resignable.ipa' if internal else 'zLoader-resignable.ipa')
+for internal in [True]:
+    ipa = root / 'outputs' / 'zLoader-resignable.ipa'
     with zipfile.ZipFile(ipa) as archive:
         assert archive.testzip() is None
         assert any('/PlugIns/zLoaderTunnel.appex/' in name for name in archive.namelist()) == internal
         info = plistlib.loads(archive.read('Payload/zLoader.app/Info.plist'))
         assert 'Payload/zLoader.app/PlugIns/zLoaderWidget.appex/Info.plist' in archive.namelist()
-        if not internal:
+        if internal:
             data = archive.read('Payload/zLoader.app/zLoaderTunnelPayload.zip')
             manifest = plistlib.loads(archive.read('Payload/zLoader.app/zLoaderTunnelPayload.plist'))
             assert manifest['sha256'] == hashlib.sha256(data).hexdigest()
@@ -35,4 +35,4 @@ for internal in [False, True]:
         assert ('com.apple.developer.networking.networkextension' in declared) == internal
         assert declared['com.apple.security.application-groups'] == ['group.com.zynthec.zLoader']
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(host)], check=True, capture_output=True)
-print('PASS bootstrap/full IPA separation, provider version/build/hash and profile-free archive, host entitlement contract and ad-hoc integrity')
+print('PASS single IPA contains installed provider and recovery payload, version/build/hash integrity, profile-free archive and ad-hoc entitlement contract')

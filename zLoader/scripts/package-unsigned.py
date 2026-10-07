@@ -11,7 +11,7 @@ import argparse
 
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser()
-parser.add_argument('--internal', action='store_true')
+parser.add_argument('--internal', action='store_true', help=argparse.SUPPRESS)
 args = parser.parse_args()
 app = root / '.build/Device/Build/Products/Release-iphoneos/zLoader.app'
 info = plistlib.loads((app / 'Info.plist').read_bytes())
@@ -26,8 +26,7 @@ staging = out / 'unsigned-staging'
 if staging.exists():
     shutil.rmtree(staging)
 shutil.copytree(app, staging / 'Payload/zLoader.app', symlinks=True)
-if not args.internal:
-    runpy.run_path(str(root / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](staging / 'Payload/zLoader.app', root)
+runpy.run_path(str(root / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](staging / 'Payload/zLoader.app', root, remove_provider=False)
 # Remove inherited vendor signatures as well as host/extension signatures.
 # This is a fully unsigned artifact; no capability requests are fabricated.
 macho_magic = {bytes.fromhex(value) for value in
@@ -46,19 +45,18 @@ for path in list((staging / 'Payload').rglob('_CodeSignature')):
         shutil.rmtree(path)
 for path in (staging / 'Payload').rglob('embedded.mobileprovision'):
     path.unlink()
-ipa = out / ('zLoader-internal-unsigned.ipa' if args.internal else 'zLoader-unsigned.ipa')
+ipa = out / 'zLoader-unsigned.ipa'
 # ditto preserves bundle links/permissions, unlike a naive Python ZIP writer.
 subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
                 str(staging / 'Payload'), str(ipa)], check=True)
 with zipfile.ZipFile(ipa) as archive:
     assert archive.testzip() is None
-    assert any('/zLoaderTunnel.appex/' in name for name in archive.namelist()) == args.internal
-    if not args.internal:
-        assert 'Payload/zLoader.app/zLoaderTunnelPayload.zip' in archive.namelist()
+    assert any('/zLoaderTunnel.appex/' in name for name in archive.namelist()) == True
+    assert 'Payload/zLoader.app/zLoaderTunnelPayload.zip' in archive.namelist()
 result = {'artifact': ipa.name, 'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
           'bundleIdentifier': info['CFBundleIdentifier'],
-          'signing': 'unsigned; Apple provisioning required', 'internalProviderInstalled': args.internal,
-          'bootstrapPayloadIncluded': not args.internal}
+          'signing': 'unsigned; Apple provisioning required', 'internalProviderInstalled': True,
+          'bootstrapPayloadIncluded': True}
 ipa.with_suffix('.json').write_text(json.dumps(result, indent=2) + '\n')
 shutil.rmtree(staging)
 print(json.dumps(result, indent=2))

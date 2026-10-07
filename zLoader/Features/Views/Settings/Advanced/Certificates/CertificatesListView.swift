@@ -11,7 +11,7 @@ import SideSign
 
 struct CertificatesListView: View {
     @ObservedObject var viewModel: CertificatesViewModel
-    
+
     var onRowTap:     (ALTX509Certificate) -> Void
     var onRevoke:     (ALTX509Certificate) -> Void
     var onExportP12:  (ALTX509Certificate) -> Void
@@ -19,7 +19,7 @@ struct CertificatesListView: View {
     var onAddKeyBin:  (ALTX509Certificate) -> Void
     var onAddKeyText: (ALTX509Certificate) -> Void
     var onDelete:     (ALTX509Certificate) -> Void
-    
+
     var body: some View {
         if viewModel.certificates.isEmpty {
             Section(header: Text("All Certificates")) {
@@ -86,10 +86,12 @@ struct CertificatesListView: View {
                 } header: {
                     CertGroupHeaderView(group: group, viewModel: viewModel)
                 } footer: {
-                    if group.id == viewModel.groupedCertificatesList.last?.id {
-                        Text("Suffix (R) indicates the certificate is registered remotely on Apple's developer portal.")
-                    }
-                }.listRowBackground(ZLoaderGlassBackground())
+                Group {
+                        if group.id == viewModel.groupedCertificatesList.last?.id {
+                            Text("Suffix (R) indicates the certificate is registered remotely on Apple's developer portal.")
+                        }
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
             }
         }
     }
@@ -102,7 +104,7 @@ private struct CertGroupHeaderView: View {
     @State private var showSortDialog: Bool = false
     @State private var showGroupDialog: Bool = false
     #endif
-    
+
     private var headerTitle: String {
         if group.name == "Certificates" {
             let localCount = viewModel.certificates.count
@@ -189,7 +191,7 @@ private struct CertGroupHeaderView: View {
 private struct AdaptiveTappableRow<Content: View>: View {
     let action: () -> Void
     @ViewBuilder let content: () -> Content
-    
+
     var body: some View {
         #if !os(tvOS)
         content()

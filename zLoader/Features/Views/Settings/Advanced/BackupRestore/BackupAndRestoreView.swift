@@ -122,7 +122,7 @@ struct BackupAndRestoreView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(ZLoaderAppBackground())
+        .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Backup & Restore")
         .labelStyle(.titleOnly)
         #if !os(tvOS)

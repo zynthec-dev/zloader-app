@@ -99,7 +99,7 @@ struct OperationsLoggingControlView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(ZLoaderAppBackground())
+        .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Operations Logging")
         .labelStyle(.titleOnly)
         #if !os(tvOS)

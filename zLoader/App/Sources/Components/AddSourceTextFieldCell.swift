@@ -10,6 +10,7 @@
 
 class AddSourceTextFieldCell: UICollectionViewCell
 {
+    static let sourceURLFieldTag = 77502
     let textField: UITextField
     
     private let backgroundEffectView: UIVisualEffectView
@@ -19,7 +20,11 @@ class AddSourceTextFieldCell: UICollectionViewCell
     {
         self.textField = UITextField(frame: frame)
         self.textField.translatesAutoresizingMaskIntoConstraints = false
-        self.textField.placeholder = NSLocalizedString("apps.zloader.io", comment: "")
+        self.textField.placeholder = "https://zloader.zynthec.com"
+        self.textField.tag = Self.sourceURLFieldTag
+        self.textField.font = .preferredFont(forTextStyle: .body)
+        self.textField.adjustsFontForContentSizeCategory = true
+        self.textField.backgroundColor = .clear
         self.textField.textContentType = .URL
 //        self.textField.keyboardType = .URL    // we can add multiple sources now delimited by spaces/newline so we use normal keyboard not url keyboard
         self.textField.returnKeyType = .done
@@ -28,27 +33,12 @@ class AddSourceTextFieldCell: UICollectionViewCell
         self.textField.spellCheckingType = .no
         self.textField.enablesReturnKeyAutomatically = true
         self.textField.tintColor = .altPrimary
-        self.textField.textColor = UIColor { traits in
-            if traits.userInterfaceStyle == .dark
-            {
-                //TODO: Change once we update UIColor.altPrimary to match 2.0 icon.
-                return UIColor(resource: .gradientTop)
-            }
-            else
-            {
-                return UIColor.altPrimary
-            }
-        }
-        
-        #if !os(tvOS)
-        let blurEffect = UIBlurEffect(style: .systemChromeMaterial)
-        #else
-        let blurEffect = UIBlurEffect(style: .regular)
-        #endif
-        self.backgroundEffectView = UIVisualEffectView(effect: blurEffect)
+        self.textField.textColor = .label
+
+        self.backgroundEffectView = UIVisualEffectView(effect: nil)
         self.backgroundEffectView.translatesAutoresizingMaskIntoConstraints = false
         self.backgroundEffectView.clipsToBounds = true
-        self.backgroundEffectView.backgroundColor = .altPrimary
+        self.backgroundEffectView.backgroundColor = .settingsCard
         
         let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .bold)
         let image = UIImage(systemName: "link", withConfiguration: config)?.withRenderingMode(.alwaysTemplate)

@@ -16,7 +16,6 @@ final class SettingsHeaderFooterView: UITableViewHeaderFooterView
     @IBOutlet var button: UIButton!
         
     @IBOutlet private var stackView: UIStackView!
-    
     override init(reuseIdentifier: String?)
     {
         super.init(reuseIdentifier: reuseIdentifier)

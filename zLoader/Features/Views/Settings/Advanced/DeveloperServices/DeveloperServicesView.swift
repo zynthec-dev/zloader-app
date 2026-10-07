@@ -137,7 +137,7 @@ struct DeveloperServicesView: View {
                     #if !os(tvOS)
                     .background(Color(UIColor.settingsCard))
                     #else
-                    .background(ZLoaderAppBackground())
+                    .background(Color(uiColor: .settingsBackground))
                     #endif
                     .cornerRadius(12)
                     .shadow(radius: 6)

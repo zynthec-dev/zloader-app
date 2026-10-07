@@ -27,13 +27,13 @@ struct AnimatedCheckmarkView: View {
             Circle()
                 .stroke(Color.green.opacity(0.2), lineWidth: 4)
                 .frame(width: 70, height: 70)
-            
+
             Circle()
                 .trim(from: 0.0, to: outerCircleTrim)
                 .stroke(Color.green, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .frame(width: 70, height: 70)
                 .rotationEffect(.degrees(-90))
-            
+
             Path { path in
                 path.move(to: CGPoint(x: 21, y: 35))
                 path.addLine(to: CGPoint(x: 30, y: 44))
@@ -93,7 +93,10 @@ struct ConnectionConfigView: View {
                     TextField("Local Peer Address", text: $peer)
                     TextField("Local Interface Address", text: $interface)
                 } header: { Text("Internal Tunnel Addresses") }
-                  footer: { Text("Choose two different private IPv4 addresses. These are virtual tunnel addresses, not Wi-Fi addresses. Changes apply the next time the tunnel connects.") }.listRowBackground(ZLoaderGlassBackground())
+                  footer: {
+                Group { Text("Choose two different private IPv4 addresses. These are virtual tunnel addresses, not Wi-Fi addresses. Changes apply the next time the tunnel connects.")
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
             }
             Section("Device Endpoint") {
                 LabeledContent("Interface", value: config.formattedTunnelIface ?? "Not Detected")

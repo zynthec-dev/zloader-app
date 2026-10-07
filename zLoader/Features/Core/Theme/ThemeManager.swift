@@ -57,10 +57,6 @@ public final class ThemeManager: ObservableObject {
     @Published public var customFieldColor: UIColor? = UserDefaults.standard.string(forKey: "zLoader.fieldColor").flatMap { UIColor(hex: $0) } {
         didSet { persistColor(customFieldColor, key: "zLoader.fieldColor") }
     }
-    @Published var wallpaperRevision = 0
-    var wallpaperImages: [String: UIImage] = [:]
-    private var wallpaperSurfaceColors = NSMapTable<UIView, UIColor>(keyOptions: .weakMemory, valueOptions: .strongMemory)
-
     public var symbolColor: UIColor { customSymbolColor ?? primaryColor }
     public var fieldColor: UIColor { customFieldColor ?? .secondarySystemGroupedBackground }
 
@@ -72,6 +68,16 @@ public final class ThemeManager: ObservableObject {
     }
 
     private init() {
+        if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            for name in ["light.jpg", "dark.jpg"] {
+                let obsoleteImage = support.appendingPathComponent("Appearance").appendingPathComponent(name)
+                if FileManager.default.fileExists(atPath: obsoleteImage.path) {
+                    do { try FileManager.default.removeItem(at: obsoleteImage) }
+                    catch { debugLog("Could not remove obsolete appearance image: \(error.localizedDescription)") }
+                }
+            }
+        }
+
         if let hex = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
            let color = UIColor(hex: hex) {
             // Older versions persisted one resolved side of the dynamic mint.
@@ -168,7 +174,7 @@ struct ZLoaderThemedRoot<Content: View>: View {
             .environment(\.locale, AppLanguage.launchLocale)
             .preferredColorScheme(theme.appearance.colorScheme)
             .scrollContentBackground(.hidden)
-            .background(ZLoaderAppBackground())
+            .background(Color(uiColor: .settingsBackground))
     }
 }
 
@@ -219,38 +225,12 @@ extension ThemeManager {
             for window in scene.windows {
                 window.overrideUserInterfaceStyle = appearance.interfaceStyle
                 window.tintColor = primaryColor
-                let image = wallpaper(for: window.traitCollection.userInterfaceStyle)
-                let backdrop: UIImageView
-                if let existing = window.viewWithTag(77501) as? UIImageView { backdrop = existing }
-                else {
-                    backdrop = UIImageView(frame: window.bounds)
-                    backdrop.tag = 77501
-                    backdrop.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                    backdrop.contentMode = .scaleAspectFill
-                    backdrop.clipsToBounds = true
-                    backdrop.isUserInteractionEnabled = false
-                    window.insertSubview(backdrop, at: 0)
-                }
-                backdrop.image = image
-                backdrop.isHidden = image == nil
-                window.sendSubviewToBack(backdrop)
                 applyAppearance(to: window)
             }
         }
     }
 
     @MainActor func applyAppearance(to view: UIView) {
-        let hasWallpaper = wallpaper(for: view.traitCollection.userInterfaceStyle) != nil
-        if hasWallpaper, !(view is UITableViewCell), !(view is UIVisualEffectView),
-           let color = view.backgroundColor,
-           color == .settingsBackground || color == .systemBackground || color == .systemGroupedBackground {
-            if wallpaperSurfaceColors.object(forKey: view) == nil { wallpaperSurfaceColors.setObject(color, forKey: view) }
-            view.backgroundColor = .clear
-        } else if !hasWallpaper, let original = wallpaperSurfaceColors.object(forKey: view) {
-            view.backgroundColor = original
-            wallpaperSurfaceColors.removeObject(forKey: view)
-        }
-        // Preserve semantic colors and original surfaces when no wallpaper is set.
         if view.tintColor == UIColor(named: "Primary") { view.tintColor = .altPrimary }
         if view.backgroundColor == UIColor(named: "Primary") {
             view.backgroundColor = .altPrimary
@@ -259,28 +239,35 @@ extension ThemeManager {
             }
         }
         if let field = view as? UITextField {
-            field.backgroundColor = .settingsField
-            field.textColor = customFieldColor == nil ? .label : fieldColor.contrastingText
-            #if !os(tvOS)
-            if #available(iOS 26.0, *) {
-                let glass: UIVisualEffectView
-                if let existing = field.viewWithTag(77500) as? UIVisualEffectView { glass = existing }
-                else {
-                    glass = UIVisualEffectView()
-                    glass.tag = 77500
-                    glass.isUserInteractionEnabled = false
-                    glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                    glass.frame = field.bounds
-                    glass.layer.cornerRadius = 12
-                    glass.clipsToBounds = true
-                    field.insertSubview(glass, at: 0)
-                }
-                let effect = UIGlassEffect(style: .regular)
-                effect.tintColor = customFieldColor
-                glass.effect = effect
+            if field.tag == AddSourceTextFieldCell.sourceURLFieldTag {
+                // The source input uses its parent card, matching native form rows.
                 field.backgroundColor = .clear
+                field.textColor = .label
+                field.viewWithTag(77500)?.removeFromSuperview()
+            } else {
+                field.backgroundColor = .settingsField
+                field.textColor = customFieldColor == nil ? .label : fieldColor.contrastingText
+                #if !os(tvOS)
+                if #available(iOS 26.0, *) {
+                    let glass: UIVisualEffectView
+                    if let existing = field.viewWithTag(77500) as? UIVisualEffectView { glass = existing }
+                    else {
+                        glass = UIVisualEffectView()
+                        glass.tag = 77500
+                        glass.isUserInteractionEnabled = false
+                        glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                        glass.frame = field.bounds
+                        glass.layer.cornerRadius = 12
+                        glass.clipsToBounds = true
+                        field.insertSubview(glass, at: 0)
+                    }
+                    let effect = UIGlassEffect(style: .regular)
+                    effect.tintColor = customFieldColor
+                    glass.effect = effect
+                    field.backgroundColor = .clear
+                }
+                #endif
             }
-            #endif
         }
         if let image = view as? UIImageView, image.tag == 77023 {
             image.tintColor = .settingsSymbol

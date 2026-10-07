@@ -72,7 +72,7 @@ struct CacheManagementView: View {
                 #if !os(tvOS)
                 .listStyle(InsetGroupedListStyle())
                 .scrollContentBackground(.hidden)
-                .background(ZLoaderAppBackground())
+                .background(Color(uiColor: .settingsBackground))
                 #else
                 .listStyle(GroupedListStyle())
                 #endif

@@ -38,9 +38,9 @@ public enum AppConstants {
     public enum Sources {
         public static let fetchTimeout: TimeInterval  = 3.0
         public static let defaultSourcesURL           = URL(string: "https://sidestore.io/default-sources/")!
-        public static let zLoaderCommunitySourceURL = URL(string: "https://altsource.zynthec.com")!
-        public static let zLoaderFallbackIconURL    = URL(string: "https://altsource.zynthec.com/assets/apps/com.zynthec.zLoader.png")!
-        public static let zLoaderWebsite            = URL(string: "https://altsource.zynthec.com")!
+        public static let zLoaderCommunitySourceURL = URL(string: "https://zloader.zynthec.com")!
+        public static let zLoaderFallbackIconURL    = URL(string: "https://zloader.zynthec.com/assets/apps/com.zynthec.zLoader.png")!
+        public static let zLoaderWebsite            = URL(string: "https://zloader.zynthec.com")!
     }
     
     public enum Bonjour {
@@ -138,7 +138,7 @@ public enum AppConstants {
         // ZLoader Documentation & Community URLs
         public static let pairingDocumentation      = URL(string: "https://docs.sidestore.io/docs/advanced/pairing-file")!
         public static let errorCodesDocumentation   = URL(string: "https://docs.sidestore.io/docs/troubleshooting/error-codes")!
-        public static let zLoaderWebsite          = URL(string: "https://altsource.zynthec.com")!
+        public static let zLoaderWebsite          = URL(string: "https://zloader.zynthec.com")!
         public static let zLoaderGitHub           = URL(string: "https://github.com/zynthec-dev/zLoader-ios")!
         public static let zLoaderIssues           = URL(string: "https://github.com/zynthec-dev/zLoader-ios/issues")!
         public static let zLoaderDiscord          = URL(string: "https://github.com/zynthec-dev/zLoader-ios")!

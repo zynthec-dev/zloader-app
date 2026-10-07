@@ -449,7 +449,7 @@ struct SideSignConfigurationView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(ZLoaderAppBackground())
+        .background(Color(uiColor: .settingsBackground))
         .navigationTitle("SideSign Config")
         .labelStyle(.titleOnly)
         #if !os(tvOS)

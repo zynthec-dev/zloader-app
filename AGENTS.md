@@ -27,5 +27,5 @@ Apple IDs, passwords or device UDIDs. Do not bypass Apple entitlements.
 
 Build success, ad-hoc IPA integrity, Apple signing and physical-device runtime are
 separate claims. Test cellular-only behavior and iOS lifecycle on actual hardware
-before claiming they work. Own releases use https://altsource.zynthec.com; preserve
+before claiming they work. Own releases use https://zloader.zynthec.com; preserve
 its non-removable default source and the corresponding-source distribution requirement.

@@ -64,27 +64,17 @@ struct ZLoaderGlassGroup<Content: View>: View {
     }
 }
 
-/// Shared row/field material. UIKit renders it according to OS glass preferences.
+/// Opaque list rows remain legible independently of glass preferences.
+/// The name is retained for existing listRowBackground call sites.
 struct ZLoaderGlassBackground: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        let view = UIVisualEffectView()
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
         view.isUserInteractionEnabled = false
         updateUIView(view, context: context)
         return view
     }
 
-    func updateUIView(_ view: UIVisualEffectView, context: Context) {
-        #if !os(tvOS)
-        if #available(iOS 26.0, *) {
-            view.effect = UIGlassEffect(style: .regular)
-            view.backgroundColor = .clear
-        } else {
-            view.effect = nil
-            view.backgroundColor = .settingsCard
-        }
-        #else
-        view.effect = nil
-        view.backgroundColor = .settingsCard
-        #endif
+    func updateUIView(_ view: UIView, context: Context) {
+        view.backgroundColor = .secondarySystemGroupedBackground
     }
 }

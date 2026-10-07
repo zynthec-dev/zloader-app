@@ -322,7 +322,7 @@ struct UserCustomizationsView: View {
             }.listRowBackground(ZLoaderGlassBackground())
 
         }
-        .background(ZLoaderAppBackground())
+        .background(Color(uiColor: .settingsBackground))
         .navigationTitle("User Customizations")
         .labelStyle(.titleOnly)
         #if !os(tvOS)

@@ -215,7 +215,7 @@ public class DatabaseManager: @unchecked Sendable
             
             let zLoaderSource: Source
             
-            if let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), Source.zLoaderIdentifier), in: context)
+            if let source = Source.fetchZLoaderSource(in: context)
             {
                 zLoaderSource = source
             }
@@ -224,7 +224,8 @@ public class DatabaseManager: @unchecked Sendable
                 zLoaderSource = Source.makeZLoaderSource(in: context)
             }
             
-            // Make sure to always update source URL to be current.
+            // Make sure to always update source URL and name to be current.
+            zLoaderSource.name = "zLoader Source"
             try! zLoaderSource.setSourceURL(Source.zLoaderSourceURL)
             
             let storeApp: StoreApp
@@ -238,7 +239,7 @@ public class DatabaseManager: @unchecked Sendable
                 storeApp = StoreApp.makeZLoaderApp(version: localAppBundle.version, buildVersion: nil, in: context)
             }
                         
-            // Self-updates belong to the fixed zynthec source, including existing installs.
+            // Self-updates belong to the fixed zLoader Source, including existing installs.
             storeApp.source = zLoaderSource
 
             let serialNumber = CertificateManager.shared.getSigningCertificate(at: Bundle.Info.activeBundleURL)?.serialNumber

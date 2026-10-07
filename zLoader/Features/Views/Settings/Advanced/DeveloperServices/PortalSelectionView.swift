@@ -53,7 +53,9 @@ struct PortalSelectionView: View {
                     .tag(item.id)
                 }
             } footer: {
-                Text("Changes are applied to the Apple Developer Portal. An item is removed here only after Apple confirms it is no longer present.")
+                Group {
+                    Text("Changes are applied to the Apple Developer Portal. An item is removed here only after Apple confirms it is no longer present.")
+                }
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .onChange(of: items.map(\.id)) { _, available in

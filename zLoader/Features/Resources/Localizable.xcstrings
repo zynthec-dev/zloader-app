@@ -4217,40 +4217,6 @@
         }
       }
     },
-    "Choose from Files": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose from Files"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus Dateien wählen"
-          }
-        }
-      }
-    },
-    "Choose from Photos": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose from Photos"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus Fotos wählen"
-          }
-        }
-      }
-    },
     "Choose from registered team App IDs or specify a custom App ID / identifier.": {
       "extractionState": "manual",
       "localizations": {
@@ -20146,23 +20112,6 @@
         }
       }
     },
-    "apps.zloader.io": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "apps.zloader.io"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "apps.zloader.io"
-          }
-        }
-      }
-    },
     "day": {
       "extractionState": "manual",
       "localizations": {
@@ -25234,66 +25183,6 @@
         }
       }
     },
-    "App Background": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App-Hintergrund"
-          }
-        }
-      }
-    },
-    "Background Mode": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hintergrundmodus"
-          }
-        }
-      }
-    },
-    "Remove Background": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hintergrund entfernen"
-          }
-        }
-      }
-    },
-    "Background Image": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hintergrundbild"
-          }
-        }
-      }
-    },
-    "Choose a readable image smaller than 30 MB.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle ein lesbares Bild mit weniger als 30 MB."
-          }
-        }
-      }
-    },
-    "Both uses the same image in Light and Dark. Choose Light or Dark to change only that background. Images are stored locally on this device.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beide verwendet dasselbe Bild in Light und Dark. Wähle Light oder Dark, um nur diesen Hintergrund zu ändern. Bilder werden lokal auf diesem Gerät gespeichert."
-          }
-        }
-      }
-    },
     "This zLoader installation is signed by a different team. Its provisioning profiles are preserved and it is excluded from refresh. Other apps can use your selected Apple Account.": {
       "localizations": {
         "de": {
@@ -25370,6 +25259,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Profil autorisiert nicht alle ausgewählten registrierten Geräte."
+          }
+        }
+      }
+    },
+    "Choose from Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose from Photos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Fotos wählen"
           }
         }
       }

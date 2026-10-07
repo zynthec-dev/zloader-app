@@ -86,7 +86,7 @@ struct PairingFileDetailView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(ZLoaderAppBackground())
+        .background(Color(uiColor: .settingsBackground))
         .navigationTitle(titleText)
         .labelStyle(.titleOnly)
         #if !os(tvOS)
