@@ -169,10 +169,6 @@ public enum AppConstants {
         public static let documentationURL          = AppConstants.URLs.pairingDocumentation
     }
 
-    public enum Installation {
-        public static let selfInstallSuspendDelayNs: UInt64 = 500_000_000
-    }
-
     public static let accountConfigurationFileName = "Account.sideconf"
     public static let defaultAccountRepairMessage  = Constants.defaultAccountRepairMessage
 

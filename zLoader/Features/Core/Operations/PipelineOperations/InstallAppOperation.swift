@@ -163,6 +163,8 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
                     if let stagedData = installedApp.serialize(format: .json),
                        var dict = (try? JSONSerialization.jsonObject(with: stagedData, options: [])) as? [String: Any] {
                         dict["lastBundlePath"] = Bundle.main.bundlePath
+                        dict["expectedVersion"] = resignedAppBundle.infoPlist["CFBundleShortVersionString"]
+                        dict["expectedBuild"] = resignedAppBundle.infoPlist["CFBundleVersion"]
                         
                         if let finalData = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]) {
                             try? finalData.write(to: jsonURL)
@@ -177,18 +179,29 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         
         self.setProgress(30)
         
-        // Self-reinstall background suspension
-        if isSelfReinstall {
-            self.handleSelfReinstallation(for: installedApp)
+        // Protect the actual install call, including transport acquisition. Never
+        // stop keepalive or suspend on a timer before the request reaches iOS.
+        let backgroundTask = isSelfReinstall ? await MainActor.run {
+            UIApplication.shared.beginBackgroundTask(withName: "SelfReinstall", expirationHandler: nil)
+        } : UIBackgroundTaskIdentifier.invalid
+        defer {
+            if backgroundTask != .invalid {
+                Task { @MainActor in UIApplication.shared.endBackgroundTask(backgroundTask) }
+            }
         }
-        
-        // Phase 2: App installation
-        if UserDefaults.standard.preferResignedIPA {
-            try await installIPA(bundleID)
-        } else {
-            try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent)
+        do {
+            if UserDefaults.standard.preferResignedIPA {
+                try await installIPA(bundleID)
+            } else {
+                try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent)
+            }
+        } catch {
+            // A failed request must not be mistaken for a pending successful update
+            // on the next launch. Keep the old installation and propagate its error.
+            if isSelfReinstall { self.removeStagedSelfReinstallation() }
+            throw error
         }
-        
+
         self.setProgress(90)
         
         // Phase 3: Post-install CoreData write — update refreshedDate
@@ -382,71 +395,9 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         }
     }
         
-    private func suspendToHomeScreen() async {
-        let handler = self.context.handler.installAppHandler
-        await handler.suspendToHomeScreen()
+    private func removeStagedSelfReinstallation() {
+        guard let group = Bundle.main.zloaderAppGroup,
+              let directory = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { return }
+        try? FileManager.default.removeItem(at: directory.appendingPathComponent("StagedSelfReinstall.json"))
     }
-
-    private func handleSelfReinstallation(for installedApp: InstalledApp) {
-        // Stop keepalive background services unconditionally so the process can suspend cleanly
-        BackgroundServiceManager.stop()
-
-        // Reinstalling ourself will hang until we leave the app, so we need to exit it without force closing
-        Task.detached {
-            let bgTaskID = await MainActor.run {
-                UIApplication.shared.beginBackgroundTask(withName: "SelfReinstall", expirationHandler: nil)
-            }
-            defer {
-                if bgTaskID != .invalid {
-                    Task { @MainActor in UIApplication.shared.endBackgroundTask(bgTaskID) }
-                }
-            }
-
-            try? await Task.sleep(nanoseconds: AppConstants.Installation.selfInstallSuspendDelayNs)
-
-            let handler = self.context.handler.installAppHandler
-            guard await handler.isAppInForeground() else {
-                self.debugLog("[InstallAppOperation] We are not in the foreground, let's not do anything")
-                return
-            }
-            
-            let delaySeconds = AppConstants.Installation.selfInstallSuspendDelayNs / 1_000_000_000
-            self.debugLog("[InstallAppOperation] We are still installing after \(delaySeconds) seconds")
-            
-            await self.suspendToHomeScreen()
-
-            // #if !os(tvOS)
-            // let settings = await UNUserNotificationCenter.current().notificationSettings()
-            // switch settings.authorizationStatus {
-            //     case .authorized, .ephemeral, .provisional:
-            //         self.verboseLog("[InstallAppOperation] Notifications are enabled")
-            //
-            //         let content = UNMutableNotificationContent()
-            //         content.title = "Refreshing..."
-            //         content.body = "zLoader will automatically move to the homescreen to finish refreshing!"
-            //         let notification = UNNotificationRequest(identifier: Bundle.Info.appbundleIdentifier + ".FinishRefreshNotification", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false))
-            //         try? await UNUserNotificationCenter.current().add(notification)
-            //         
-            //         await self.suspendToHomeScreen()
-            //
-            //     default:
-            //         self.verboseLog("[InstallAppOperation] Notifications are not enabled")
-            //
-            //         await withTaskGroup(of: Void.self) { group in
-            //             group.addTask { await handler.requestBackgroundSuspension() }
-            //             group.addTask { try? await Task.sleep(nanoseconds: 5_000_000_000) }
-            //             _ = await group.next()
-            //             group.cancelAll()
-            //         }
-            //         await self.suspendToHomeScreen()
-            //     }
-            // #else
-            // NotificationCenter.default.post(name: NSNotification.Name("TVTopShelfItemsDidChangeNotification"), object: nil)
-            // await handler.requestBackgroundSuspension()
-            // await self.suspendToHomeScreen()
-            // #endif
-        }
-    }
-    
-
 }

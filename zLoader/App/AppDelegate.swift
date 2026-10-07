@@ -677,7 +677,11 @@ private extension AppDelegate {
         let currBundlePath = Bundle.main.bundlePath
         debugLog("[AppDelegate] reconcileSelfReinstallation: Current BundlePath: '\(currBundlePath)', Last BundlePath: '\(lastBundlePath ?? "nil")'")
         
-        if let lastBundlePath, currBundlePath != lastBundlePath {
+        let expectedVersion = stagedData["expectedVersion"] as? String
+        let expectedBuild = stagedData["expectedBuild"] as? String
+        let versionMatches = expectedVersion.map { $0 == Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String } ?? true
+        let buildMatches = expectedBuild.map { $0 == Bundle.main.infoDictionary?["CFBundleVersion"] as? String } ?? true
+        if let lastBundlePath, currBundlePath != lastBundlePath, versionMatches && buildMatches {
             debugLog("[AppDelegate] reconcileSelfReinstallation: App reinstallation confirmed (BundlePath changed)! Applying staged updates to zLoader app in database.")
             let context = DatabaseManager.shared.persistentContainer.newBackgroundContext()
             context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
