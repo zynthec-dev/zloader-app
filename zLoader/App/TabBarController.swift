@@ -49,7 +49,7 @@ final class TabBarController: UITabBarController
             ("My Apps", "a.square", "a.square.fill"),
             ("Settings", "gearshape", "gearshape.fill")
         ]
-        let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .regular)
+        let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
         for (index, controller) in (viewControllers ?? []).enumerated() where index < tabs.count {
             let (title, image, selected) = tabs[index]
             controller.tabBarItem.title = NSLocalizedString(title, comment: "")

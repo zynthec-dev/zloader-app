@@ -1498,7 +1498,8 @@ extension SettingsViewController: INUIAddVoiceShortcutViewControllerDelegate
 
 extension SettingsViewController {
     private func settingsSymbol(for title: String, configuration: UIImage.SymbolConfiguration) -> UIImage? {
-        guard let image = UIImage(systemName: SettingsEntrySymbol.name(for: title), withConfiguration: configuration) else { return nil }
+        guard let image = UIImage(systemName: SettingsEntrySymbol.name(for: title), withConfiguration: configuration)
+            ?? UIImage(systemName: "gearshape", withConfiguration: configuration) else { return nil }
         // Fixed canvas keeps narrow and wide SF Symbols in the same column.
         let side: CGFloat = 22
         let scale = min(side / image.size.width, side / image.size.height)
