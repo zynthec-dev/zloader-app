@@ -219,12 +219,9 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             preferredName = targetAppBundle.name
         }
         
-        if let profile = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: parentAppBundle,
-                                                       bundleID: bundleID, team: team) {
-            self.debugLog("[FetchProvisioningProfiles] Reusing compatible embedded profile; certificate, identity, device, expiry and capabilities checked.")
-            return profile
-        }
-
+        // Apple-account signing always synchronizes capabilities and associations first.
+        // An embedded profile may predate portal or entitlement edits; imported-identity
+        // signing is validated separately above and never mutates the developer account.
         self.debugLog("[FetchProvisioningProfiles] Registering App ID with name '\(preferredName)' and bundleID '\(bundleID)'...")
         let appID = try await self.registerAppID(for: targetAppBundle, name: preferredName, bundleIdentifier: bundleID, team: team)
         self.debugLog("[FetchProvisioningProfiles] App ID registered successfully: \(appID.bundleIdentifier) (\(appID.identifier))")
@@ -357,15 +354,10 @@ private extension FetchProvisioningProfilesOperation{
             guard let identifier = item.identifier else { continue }
             // Download before changing anything. A failed download must not cause deletion.
             let candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
-            let snapshot = EmbeddedProfileSnapshot(
-                bundleID: candidate.bundleIdentifier, teamID: candidate.teamIdentifier, expiresAt: candidate.expirationDate,
-                certificates: candidate.certificates.map { $0.rawDER }, devices: candidate.deviceIDs, entitlements: candidate.entitlements
-            )
-            if item.profileType == profileType && EmbeddedProfileReuse.accepts(snapshot, for: target) &&
-                registeredUDIDs.isSubset(of: Set(candidate.deviceIDs.map { $0.lowercased() })) {
-                _ = try ProfileManager.shared.importProfile(data: candidate.data)
-                return candidate
-            }
+            _ = candidate // Download must succeed before replacing an owned profile.
+            // Issue a fresh profile after capability/group synchronization, even when
+            // the old profile appears compatible. Disabled capabilities and portal-only
+            // edits cannot be inferred from a subset comparison of IPA entitlements.
             // Replace only the profile owned by this signing flow; preserve unrelated Xcode profiles.
             if item.name == managedName { incompatibleManagedIDs.append(identifier) }
         }

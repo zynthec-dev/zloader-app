@@ -119,7 +119,15 @@ public class DeveloperPortalProxy {
     public func updateAppID(_ appID: ALTAppID, team: ALTTeam? = nil) async throws -> ALTAppID {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
+        _ = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
+        let fresh = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
+        guard let confirmed = fresh.first(where: { $0.identifier == appID.identifier }),
+              appID.features.allSatisfy({ feature, value in
+                  let expected = value.lowercased()
+                  let actual = confirmed.features[feature]?.lowercased() ?? "false"
+                  return expected == actual
+              }) else { throw PortalMutationError.updateNotConfirmed }
+        return confirmed
     }
 
     @discardableResult
@@ -158,14 +166,25 @@ public class DeveloperPortalProxy {
     public func updateAppGroup(_ group: ALTAppGroup, team: ALTTeam? = nil) async throws -> ALTAppGroup {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.updateAppGroup(group, team: team, session: session)
+        _ = try await ALTAppleAPI.shared.updateAppGroup(group, team: team, session: session)
+        let fresh = try await ALTAppleAPI.shared.fetchAppGroups(for: team, session: session)
+        guard let confirmed = fresh.first(where: { $0.groupID == group.groupID }),
+              confirmed.name == group.name else { throw PortalMutationError.updateNotConfirmed }
+        return confirmed
     }
 
     @discardableResult
     public func assignAppID(_ appID: ALTAppID, to groups: [ALTAppGroup], team: ALTTeam? = nil) async throws -> ALTAppID {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.assign(appID, to: groups, team: team, session: session)
+        // Group assignment does not enable the App Groups capability itself.
+        // Enable and verify that permission before sending the association request.
+        var target = appID
+        if !groups.isEmpty && target.features[.appGroups]?.lowercased() != "true" {
+            target.features[.appGroups] = "true"
+            target = try await updateAppID(target, team: team)
+        }
+        return try await ALTAppleAPI.shared.assign(target, to: groups, team: team, session: session)
     }
 
     @discardableResult
@@ -285,9 +304,10 @@ class DeveloperPortalProxyWithAuth: DeveloperPortalProxy {
 /// A mutation is successful only after Apple accepts it and fresh remote state
 /// confirms it. Local lists must remain unchanged on rejection/uncertainty.
 enum PortalMutationError: LocalizedError {
-    case rejected, notConfirmed
+    case rejected, notConfirmed, updateNotConfirmed
     var errorDescription: String? {
         switch self {
+        case .updateNotConfirmed: return NSLocalizedString("Apple did not confirm the requested changes. Your edits were kept. Refresh the Developer Portal and try again.", comment: "")
         case .rejected: return NSLocalizedString("Apple rejected the portal change. No local item was removed.", comment: "")
         case .notConfirmed: return NSLocalizedString("Apple still lists this item after the request. The change could not be confirmed; refresh the portal and try again. The local item was preserved.", comment: "")
         }

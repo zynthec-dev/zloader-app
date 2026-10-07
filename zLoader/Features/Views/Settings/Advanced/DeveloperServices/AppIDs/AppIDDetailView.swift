@@ -16,7 +16,8 @@ struct AppIDDetailView: View {
 
     @State private var selectedGroupIDs: Set<String> = []
     @State private var hasModifiedGroups = false
-    @State private var isSavingGroups = false
+    @State private var isSaving = false
+    @State private var hasInitializedGroups = false
     @State private var editedFeatures: [Feature: String] = [:]
     @State private var hasModifiedFeatures = false
 
@@ -47,18 +48,7 @@ struct AppIDDetailView: View {
                         get: { (editedFeatures[feature] ?? currentAppID.features[feature]) == "true" },
                         set: { editedFeatures[feature] = $0 ? "true" : "false"; hasModifiedFeatures = true }
                     ))
-                    .disabled(viewModel.isActionLoading)
-                }
-                if hasModifiedFeatures {
-                    SwiftUI.Button("Save Capabilities") {
-                        Task {
-                            if await viewModel.updateCapabilities(for: currentAppID, features: editedFeatures) {
-                                editedFeatures = [:]
-                                hasModifiedFeatures = false
-                            }
-                        }
-                    }
-                    .disabled(viewModel.isActionLoading)
+                    .disabled(viewModel.isActionLoading || isSaving)
                 }
                 if currentAppID.features.isEmpty {
                     Text("No special features enabled for this App ID.")
@@ -122,31 +112,7 @@ struct AppIDDetailView: View {
                         }
                     }
 
-                    if hasModifiedGroups {
-                        SwiftUI.Button {
-                            let groupsToAssign = viewModel.appGroups.filter { selectedGroupIDs.contains($0.identifier) }
-                            Task {
-                                isSavingGroups = true
-                                let success = await viewModel.updateAppGroups(for: currentAppID, to: groupsToAssign, presentingViewController: presentingViewController)
-                                isSavingGroups = false
-                                if success {
-                                    hasModifiedGroups = false
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Spacer()
-                                if isSavingGroups {
-                                    ProgressView()
-                                        .padding(.trailing, 8)
-                                }
-                                SettingsEntryLabel(title: "Save Group Associations")
-                                    .fontWeight(.semibold)
-                                Spacer()
-                            }
-                        }
-                        .disabled(isSavingGroups)
-                    }
+
                 }
             }.listRowBackground(ZLoaderGlassBackground())
 
@@ -169,6 +135,24 @@ struct AppIDDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle(currentAppID.name.isEmpty ? "App ID Details" : currentAppID.name)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                SwiftUI.Button {
+                    Task { await saveChanges() }
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.title2)
+                    }
+                }
+                .accessibilityLabel(Text("Save Changes"))
+                .disabled(isSaving || viewModel.isActionLoading || !(hasModifiedFeatures || hasModifiedGroups))
+            }
+        }
+        .disabled(isSaving)
         .labelStyle(.titleOnly)
         .onAppear {
             initializeSelectedGroups()
@@ -181,7 +165,29 @@ struct AppIDDetailView: View {
         .developerServicesToast(viewModel: viewModel)
     }
 
+    @MainActor
+    private func saveChanges() async {
+        guard !isSaving else { return }
+        isSaving = true
+        defer { isSaving = false }
+        // Apple exposes separate mutations. Keep unsaved changes when either fails;
+        // successfully saved capabilities are not submitted again on a retry.
+        if hasModifiedFeatures {
+            guard await viewModel.updateCapabilities(for: currentAppID, features: editedFeatures) else { return }
+            editedFeatures = [:]
+            hasModifiedFeatures = false
+        }
+        if hasModifiedGroups {
+            let groups = viewModel.appGroups.filter { selectedGroupIDs.contains($0.identifier) }
+            guard await viewModel.updateAppGroups(for: currentAppID, to: groups,
+                presentingViewController: presentingViewController) else { return }
+            hasModifiedGroups = false
+        }
+    }
+
     private func initializeSelectedGroups() {
+        guard !hasInitializedGroups else { return }
+        hasInitializedGroups = true
         let initial = Set<String>()
         // The portal's feature flag does not identify associated groups. Never
         // preselect every group in the team from a single enabled capability.

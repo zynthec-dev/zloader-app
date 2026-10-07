@@ -218,7 +218,7 @@ struct AppGroupsListView: View {
                     leading: SwiftUI.Button("Cancel") {
                         groupToEdit = nil
                     },
-                    trailing: SwiftUI.Button("Save") {
+                    trailing: SwiftUI.Button {
                         let trimmed = editGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !trimmed.isEmpty else { return }
                         Task {
@@ -228,6 +228,16 @@ struct AppGroupsListView: View {
                             }
                         }
                     }
+                    label: {
+                        if viewModel.isActionLoading {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.title2)
+                        }
+                    }
+                    .accessibilityLabel(Text("Save Changes"))
                     .disabled(editGroupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                               editGroupName == group.name ||
                               viewModel.isActionLoading)

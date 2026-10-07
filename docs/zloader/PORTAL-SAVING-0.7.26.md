@@ -1,0 +1,9 @@
+# Portal saving and managed profiles — 0.7.26
+
+App ID edits now use one green checkmark in the navigation bar for capabilities and group associations. Changes remain editable on failure; a successful capability update is not repeated if the subsequent group assignment fails. Returning to the editor does not reset pending group selections.
+
+Capability updates and App Group renames are sent to Apple through the authenticated developer-services API, then checked against freshly fetched portal state. Mixed string/boolean capability values are decoded individually. Group assignment explicitly enables App Groups when needed, then submits the selected complete group set to Apple. The legacy API does not expose existing associations in the App ID list: selections are not claimed to be remotely preloaded, and the editor retains this warning.
+
+Apple-account signing synchronizes the App ID and group associations before obtaining a profile for each bundle, including every extension. Embedded profiles no longer bypass that synchronization. Paid accounts issue fresh certificate-bound profiles and replace only the profile owned by the zLoader managed flow; unrelated Xcode profiles are preserved. Free accounts request Apple's generated team profile, subject to free-account capability limits. All requested permissions must still be authorized by Apple. Imported identities require matching imported profiles for the host and extensions and do not create portal resources.
+
+Local regression tests cover mixed capability responses and rejection of unsupported values. Build/archive validation is separate from portal/device acceptance. Required manual test: change capabilities and groups, save, reload the same identifiers in Apple's web portal, then sign an IPA with extensions and inspect every resulting embedded profile. No live account mutation is performed by the local tests.

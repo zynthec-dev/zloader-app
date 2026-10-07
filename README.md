@@ -36,6 +36,7 @@ python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
+sh zLoader/scripts/test-portal-app-id.sh
 sh zLoader/scripts/test-tunnel-payload.sh
 sh zLoader/scripts/build-unsigned.sh
 python3 zLoader/scripts/test-bootstrap-package.py

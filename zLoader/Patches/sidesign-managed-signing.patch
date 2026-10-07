@@ -277,6 +277,50 @@ index dfea7cc..546e019 100644
          guard !data.isEmpty else {
              if isDelete || isNoContent || T.self == EmptyResponse.self {
                  verboseLog("[SideSign] sendServicesRequest: successful empty response for DELETE or \(HTTPStatusCodes.noContent)")
+diff --git a/Sources/Models/AppID.swift b/Sources/Models/AppID.swift
+index 62b2f78..4b4caf4 100644
+--- a/Sources/Models/AppID.swift
++++ b/Sources/Models/AppID.swift
+@@ -51,13 +51,10 @@ public struct AppID: Sendable, Codable, Identifiable {
+         self.bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? ""
+         self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
+ 
+-        if let featMap = try? container.decodeIfPresent([String: String].self, forKey: .features) {
+-            self.features = featMap.reduce(into: [:]) { $0[Feature(rawValue: $1.key)] = $1.value }
+-        } else if let boolMap = try? container.decodeIfPresent([String: Bool].self, forKey: .features) {
+-            self.features = boolMap.reduce(into: [:]) { $0[Feature(rawValue: $1.key)] = $1.value ? "true" : "false" }
+-        } else {
+-            self.features = [:]
+-        }
++        // Apple's dictionary can contain booleans and strings in the same response.
++        // Decoding the entire dictionary as one scalar type silently lost all flags.
++        let values = try container.decodeIfPresent([String: PortalFeatureValue].self, forKey: .features) ?? [:]
++        self.features = values.reduce(into: [:]) { $0[Feature(rawValue: $1.key)] = $1.value.stringValue }
+         self.entitlements = [:]
+     }
+ 
+@@ -69,3 +66,21 @@ public struct AppID: Sendable, Codable, Identifiable {
+         try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
+     }
+ }
++
++private struct PortalFeatureValue: Decodable {
++    let stringValue: String
++
++    init(from decoder: Decoder) throws {
++        let container = try decoder.singleValueContainer()
++        if let value = try? container.decode(Bool.self) {
++            stringValue = value ? "true" : "false"
++        } else if let value = try? container.decode(String.self) {
++            stringValue = value
++        } else if let value = try? container.decode(Int.self) {
++            stringValue = String(value)
++        } else {
++            throw DecodingError.typeMismatch(String.self, .init(codingPath: decoder.codingPath,
++                debugDescription: "Unsupported capability value returned by Apple"))
++        }
++    }
++}
 diff --git a/Sources/Models/CertificateType.swift b/Sources/Models/CertificateType.swift
 index 5bb6fcc..7b3e500 100644
 --- a/Sources/Models/CertificateType.swift

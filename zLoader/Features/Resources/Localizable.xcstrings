@@ -25279,6 +25279,38 @@
           }
         }
       }
+    },
+    "Save Changes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen speichern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Changes"
+          }
+        }
+      }
+    },
+    "Apple did not confirm the requested changes. Your edits were kept. Refresh the Developer Portal and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple hat die angeforderten Änderungen nicht bestätigt. Deine Änderungen bleiben erhalten. Aktualisiere das Developer Portal und versuche es erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple did not confirm the requested changes. Your edits were kept. Refresh the Developer Portal and try again."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
