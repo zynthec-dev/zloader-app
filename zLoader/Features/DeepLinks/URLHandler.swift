@@ -17,6 +17,7 @@ class URLHandler {
     @discardableResult
     func handle(_ url: URL) -> Bool {
         debugLog("[URLHandler] handle(_:) called with URL: \(url.absoluteString)")
+        if OperationShortcutHooks.shared.handle(url) { return true }
         if url.isFileURL {
             return FileImportHandler.shared.handle(fileURL: url)
         }
@@ -77,8 +78,11 @@ class URLHandler {
         case "local-pairing":
             Task { @MainActor in
                 guard let presenter = UIApplication.shared.topViewController() else { return }
-                if presenter is UIHostingController<WirelessPairView> { return }
-                let controller = UIHostingController(rootView: NavigationStack { WirelessPairView() })
+                // Keep the existing onboarding sheet and shared result; do not stack a new server view.
+                if !UserDefaults.standard.hasCompletedOnboarding,
+                   WirelessPairViewModel.shared.onPairingFileReady != nil { return }
+                if String(describing: type(of: presenter)).contains("WirelessPairView") { return }
+                let controller = ZLoaderHostingController(rootView: NavigationStack { WirelessPairView(selfPairing: WirelessPairViewModel.shared.isSelfPairing) })
                 presenter.present(controller, animated: true)
             }
             return true

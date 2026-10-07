@@ -38,6 +38,8 @@ final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationConte
         self.setProgress(10)
 
         try await self.enableJIT(for: self.installedApp)
+        let name = await self.installedApp.managedObjectContext?.performWithObject(self.installedApp) { $0.name } ?? "App"
+        await notifyJITSuccess(appName: name)
         self.setProgress(100)
         return true
     }
@@ -93,7 +95,6 @@ final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationConte
                 self.setProgress(percent)
                 do {
                     try await safeDebugApp(targetBundleId)
-                    await notifyJITSuccess(appName: appName)
                     return
                 } catch {
                     lastError = error

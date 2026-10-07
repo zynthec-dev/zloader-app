@@ -18,7 +18,21 @@ public extension UIColor
         #if WIDGET_EXTENSION
         return defaultAltPrimary
         #else
-        return ThemeManager.shared.primaryColor
+        return UIColor { traits in ThemeManager.shared.primaryColor.resolvedColor(with: traits) }
+        #endif
+    }
+    static var settingsSymbol: UIColor {
+        #if WIDGET_EXTENSION
+        return defaultAltPrimary
+        #else
+        return UIColor { traits in ThemeManager.shared.symbolColor.resolvedColor(with: traits) }
+        #endif
+    }
+    static var settingsField: UIColor {
+        #if WIDGET_EXTENSION
+        return .secondarySystemGroupedBackground
+        #else
+        return UIColor { traits in ThemeManager.shared.fieldColor.resolvedColor(with: traits) }
         #endif
     }
     static let defaultAltPrimary = namedColor("Primary")!
@@ -30,17 +44,12 @@ public extension UIColor
     static let refreshYellow = namedColor("RefreshYellow")!
     static let refreshGreen = namedColor("RefreshGreen")!
 
-    static let altBackground = namedColor("Background")!
+    static var altBackground: UIColor { .systemBackground }
+    static var settingsBackground: UIColor { .systemGroupedBackground }
+    static var settingsHighlighted: UIColor { .tertiarySystemGroupedBackground }
+    static var settingsCard: UIColor { .secondarySystemGroupedBackground }
 
-    static var settingsBackground: UIColor {
-        return namedColor("SettingsBackground")!
-    }
-
-    static var settingsHighlighted: UIColor {
-        return namedColor("SettingsHighlighted")!
-    }
-
-    static let altInvertedPrimary = namedColor("SettingsHighlighted")!
+    static var altInvertedPrimary: UIColor { settingsHighlighted }
 }
 
 public extension UIColor

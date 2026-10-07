@@ -8,6 +8,8 @@
 	<string>https://ani.sidestore.io</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>zLoader</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -96,7 +98,6 @@
 	<array>
 		<string>zloader-com.zynthec.zLoader</string>
 		<string>zloader-com.zynthec.zLoader.Beta</string>
-		<string>localdevvpn</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
@@ -328,7 +329,5 @@
 			</dict>
 		</dict>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>zLoader</string>
 </dict>
 </plist>

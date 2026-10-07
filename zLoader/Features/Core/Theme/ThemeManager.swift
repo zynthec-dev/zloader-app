@@ -8,6 +8,7 @@
 
 import UIKit
 import Combine
+import SwiftUI
 
 public struct ThemePreset: Identifiable, Equatable {
     public let id: String
@@ -19,7 +20,7 @@ public struct ThemePreset: Identifiable, Equatable {
     }
     
     public static let presets: [ThemePreset] = [
-        ThemePreset(id: "classic", name: "zLoader Mint", hex: "#207C65"),
+        ThemePreset(id: "classic", name: "zLoader Mint", hex: "#147D60"),
         ThemePreset(id: "neonViolet", name: "Neon Violet", hex: "#8B5CF6"),
         ThemePreset(id: "sunsetCrimson", name: "Sunset Crimson", hex: "#EF4444"),
         ThemePreset(id: "sapphireBlue", name: "Sapphire Blue", hex: "#3B82F6"),
@@ -35,23 +36,46 @@ public final class ThemeManager: ObservableObject {
 
     private static let userDefaultsKey = "userCustomThemeHex"
 
+    @Published var appearance: AppAppearance = AppAppearance(rawValue: UserDefaults.standard.string(forKey: "zLoader.appearance") ?? "system") ?? .system {
+        didSet {
+            UserDefaults.standard.set(appearance.rawValue, forKey: "zLoader.appearance")
+            DispatchQueue.main.async { self.refreshVisibleAppearance() }
+        }
+    }
+
     @Published public var primaryColor: UIColor {
         didSet {
             UserDefaults.standard.set(primaryColor.hexString, forKey: Self.userDefaultsKey)
             NotificationCenter.default.post(name: Self.themeDidChangeNotification, object: primaryColor)
-            DispatchQueue.main.async {
-                if let window = UIApplication.alt_shared?.alt_keyWindow {
-                    window.tintColor = self.primaryColor
-                }
-            }
+            DispatchQueue.main.async { self.refreshVisibleAppearance() }
         }
+    }
+
+    @Published public var customSymbolColor: UIColor? = UserDefaults.standard.string(forKey: "zLoader.symbolColor").flatMap { UIColor(hex: $0) } {
+        didSet { persistColor(customSymbolColor, key: "zLoader.symbolColor") }
+    }
+    @Published public var customFieldColor: UIColor? = UserDefaults.standard.string(forKey: "zLoader.fieldColor").flatMap { UIColor(hex: $0) } {
+        didSet { persistColor(customFieldColor, key: "zLoader.fieldColor") }
+    }
+    @Published var wallpaperRevision = 0
+    var wallpaperImages: [String: UIImage] = [:]
+    private var wallpaperSurfaceColors = NSMapTable<UIView, UIColor>(keyOptions: .weakMemory, valueOptions: .strongMemory)
+
+    public var symbolColor: UIColor { customSymbolColor ?? primaryColor }
+    public var fieldColor: UIColor { customFieldColor ?? .secondarySystemGroupedBackground }
+
+    private func persistColor(_ color: UIColor?, key: String) {
+        if let color { UserDefaults.standard.set(color.hexString, forKey: key) }
+        else { UserDefaults.standard.removeObject(forKey: key) }
+        NotificationCenter.default.post(name: Self.themeDidChangeNotification, object: nil)
+        DispatchQueue.main.async { self.refreshVisibleAppearance() }
     }
 
     private init() {
         if let hex = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
            let color = UIColor(hex: hex) {
             // Older versions persisted one resolved side of the dynamic mint.
-            self.primaryColor = ["#207C65", "#74DDB5"].contains(hex.uppercased()) ? .defaultAltPrimary : color
+            self.primaryColor = ["#207C65", "#74DDB5", "#147D60", "#57D5A2"].contains(hex.uppercased()) ? .defaultAltPrimary : color
         } else {
             self.primaryColor = .defaultAltPrimary
         }
@@ -129,5 +153,235 @@ public extension UIColor {
         }
 
         return (Int(h * 360), Int(s * 100), Int(l * 100))
+    }
+}
+
+// Host all SwiftUI screens in the same observable palette as the UIKit shell.
+struct ZLoaderThemedRoot<Content: View>: View {
+    @ObservedObject private var theme = ThemeManager.shared
+    let content: Content
+
+    var body: some View {
+        content
+            .tint(Color(uiColor: theme.primaryColor))
+            .accentColor(Color(uiColor: theme.primaryColor))
+            .environment(\.locale, AppLanguage.launchLocale)
+            .preferredColorScheme(theme.appearance.colorScheme)
+            .scrollContentBackground(.hidden)
+            .background(ZLoaderAppBackground())
+    }
+}
+
+final class ZLoaderHostingController<Content: View>: UIHostingController<ZLoaderThemedRoot<Content>> {
+    var ownsNavigation = false
+    private var previousNavigationBarHidden = false
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if ownsNavigation {
+            previousNavigationBarHidden = navigationController?.isNavigationBarHidden ?? false
+            navigationController?.setNavigationBarHidden(true, animated: animated)
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        ThemeManager.shared.applyAppearance(to: view)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if ownsNavigation, isMovingFromParent || navigationController?.topViewController !== self {
+            navigationController?.setNavigationBarHidden(previousNavigationBarHidden, animated: animated)
+        }
+    }
+
+    init(rootView: Content) {
+        super.init(rootView: ZLoaderThemedRoot(content: rootView))
+    }
+
+    @MainActor required dynamic init?(coder: NSCoder) {
+        return nil
+    }
+}
+
+extension ThemeManager {
+    @MainActor func installAppearance() {
+        UITableView.appearance().backgroundColor = .settingsBackground
+        UITextField.appearance().tintColor = .altPrimary
+        UITextField.appearance().backgroundColor = .settingsField
+        UISwitch.appearance().onTintColor = .altPrimary
+    }
+
+    @MainActor func refreshVisibleAppearance() {
+        installAppearance()
+        for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+            for window in scene.windows {
+                window.overrideUserInterfaceStyle = appearance.interfaceStyle
+                window.tintColor = primaryColor
+                let image = wallpaper(for: window.traitCollection.userInterfaceStyle)
+                let backdrop: UIImageView
+                if let existing = window.viewWithTag(77501) as? UIImageView { backdrop = existing }
+                else {
+                    backdrop = UIImageView(frame: window.bounds)
+                    backdrop.tag = 77501
+                    backdrop.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    backdrop.contentMode = .scaleAspectFill
+                    backdrop.clipsToBounds = true
+                    backdrop.isUserInteractionEnabled = false
+                    window.insertSubview(backdrop, at: 0)
+                }
+                backdrop.image = image
+                backdrop.isHidden = image == nil
+                window.sendSubviewToBack(backdrop)
+                applyAppearance(to: window)
+            }
+        }
+    }
+
+    @MainActor func applyAppearance(to view: UIView) {
+        let hasWallpaper = wallpaper(for: view.traitCollection.userInterfaceStyle) != nil
+        if hasWallpaper, !(view is UITableViewCell), !(view is UIVisualEffectView),
+           let color = view.backgroundColor,
+           color == .settingsBackground || color == .systemBackground || color == .systemGroupedBackground {
+            if wallpaperSurfaceColors.object(forKey: view) == nil { wallpaperSurfaceColors.setObject(color, forKey: view) }
+            view.backgroundColor = .clear
+        } else if !hasWallpaper, let original = wallpaperSurfaceColors.object(forKey: view) {
+            view.backgroundColor = original
+            wallpaperSurfaceColors.removeObject(forKey: view)
+        }
+        // Preserve semantic colors and original surfaces when no wallpaper is set.
+        if view.tintColor == UIColor(named: "Primary") { view.tintColor = .altPrimary }
+        if view.backgroundColor == UIColor(named: "Primary") {
+            view.backgroundColor = .altPrimary
+            if let button = view as? UIButton {
+                button.setTitleColor(UIColor.altPrimary.contrastingText, for: .normal)
+            }
+        }
+        if let field = view as? UITextField {
+            field.backgroundColor = .settingsField
+            field.textColor = customFieldColor == nil ? .label : fieldColor.contrastingText
+            #if !os(tvOS)
+            if #available(iOS 26.0, *) {
+                let glass: UIVisualEffectView
+                if let existing = field.viewWithTag(77500) as? UIVisualEffectView { glass = existing }
+                else {
+                    glass = UIVisualEffectView()
+                    glass.tag = 77500
+                    glass.isUserInteractionEnabled = false
+                    glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    glass.frame = field.bounds
+                    glass.layer.cornerRadius = 12
+                    glass.clipsToBounds = true
+                    field.insertSubview(glass, at: 0)
+                }
+                let effect = UIGlassEffect(style: .regular)
+                effect.tintColor = customFieldColor
+                glass.effect = effect
+                field.backgroundColor = .clear
+            }
+            #endif
+        }
+        if let image = view as? UIImageView, image.tag == 77023 {
+            image.tintColor = .settingsSymbol
+        }
+        view.setNeedsDisplay()
+        for child in view.subviews { applyAppearance(to: child) }
+    }
+}
+
+// Shared monochrome symbols for Settings entries across UIKit and SwiftUI.
+enum SettingsEntrySymbol {
+    static func name(for title: String) -> String {
+        let entries: [(String, String)] = [
+            ("Signing Identities", "signature"),
+            ("Name", "person"),
+            ("Email", "envelope"),
+            ("Type", "person.badge.shield.checkmark"),
+            ("Change App Icon", "app"),
+            ("Background Refresh", "arrow.clockwise"),
+            ("Disable Idle Timeout", "lock.open"),
+            ("Signed IPAs", "doc.zipper"),
+            ("Save Resigned IPAs", "square.and.arrow.down"),
+            ("Shortcuts", "square.stack.3d.up"),
+            ("Health Check", "stethoscope"),
+            ("View Error Log", "exclamationmark.triangle"),
+            ("Storage Explorer", "internaldrive"),
+            ("Clear Data Cache…", "trash"),
+            ("Send Feedback", "bubble.left"),
+            ("View Refresh Attempts", "clock.arrow.circlepath"),
+            ("SideJITServer", "bolt"),
+            ("Pairing File Management", "link"),
+            ("Anisette Servers", "server.rack"),
+            ("Connection Config", "network"),
+            ("Network Discovery (mDNS)", "dot.radiowaves.left.and.right"),
+            ("Profiles Management", "doc.text.badge.checkmark"),
+            ("Certificate Management", "checkmark.seal"),
+            ("Backup & Restore", "externaldrive"),
+            ("User Customizations", "person.crop.circle"),
+            ("Developer Options", "hammer"),
+            ("Experimental Features", "flask"),
+            ("Licenses", "doc.text"),
+            ("About zynthec-dev", "person.crop.circle"),
+            ("Main Repository", "chevron.left.forwardslash.chevron.right"),
+            ("Based on SideStore", "heart"),
+        ]
+        if let entry = entries.first(where: { title == $0.0 || title == NSLocalizedString($0.0, comment: "") }) { return entry.1 }
+        let text = title.lowercased()
+        let rules: [(String, String)] = [
+            ("user custom", "person.crop.circle"), ("personalis", "person.crop.circle"),
+            ("darstellung", "paintpalette"), ("appearance", "paintpalette"),
+            ("self-pair", "iphone"), ("wireless", "antenna.radiowaves.left.and.right"),
+            ("pairing", "link"), ("signed ipa", "doc.zipper"), ("certificate", "checkmark.seal"),
+            ("signing request", "doc.badge.plus"), ("private", "key.fill"), ("key", "key.horizontal"),
+            ("app id", "app.badge"), ("appid", "app.badge"), ("provision", "doc.text.badge.checkmark"),
+            ("profile", "person.crop.rectangle"), ("icloud", "icloud"), ("container", "shippingbox"),
+            ("account", "person.crop.circle"), ("name", "person"), ("email", "envelope"), ("type", "person.badge.shield.checkmark"),
+            ("icon", "app"), ("theme", "paintpalette"), ("accent", "paintpalette"),
+            ("background", "arrow.trianglehead.2.clockwise.rotate.90"), ("refresh", "arrow.clockwise"),
+            ("idle", "lock.open"), ("siri", "waveform"), ("shortcut", "square.stack.3d.up"),
+            ("tunnel", "network"), ("vpn", "network"), ("connection", "network"), ("network", "network"),
+            ("bonjour", "dot.radiowaves.left.and.right"), ("jit", "bolt"), ("anisette", "person.badge.key"),
+            ("sign", "signature"), ("entitlement", "checkmark.shield"), ("capabilit", "checkmark.shield"),
+            ("extension", "puzzlepiece.extension"), ("plist", "list.bullet.rectangle"),
+            ("source", "tray.full"), ("import", "square.and.arrow.down"), ("export", "square.and.arrow.up"),
+            ("download", "arrow.down.circle"), ("install", "arrow.down.app"), ("cache", "internaldrive"),
+            ("storage", "internaldrive"), ("backup", "externaldrive"), ("database", "externaldrive"),
+            ("delete", "trash"), ("reset", "arrow.counterclockwise"), ("log", "list.bullet.rectangle"),
+            ("error", "exclamationmark.triangle"), ("diagnostic", "stethoscope"), ("debug", "ladybug"),
+            ("feedback", "bubble.left"), ("about", "info.circle"), ("license", "doc.text"),
+            ("repository", "chevron.left.forwardslash.chevron.right"), ("sidestore", "heart"),
+            ("app", "square.stack"), ("device", "iphone"), ("service", "server.rack")
+        ]
+        return rules.first { text.contains($0.0) }?.1 ?? "gearshape"
+    }
+}
+
+private struct SettingsEntryIconsKey: EnvironmentKey {
+    static let defaultValue = false
+}
+extension EnvironmentValues {
+    var settingsEntryIconsVisible: Bool {
+        get { self[SettingsEntryIconsKey.self] }
+        set { self[SettingsEntryIconsKey.self] = newValue }
+    }
+}
+
+/// Ordinary submenu labels stay text-only; certificate tools opt into meaningful icons.
+struct SettingsEntryLabel: View {
+    let title: String
+    var systemImage: String? = nil
+    @Environment(\.settingsEntryIconsVisible) private var showsIcons
+    var body: some View {
+        HStack(spacing: 12) {
+            if showsIcons {
+                Image(systemName: systemImage ?? SettingsEntrySymbol.name(for: title))
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color(uiColor: .settingsSymbol))
+                    .frame(width: 24, height: 24)
+            }
+            Text(LocalizedStringKey(title)).foregroundStyle(.primary)
+        }
+        .font(.body)
     }
 }

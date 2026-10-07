@@ -46,7 +46,7 @@ extension SettingsViewController
         case disableAppLimit
         
         static var allCases: [AppRefreshRow] {
-            var c: [AppRefreshRow] = [.backgroundRefresh, .noIdleTimeout, .addToSiri]
+            var c: [AppRefreshRow] = [.backgroundRefresh, .noIdleTimeout]
 
             // conditional entries go at the last to preserve ordering
             if UserDefaults.standard.isCowExploitSupported || !ProcessInfo().sparseRestorePatched
@@ -59,10 +59,10 @@ extension SettingsViewController
     
     private enum CreditsRow: Int, CaseIterable
     {
-        case developer
-        case operations
-        case designer
         case softwareLicenses
+        case developer
+        case designer
+        case operations
     }
     
     private enum TechyThingsRow: Int, CaseIterable
@@ -95,7 +95,6 @@ extension SettingsViewController
             rows.append(contentsOf: [
                 .connectionConfig,
                 .networkDiscovery,
-                .developerServices,
                 .profileManagement,
                 .certificateManagement,
                 .backupAndRestore,
@@ -335,7 +334,10 @@ private extension SettingsViewController
 
     @objc private func openPairingFiles() {
         // Pairing detail and wireless routes need a SwiftUI navigation container.
-        let controller = UIHostingController(rootView: PairingFileNavigationView())
+        let controller = ZLoaderHostingController(rootView: PairingFileNavigationView(onBack: { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }))
+        controller.ownsNavigation = true
         controller.hidesBottomBarWhenPushed = true
         navigationController?.pushViewController(controller, animated: true)
     }
@@ -935,13 +937,18 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat
     {
-        if Section.allCases[indexPath.section] == .account && indexPath.row == 3 {
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 52 }
+        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return UITableView.automaticDimension }
+        if Section.allCases[indexPath.section] == .account && indexPath.row == 3 { return 52 }
+        if Section.allCases[indexPath.section] == .account && indexPath.row == 4 {
             return AccountVerificationRow.preferredHeight
         }
         let effectiveIndexPath: IndexPath
         if Section.allCases[indexPath.section] == .advancedSettings {
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
+        } else if Section.allCases[indexPath.section] == .appRefresh {
+            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
@@ -952,8 +959,8 @@ extension SettingsViewController
     {
         if Section.allCases[indexPath.section] == .account {
             if indexPath.row == 2, let insetCell = cell as? InsetGroupTableViewCell {
-                insetCell.style = (self.accountStatus == .completed) ? .bottom : .middle
-            } else if indexPath.row == 3, let actionCell = cell as? AccountVerificationRow {
+                insetCell.style = .middle
+            } else if indexPath.row == 4, let actionCell = cell as? AccountVerificationRow {
                 actionCell.style = .bottom
                 actionCell.backgroundColor = .clear
                 actionCell.contentView.backgroundColor = .clear
@@ -964,13 +971,17 @@ extension SettingsViewController
 
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
-        if Section.allCases[indexPath.section] == .account && indexPath.row == 3 {
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 0 }
+        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return 0 }
+        if Section.allCases[indexPath.section] == .account && indexPath.row >= 3 {
             return 0
         }
         let effectiveIndexPath: IndexPath
         if Section.allCases[indexPath.section] == .advancedSettings {
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
+        } else if Section.allCases[indexPath.section] == .appRefresh {
+            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
@@ -984,8 +995,10 @@ extension SettingsViewController
         {
         case _ where isSectionHidden(section): return 0
         case .signIn: return (self.activeTeam == nil) ? 1 : 0
-        case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 3 : 4)
-        case .appRefresh: return AppRefreshRow.allCases.count
+        case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 4 : 5)
+        case .display: return 1
+        case .appRefresh: return AppRefreshRow.allCases.count + 1
+        case .techyThings: return TechyThingsRow.allCases.count + 1
         case .advancedSettings: return AdvancedSettingsRow.allCases.count
         default: return super.tableView(tableView, numberOfRowsInSection: section.rawValue)
         }
@@ -993,24 +1006,88 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
-        if Section.allCases[indexPath.section] == .credits && indexPath.row < 3 {
-            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            let titles = ["About zLoader", "Based on SideStore", "zLoader Repository"]
-            let details = [ZLoaderBrand.maintainer, "SideStore, AltStore and their contributors", "zynthec-dev/zLoader-ios"]
-            cell.textLabel?.text = titles[indexPath.row]
-            cell.detailTextLabel?.text = details[indexPath.row]
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.style = .bottom
+            cell.isSelectable = true
+            cell.textLabel?.text = NSLocalizedString("Shortcuts", comment: "")
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+            cell.accessoryType = .disclosureIndicator
+            decorateSettingsCell(cell)
+            return cell
+        }
+        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.style = AppRefreshRow.allCases.count == 2 ? .bottom : .middle
+            cell.isSelectable = false
+            let title = UILabel()
+            title.text = NSLocalizedString("Save Resigned IPAs", comment: "Save install and refresh results")
+            title.numberOfLines = 0
+            title.font = self.backgroundRefreshSwitch.superview?.subviews.compactMap { $0 as? UILabel }.first?.font ?? .preferredFont(forTextStyle: .body)
+            title.adjustsFontForContentSizeCategory = true
+            title.textColor = .label
+            cell.backgroundColor = .clear
+            let toggle = UISwitch()
+            toggle.isOn = UserDefaults.standard.isExportResignedAppEnabled
+            toggle.onTintColor = .altPrimary
+            toggle.accessibilityLabel = NSLocalizedString("Save Resigned IPAs", comment: "")
+            toggle.addTarget(self, action: #selector(setExportSignedIPAs(_:)), for: .valueChanged)
+            for view in [title, toggle] {
+                view.translatesAutoresizingMaskIntoConstraints = false
+                cell.contentView.addSubview(view)
+            }
+            // Match the storyboard rows: label and switch sit inside the inset card.
+            NSLayoutConstraint.activate([
+                title.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 30),
+                title.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
+                title.trailingAnchor.constraint(lessThanOrEqualTo: toggle.leadingAnchor, constant: -12),
+                title.topAnchor.constraint(greaterThanOrEqualTo: cell.contentView.topAnchor, constant: 12),
+                title.bottomAnchor.constraint(lessThanOrEqualTo: cell.contentView.bottomAnchor, constant: -12),
+                toggle.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -30),
+                toggle.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor)
+            ])
+            decorateSettingsCell(cell)
+            return cell
+        }
+
+        if Section.allCases[indexPath.section] == .credits {
+            if indexPath.row == 0 {
+                let cell = super.tableView(tableView, cellForRowAt: IndexPath(row: 3, section: indexPath.section))
+                (cell as? InsetGroupTableViewCell)?.style = .top
+                decorateSettingsCell(cell)
+                return cell
+            }
+            let cell = InsetGroupTableViewCell(style: .subtitle, reuseIdentifier: nil)
+            cell.style = indexPath.row == 3 ? .bottom : .middle
+            cell.isSelectable = true
+            let titles = ["About zynthec-dev", "Main Repository", "Based on SideStore"]
+            let details = [ZLoaderBrand.maintainer, "zynthec-dev/zLoader-ios", "SideStore, AltStore and their contributors"]
+            cell.textLabel?.text = NSLocalizedString(titles[indexPath.row - 1], comment: "")
+            cell.detailTextLabel?.text = details[indexPath.row - 1]
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
             cell.textLabel?.textColor = .label
             cell.detailTextLabel?.textColor = .secondaryLabel
-            cell.backgroundColor = .secondarySystemGroupedBackground
+            cell.backgroundColor = .clear
             cell.accessoryType = .disclosureIndicator
+            decorateSettingsCell(cell)
             return cell
         }
 
         if Section.allCases[indexPath.section] == .account && indexPath.row == 3 {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.style = accountStatus == .completed ? .bottom : .middle
+            cell.isSelectable = true
+            cell.textLabel?.text = NSLocalizedString("Signing Identities", comment: "")
+            cell.accessoryType = .disclosureIndicator
+            decorateSettingsCell(cell)
+            return cell
+        }
+        if Section.allCases[indexPath.section] == .account && indexPath.row == 4 {
             let cell = tableView.dequeueReusableCell(withIdentifier: AccountVerificationRow.reuseIdentifier) as? AccountVerificationRow
                 ?? AccountVerificationRow()
             cell.configure(with: self.accountStatus)
             cell.style = .bottom
+            decorateSettingsCell(cell)
             return cell
         }
         
@@ -1018,6 +1095,8 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .advancedSettings {
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
+        } else if Section.allCases[indexPath.section] == .appRefresh {
+            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
@@ -1026,12 +1105,14 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .account {
             if indexPath.row == 2 {
                 if let insetCell = cell as? InsetGroupTableViewCell {
-                    insetCell.style = (self.accountStatus == .completed) ? .bottom : .middle
+                    insetCell.style = .middle
                 }
             }
         }
         
 
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count - 1,
+           let insetCell = cell as? InsetGroupTableViewCell { insetCell.style = .middle }
         if AppRefreshRow.AllCases().count == 1
         {
             if let cell = cell as? InsetGroupTableViewCell,
@@ -1044,12 +1125,15 @@ extension SettingsViewController
         
         if let cell = cell as? InsetGroupTableViewCell,
                indexPath.section == Section.appRefresh.rawValue,
-               indexPath.row == AppRefreshRow.allCases.count-1      // last row
+               indexPath.row == AppRefreshRow.allCases.count  // last row
         {
             cell.style = .bottom
         }
         
         
+        if Section.allCases[indexPath.section] == .appRefresh, indexPath.row == 1,
+           let insetCell = cell as? InsetGroupTableViewCell { insetCell.style = .middle }
+        decorateSettingsCell(cell)
         return cell
     }
     
@@ -1125,20 +1209,30 @@ extension SettingsViewController
 
 extension SettingsViewController
 {
+    @objc private func setExportSignedIPAs(_ sender: UISwitch) {
+        UserDefaults.standard.isExportResignedAppEnabled = sender.isOn
+    }
+
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     {
         let section = Section.allCases[indexPath.section]
         verboseLog("[SettingsVC] didSelectRowAt: section \(section) (index \(indexPath.section)), row \(indexPath.row)")
+        if section == .appRefresh && indexPath.row == 2 {
+            tableView.deselectRow(at: indexPath, animated: true)
+            return
+        }
         switch section
         {
         case .signIn: self.signIn()
         case .account:
+            tableView.deselectRow(at: indexPath, animated: true)
             if indexPath.row == 3 {
-                tableView.deselectRow(at: indexPath, animated: true)
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: SigningIdentitiesView()), animated: true)
+            } else if indexPath.row == 4 {
                 self.resolvePendingAccountActions()
             }
         case .appRefresh:
-            let row = AppRefreshRow.allCases[indexPath.row]
+            let row = AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row]
             switch row
             {
             case .backgroundRefresh: break
@@ -1152,12 +1246,16 @@ extension SettingsViewController
             }
             
         case .techyThings:
+            if indexPath.row == TechyThingsRow.allCases.count {
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: ShortcutsSettingsView()), animated: true)
+                return
+            }
             let row = TechyThingsRow.allCases[indexPath.row]
             switch row
             {
             case .healthCheck:
                 let healthCheckView = HealthCheckView()
-                let vc = UIHostingController(rootView: healthCheckView)
+                let vc = ZLoaderHostingController(rootView: healthCheckView)
                 
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
@@ -1182,11 +1280,11 @@ extension SettingsViewController
                     if let url = url {
                         verboseLog("[SettingsVC] Creating DirectoryExplorerView for: \(url.path)")
                         let view = DirectoryExplorerView(url: url, onSelectFolder: onSelectFolder)
-                        return UIHostingController(rootView: view)
+                        return ZLoaderHostingController(rootView: view)
                     } else {
                         verboseLog("[SettingsVC] Creating root StorageExplorerView")
                         let view = StorageExplorerView(onSelectFolder: onSelectFolder)
-                        return UIHostingController(rootView: view)
+                        return ZLoaderHostingController(rootView: view)
                     }
                 }
                 let vc = makeExplorerVC()
@@ -1200,7 +1298,7 @@ extension SettingsViewController
             let row = CreditsRow.allCases[indexPath.row]
             switch row
             {
-            case .developer: navigationController?.pushViewController(UIHostingController(rootView: ZLoaderAboutView()), animated: true)
+            case .developer: navigationController?.pushViewController(ZLoaderHostingController(rootView: ZLoaderAboutView()), animated: true)
             case .operations: self.openWebURL(ZLoaderBrand.upstreamURL, preferredTintColor: .altPrimary)
             case .designer: self.openWebURL(ZLoaderBrand.repositoryURL, preferredTintColor: .altPrimary)
             case .softwareLicenses: break
@@ -1237,7 +1335,7 @@ extension SettingsViewController
                 
             case .refreshSideJITServer:
                 let jitConfigView = SideJITServerConfigView()
-                let vc = UIHostingController(rootView: jitConfigView)
+                let vc = ZLoaderHostingController(rootView: jitConfigView)
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
                 appearance.configureWithDefaultBackground()
@@ -1261,12 +1359,12 @@ extension SettingsViewController
                     }
                 )
                 
-                let vc = UIHostingController(rootView: anisetteServersView)
+                let vc = ZLoaderHostingController(rootView: anisetteServersView)
                 self.prepare(for: UIStoryboardSegue(identifier: "anisetteServers", source: self, destination: vc), sender: nil)
 
             case .connectionConfig:
                 let connectionConfigView = ConnectionConfigView()
-                let vc = UIHostingController(rootView: connectionConfigView)
+                let vc = ZLoaderHostingController(rootView: connectionConfigView)
 
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
@@ -1279,36 +1377,36 @@ extension SettingsViewController
 
             case .networkDiscovery:
                 let discoveryView = BonjourDiscoveryView()
-                let vc = UIHostingController(rootView: discoveryView)
+                let vc = ZLoaderHostingController(rootView: discoveryView)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("Network Discovery", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
 
             case .developerServices:
                 let developerServicesView = DeveloperServicesView(presentingViewController: self)
-                let vc = UIHostingController(rootView: developerServicesView)
+                let vc = ZLoaderHostingController(rootView: developerServicesView)
                 self.prepare(for: UIStoryboardSegue(identifier: "developerServices", source: self, destination: vc), sender: nil)
 
             case .profileManagement:
                 let profileManagementView = ProfileManagementView(presentingViewController: self)
-                let vc = UIHostingController(rootView: profileManagementView)
+                let vc = ZLoaderHostingController(rootView: profileManagementView)
                 self.prepare(for: UIStoryboardSegue(identifier: "profileManagement", source: self, destination: vc), sender: nil)
 
             case .certificateManagement:
                 let certificateManagementView = CertificatesView(presentingViewController: self)
-                let vc = UIHostingController(rootView: certificateManagementView)
+                let vc = ZLoaderHostingController(rootView: certificateManagementView)
                 self.prepare(for: UIStoryboardSegue(identifier: "certificateManagement", source: self, destination: vc), sender: nil)
                 
             case .backupAndRestore:
                 let backupView = BackupAndRestoreView()
-                let vc = UIHostingController(rootView: backupView)
+                let vc = ZLoaderHostingController(rootView: backupView)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("Backup & Restore", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
                 
             case .userCustomizations:
                 let userCustomizationsView = UserCustomizationsView()
-                let vc = UIHostingController(rootView: userCustomizationsView)
+                let vc = ZLoaderHostingController(rootView: userCustomizationsView)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("User Customizations", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
@@ -1321,13 +1419,13 @@ extension SettingsViewController
             switch row {
             case .developerOptions:
                 let developerOptionsView = DeveloperOptionsView()
-                let hostingController = UIHostingController(rootView: developerOptionsView)
+                let hostingController = ZLoaderHostingController(rootView: developerOptionsView)
                 hostingController.view.backgroundColor = .settingsBackground
                 hostingController.title = NSLocalizedString("Developer Options", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: hostingController), sender: nil)
             case .experimentalFeatures:
                 let experimentalFeaturesView = ExperimentalFeaturesView()
-                let hostingController = UIHostingController(rootView: experimentalFeaturesView)
+                let hostingController = ZLoaderHostingController(rootView: experimentalFeaturesView)
                 hostingController.view.backgroundColor = .settingsBackground
                 hostingController.title = NSLocalizedString("Experimental Features", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: hostingController), sender: nil)
@@ -1397,3 +1495,53 @@ extension SettingsViewController: INUIAddVoiceShortcutViewControllerDelegate
     }
 }
 #endif
+
+extension SettingsViewController {
+    private func settingsSymbol(for title: String, configuration: UIImage.SymbolConfiguration) -> UIImage? {
+        guard let image = UIImage(systemName: SettingsEntrySymbol.name(for: title), withConfiguration: configuration) else { return nil }
+        // Fixed canvas keeps narrow and wide SF Symbols in the same column.
+        let side: CGFloat = 22
+        let scale = min(side / image.size.width, side / image.size.height)
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
+            image.draw(in: CGRect(x: (side - size.width) / 2, y: (side - size.height) / 2, width: size.width, height: size.height))
+        }.withRenderingMode(.alwaysTemplate)
+    }
+
+    private func decorateSettingsCell(_ cell: UITableViewCell) {
+        let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+        if let title = cell.textLabel?.text, !title.isEmpty {
+            cell.imageView?.image = settingsSymbol(for: title, configuration: configuration)
+            cell.imageView?.tag = 77023
+            cell.imageView?.tintColor = .settingsSymbol
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+            cell.textLabel?.adjustsFontForContentSizeCategory = true
+            return
+        }
+        let tag = 77023
+        guard cell.contentView.viewWithTag(tag) == nil,
+              let title = cell.contentView.subviews.compactMap({ $0 as? UILabel }).filter({ !($0.text ?? "").isEmpty })
+                .min(by: { $0.frame.minX < $1.frame.minX }) else { return }
+        title.font = .preferredFont(forTextStyle: .body)
+        title.adjustsFontForContentSizeCategory = true
+        let icon = UIImageView(image: settingsSymbol(for: title.text ?? "", configuration: configuration))
+        icon.tag = tag
+        icon.tintColor = .settingsSymbol
+        icon.contentMode = .scaleAspectFit
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        cell.contentView.addSubview(icon)
+        for constraint in cell.contentView.constraints where constraint.firstItem as? UILabel === title && constraint.firstAttribute == .leading {
+            constraint.constant += 32
+        }
+        if title.translatesAutoresizingMaskIntoConstraints {
+            title.frame.origin.x += 32
+            title.frame.size.width = max(0, title.frame.width - 32)
+        }
+        NSLayoutConstraint.activate([
+            icon.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 30),
+            icon.centerYAnchor.constraint(equalTo: title.centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 22),
+            icon.heightAnchor.constraint(equalToConstant: 22)
+        ])
+    }
+}

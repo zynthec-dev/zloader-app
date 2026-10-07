@@ -10,6 +10,7 @@ import SwiftUI
 import SideSign
 
 struct DeveloperServicesView: View {
+    @ObservedObject private var theme = ThemeManager.shared
     @StateObject private var viewModel = DeveloperServicesViewModel()
     weak var presentingViewController: UIViewController?
 
@@ -25,7 +26,7 @@ struct DeveloperServicesView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.system(size: 36))
-                                .foregroundColor(.accentColor)
+                                .foregroundStyle(Color(uiColor: theme.symbolColor))
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(team.name)
@@ -46,17 +47,19 @@ struct DeveloperServicesView: View {
                                 .cornerRadius(8)
                         }
                         .padding(.vertical, 4)
-                    }
+                        NavigationLink(destination: AccountCertificatesView()) {
+                            SettingsEntryLabel(title: "Certificates from Account", systemImage: "icloud.and.arrow.down")
+                        }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
-                Section(header: Text("Developer Portal Services")) {
+                Section(header: Text("Developer Portal")) {
                     NavigationLink(destination: AppIDsListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
                         HStack(spacing: 14) {
                             Image(systemName: "app.badge.checkmark")
-                                .font(.system(size: 20))
-                                .foregroundColor(.blue)
-                                .frame(width: 28)
-
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(Color(uiColor: theme.symbolColor))
+                                .frame(width: 24, height: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("App IDs")
                                     .font(.body)
@@ -71,10 +74,9 @@ struct DeveloperServicesView: View {
                     NavigationLink(destination: ProfilesListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
                         HStack(spacing: 14) {
                             Image(systemName: "doc.plaintext")
-                                .font(.system(size: 20))
-                                .foregroundColor(.orange)
-                                .frame(width: 28)
-
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(Color(uiColor: theme.symbolColor))
+                                .frame(width: 24, height: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Provisioning Profiles")
                                     .font(.body)
@@ -86,31 +88,12 @@ struct DeveloperServicesView: View {
                         .padding(.vertical, 4)
                     }
 
-                    NavigationLink(destination: CertificatesPortalListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
-                        HStack(spacing: 14) {
-                            Image(systemName: "rosette")
-                                .font(.system(size: 20))
-                                .foregroundColor(.red)
-                                .frame(width: 28)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Certificates")
-                                    .font(.body)
-                                Text("\(viewModel.certificates.count) registered on portal")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-
                     NavigationLink(destination: AppGroupsListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
                         HStack(spacing: 14) {
                             Image(systemName: "person.2")
-                                .font(.system(size: 20))
-                                .foregroundColor(.green)
-                                .frame(width: 28)
-
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(Color(uiColor: theme.symbolColor))
+                                .frame(width: 24, height: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("App Groups")
                                     .font(.body)
@@ -125,10 +108,9 @@ struct DeveloperServicesView: View {
                     NavigationLink(destination: DevicesListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
                         HStack(spacing: 14) {
                             Image(systemName: "iphone.and.arrow.forward")
-                                .font(.system(size: 20))
-                                .foregroundColor(.purple)
-                                .frame(width: 28)
-
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(Color(uiColor: theme.symbolColor))
+                                .frame(width: 24, height: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Registered Devices")
                                     .font(.body)
@@ -139,7 +121,7 @@ struct DeveloperServicesView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             #if !os(tvOS)
             .listStyle(InsetGroupedListStyle())
@@ -153,15 +135,16 @@ struct DeveloperServicesView: View {
                 ProgressView("Connecting to Developer Portal...")
                     .padding()
                     #if !os(tvOS)
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .background(Color(UIColor.settingsCard))
                     #else
-                    .background(Color(uiColor: .settingsBackground))
+                    .background(ZLoaderAppBackground())
                     #endif
                     .cornerRadius(12)
                     .shadow(radius: 6)
             }
         }
         .navigationTitle("Developer Portal")
+        .labelStyle(.titleOnly)
         .onAppear {
             if viewModel.appIDs.isEmpty && viewModel.profiles.isEmpty {
                 Task {

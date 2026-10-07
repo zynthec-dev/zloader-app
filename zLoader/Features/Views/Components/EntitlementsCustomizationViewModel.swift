@@ -330,11 +330,12 @@ final class EntitlementsCustomizationViewModel: ObservableObject {
         var allResults: [String: [String: any Sendable]] = [:]
 
         for target in targets {
-            let entries = draftContainers[target.id] ?? []
+            let entries = draftContainers[target.id] ?? Self.parseInitialEntries(from: target.initialEntitlements)
             var result: [String: any Sendable] = [:]
 
+            let editableKeys = Set(Self.parseInitialEntries(from: target.initialEntitlements).map(\.key))
             for (key, val) in target.initialEntitlements {
-                if Self.nonCustomizableEntitlementKeys.contains(key) {
+                if Self.nonCustomizableEntitlementKeys.contains(key) || !editableKeys.contains(key) {
                     result[key] = val
                 }
             }
@@ -342,9 +343,6 @@ final class EntitlementsCustomizationViewModel: ObservableObject {
             for entry in entries {
                 let key = entry.key.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !key.isEmpty else { continue }
-                guard isEntitlementAllowed(key) else {
-                    continue
-                }
 
                 switch entry.type {
                 case .boolean:

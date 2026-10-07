@@ -23,7 +23,10 @@ final class UpdateAppCertificateOperation: BasePipelineOperation<InstallAppOpera
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         
         let targetBundleID = self.context.installedApp?.bundleIdentifier ?? self.context.targetBundleIdentifier
-        let profileToUse = self.context.overrideProvisioningProfile ?? ProfileManager.shared.getAssignedProfile(for: targetBundleID)
+        let requestsOwnTunnel = context.targetAppBundle?.isZLoaderApp == true &&
+            UserDefaults.standard.bool(forKey: TunnelBootstrapPayload.requestKey)
+        let profileToUse = requestsOwnTunnel ? nil :
+            (self.context.overrideProvisioningProfile ?? ProfileManager.shared.getAssignedProfile(for: targetBundleID))
 
         if let assignedProfile = profileToUse {
             debugLog("[UpdateAppCertificateOperation] Target bundle '\(targetBundleID)' using assigned profile: '\(assignedProfile.name)' (\(assignedProfile.uuid))")

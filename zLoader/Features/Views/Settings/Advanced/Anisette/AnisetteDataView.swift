@@ -9,8 +9,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 @MainActor
@@ -320,7 +320,7 @@ struct AnisetteDataView: View {
                                 isMultiline: true
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                     
@@ -363,7 +363,7 @@ struct AnisetteDataView: View {
                                 placeholder: "17106176"
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                     
@@ -398,7 +398,7 @@ struct AnisetteDataView: View {
                                 placeholder: "26.0 (26A242)"
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                     
@@ -429,7 +429,7 @@ struct AnisetteDataView: View {
                                 subtitle: "ISO8601 UTC timestamp locked to OTP generation time"
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                     
@@ -441,9 +441,9 @@ struct AnisetteDataView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Label("Save Overrides", systemImage: "checkmark.circle.fill")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(.white)
+                            SettingsEntryLabel(title: "Save Overrides", systemImage: "checkmark.circle.fill")
+                                .font(.body)
+                                .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                             Spacer()
                         }
                         .frame(height: 50)
@@ -459,7 +459,7 @@ struct AnisetteDataView: View {
                         VStack(spacing: 12) {
                             TextEditor(text: $viewModel.rawEditableJSON)
                                 .font(.system(size: 12, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .frame(minHeight: 320)
                                 .padding(8)
                                 .background(Color.white.opacity(0.06))
@@ -472,9 +472,9 @@ struct AnisetteDataView: View {
                             } label: {
                                 HStack {
                                     Spacer()
-                                    Label("Save Raw JSON", systemImage: "square.and.arrow.down.fill")
+                                    SettingsEntryLabel(title: "Save Raw JSON", systemImage: "square.and.arrow.down.fill")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                                     Spacer()
                                 }
                                 .frame(height: 48)
@@ -484,7 +484,7 @@ struct AnisetteDataView: View {
                             .disabled(viewModel.rawEditableJSON.isEmpty)
                         }
                         .padding(16)
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                 }
@@ -500,7 +500,7 @@ struct AnisetteDataView: View {
                                     HStack {
                                         Text("Server: \(URL(string: UserDefaults.standard.menuAnisetteURL)?.host ?? "Active Server")")
                                             .font(.caption)
-                                            .foregroundColor(Color.white.opacity(0.6))
+                                            .foregroundColor(Color.secondary)
                                         Spacer()
                                         SwiftUI.Button {
                                             #if !os(tvOS)
@@ -523,7 +523,7 @@ struct AnisetteDataView: View {
                                     ScrollView(.horizontal, showsIndicators: true) {
                                         Text(viewModel.serverReturnedHeadersJSON)
                                             .font(.system(size: 11, design: .monospaced))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                             .padding(10)
                                             .background(Color.black.opacity(0.3))
                                             .cornerRadius(8)
@@ -536,9 +536,9 @@ struct AnisetteDataView: View {
                                     } label: {
                                         HStack {
                                             Spacer()
-                                            Label("Save as Overrides", systemImage: "square.and.arrow.down.on.square")
+                                            SettingsEntryLabel(title: "Save as Overrides", systemImage: "square.and.arrow.down.on.square")
                                                 .font(.system(size: 15, weight: .bold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.primary)
                                             Spacer()
                                         }
                                         .frame(height: 44)
@@ -550,9 +550,9 @@ struct AnisetteDataView: View {
                                 .padding(.top, 8)
                             } label: {
                                 HStack {
-                                    Label("Remote Server Sync", systemImage: "network")
+                                    SettingsEntryLabel(title: "Remote Server Sync", systemImage: "network")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
                                     Spacer()
                                     SwiftUI.Button {
                                         Task {
@@ -577,7 +577,7 @@ struct AnisetteDataView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                 }
@@ -606,13 +606,13 @@ struct AnisetteDataView: View {
                             #endif
                         } label: {
                             HStack {
-                                Label("Import Config JSON", systemImage: "square.and.arrow.down")
+                                SettingsEntryLabel(title: "Import Config JSON", systemImage: "square.and.arrow.down")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
@@ -628,13 +628,13 @@ struct AnisetteDataView: View {
                             }
                         } label: {
                             HStack {
-                                Label("Export Config JSON", systemImage: "square.and.arrow.up")
+                                SettingsEntryLabel(title: "Export Config JSON", systemImage: "square.and.arrow.up")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
@@ -646,7 +646,7 @@ struct AnisetteDataView: View {
                             showingResetAlert = true
                         } label: {
                             HStack {
-                                Label("Reset to Defaults", systemImage: "arrow.circlepath")
+                                SettingsEntryLabel(title: "Reset to Defaults", systemImage: "arrow.circlepath")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.red)
                                 Spacer()
@@ -665,7 +665,7 @@ struct AnisetteDataView: View {
                             Text("This will restore the client headers to the default recommended values.")
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
             }
@@ -673,8 +673,9 @@ struct AnisetteDataView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("Client Config")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -717,9 +718,9 @@ struct AnisetteDataView: View {
     }
     
     private func sectionHeader(_ title: String) -> some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.system(size: 13, weight: .semibold))
-            .foregroundColor(Color.white.opacity(0.6))
+            .foregroundColor(Color.secondary)
             .padding(.horizontal, 16)
     }
     
@@ -733,20 +734,20 @@ struct AnisetteDataView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
                 Text(headerKey)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(Color.white.opacity(0.45))
+                    .foregroundColor(Color.primary.opacity(0.45))
             }
             
             if isMultiline {
                 #if !os(tvOS)
                 TextEditor(text: text)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(minHeight: 64)
                     .padding(6)
                     .background(Color.white.opacity(0.06))
@@ -754,7 +755,7 @@ struct AnisetteDataView: View {
                 #else
                 TextField(placeholder, text: text)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .padding(8)
                     .background(Color.white.opacity(0.06))
                     .cornerRadius(8)
@@ -762,7 +763,7 @@ struct AnisetteDataView: View {
             } else {
                 TextField(placeholder, text: text)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .autocapitalization(autocapitalization)
                     .disableAutocorrection(true)
                     .padding(8)
@@ -778,17 +779,17 @@ struct AnisetteDataView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Spacer()
                     Text(headerKey)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(Color.white.opacity(0.45))
+                        .foregroundColor(Color.primary.opacity(0.45))
                 }
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.system(size: 12))
-                    .foregroundColor(Color.white.opacity(0.55))
+                    .foregroundColor(Color.primary.opacity(0.55))
             }
         }
         .padding(.horizontal, 16)

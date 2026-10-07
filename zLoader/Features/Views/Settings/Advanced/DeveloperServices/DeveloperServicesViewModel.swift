@@ -137,6 +137,22 @@ class DeveloperServicesViewModel: ObservableObject {
         }
     }
 
+    func updateCapabilities(for appID: ALTAppID, features: [ALTFeature: String]) async -> Bool {
+        isActionLoading = true
+        defer { isActionLoading = false }
+        do {
+            var requested = appID
+            requested.features.merge(features) { _, edited in edited }
+            let updated = try await DeveloperPortalProxy.shared.updateAppID(requested)
+            if let index = appIDs.firstIndex(where: { $0.identifier == appID.identifier }) { appIDs[index] = updated }
+            showToastMessage("Capabilities saved. Regenerate provisioning profiles before signing with the changed permissions.")
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func updateAppGroups(for appID: ALTAppID, to selectedGroups: [ALTAppGroup], presentingViewController: UIViewController? = nil) async -> Bool {
         self.isActionLoading = true
         defer { self.isActionLoading = false }
@@ -203,7 +219,7 @@ class DeveloperServicesViewModel: ObservableObject {
 
     func updateProfile(_ profile: ALTListedProvisioningProfile, name: String, appIDId: String, certificateIDs: [String], deviceIDs: [String], type: ALTProfileType? = nil, presentingViewController: UIViewController? = nil) async -> Bool {
         guard let profileID = profile.identifier else {
-            self.errorMessage = "Profile identifier missing"
+            self.errorMessage = NSLocalizedString("Profile identifier missing", comment: "")
             return false
         }
         self.isActionLoading = true
@@ -239,7 +255,7 @@ class DeveloperServicesViewModel: ObservableObject {
 
     func downloadProfile(profile: ALTListedProvisioningProfile) async -> ALTProvisioningProfile? {
         guard let profileID = profile.identifier else {
-            self.errorMessage = "Profile identifier missing"
+            self.errorMessage = NSLocalizedString("Profile identifier missing", comment: "")
             return nil
         }
         self.isActionLoading = true
@@ -256,7 +272,7 @@ class DeveloperServicesViewModel: ObservableObject {
 
     func deleteProfile(_ profile: ALTListedProvisioningProfile, presentingViewController: UIViewController? = nil) async -> Bool {
         guard let profileID = profile.identifier else {
-            self.errorMessage = "Profile identifier is missing"
+            self.errorMessage = NSLocalizedString("Profile identifier is missing", comment: "")
             return false
         }
         self.isActionLoading = true

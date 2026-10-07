@@ -43,5 +43,25 @@ struct EmbeddedProfileReuseTests {
         print("PASS certificate rotation requires a newly authorized profile; original Xcode key is not required")
         precondition(EmbeddedProfileReuse.accepts(profile(devices: ["SYNTHETIC-DEVICE"]), for: target, now: now))
         print("PASS embedded profile reuse: exact identity/team/certificate, expiry/device and all required capabilities; seven incompatible cases rejected")
+        let general: [String: Any] = ["com.apple.developer.associated-domains": ["applinks:example.test"],
+                                      "com.apple.developer.siri": true,
+                                      "aps-environment": "development",
+                                      "keychain-access-groups": ["OLD.example.test"]]
+        let generalTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+                                                     certificate: original, deviceID: target.deviceID, entitlements: general)
+        let permitted: [String: Any] = ["com.apple.developer.associated-domains": ["*"],
+                                        "com.apple.developer.siri": true,
+                                        "aps-environment": "development",
+                                        "keychain-access-groups": ["test-team.*"]]
+        precondition(EmbeddedProfileReuse.accepts(profile(entitlements: permitted), for: generalTarget, now: now))
+        for key in general.keys {
+            var missing = permitted
+            missing.removeValue(forKey: key)
+            precondition(!EmbeddedProfileReuse.accepts(profile(entitlements: missing), for: generalTarget, now: now))
+        }
+        var wrongEnvironment = permitted
+        wrongEnvironment["aps-environment"] = "production"
+        precondition(!EmbeddedProfileReuse.accepts(profile(entitlements: wrongEnvironment), for: generalTarget, now: now))
+        print("PASS general capability authorization, Apple wildcard allow-lists, keychain team remapping and push environment mismatch")
     }
 }

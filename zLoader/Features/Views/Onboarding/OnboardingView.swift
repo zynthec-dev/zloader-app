@@ -12,13 +12,15 @@ import UniformTypeIdentifiers
 
 struct OnboardingView: View {
     var onFinish: (() -> Void)? = nil
-    @State private var currentStep = 0
-    private let totalSteps = 5
+    @AppStorage("zLoader.onboarding.currentStep") private var currentStep = 0
+    @AppStorage("zLoader.onboarding.eligibleForTunnel") private var eligibleForTunnel = false
+    @State private var membershipError: String?
+    private var totalSteps: Int { eligibleForTunnel ? 6 : 5 }
 
     var body: some View {
         ZStack {
             #if !os(tvOS)
-                Color(.systemBackground).ignoresSafeArea()
+                Color(uiColor: .settingsBackground).ignoresSafeArea()
             #else
                 Color.black.ignoresSafeArea()
             #endif
@@ -32,17 +34,36 @@ struct OnboardingView: View {
                     WelcomeStep(onNext: { currentStep += 1 })
                         .tag(0)
 
-                    EmbeddedVPNStep(onNext: { currentStep += 1 })
+                    ExternalLocalTunnelStep(onNext: { currentStep += 1 })
                         .tag(1)
 
                     PairingFileStep(onNext: { currentStep += 1 })
                         .tag(2)
 
-                    AppleIDStep(onNext: { currentStep += 1 })
+                    AppleIDStep(onNext: {
+                        Task { @MainActor in
+                            guard AuthManager.shared.isAuthenticated else {
+                                eligibleForTunnel = false
+                                currentStep = 4
+                                return
+                            }
+                            do {
+                                eligibleForTunnel = try await AuthManager.shared.getAuthenticatedTeam().type.isPaid
+                                currentStep = 4
+                            } catch { membershipError = error.localizedDescription }
+                        }
+                    })
                         .tag(3)
 
+                    if eligibleForTunnel {
+                        Group {
+                            if currentStep == 4 {
+                                InternalTunnelStep(onNext: { currentStep = 5 })
+                            }
+                        }.tag(4)
+                    }
                     CompleteStep(onFinish: complete)
-                        .tag(4)
+                        .tag(eligibleForTunnel ? 5 : 4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.25), value: currentStep)
@@ -59,7 +80,19 @@ struct OnboardingView: View {
                 #endif
             }
         }
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: TunnelBootstrapPayload.pendingKey) {
+                eligibleForTunnel = true
+                currentStep = 4
+            }
+        }
+        .alert("Could Not Verify Developer Team", isPresented: Binding(
+            get: { membershipError != nil }, set: { if !$0 { membershipError = nil } }
+        )) { SwiftUI.Button("OK", role: .cancel) {} }
+        message: { Text(membershipError ?? "") }
     }
+
+
 
     private var topBar: some View {
         ZStack {
@@ -72,7 +105,7 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+            .zLoaderGlassSurface()
             .clipShape(Capsule())
 
             if currentStep > 0 && currentStep < totalSteps - 1 {
@@ -92,6 +125,8 @@ struct OnboardingView: View {
 
     private func complete() {
         UserDefaults.standard.hasCompletedOnboarding = true
+        currentStep = 0
+        eligibleForTunnel = false
         UserDefaults.standard.synchronize()
         onFinish?()
     }
@@ -164,7 +199,7 @@ private struct WelcomeStep: View {
                     .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.accentColor)
+                    .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                     .cornerRadius(14)
             }
             .frame(maxWidth: 420)
@@ -240,12 +275,12 @@ private struct PairingFileStep: View {
                 #if !os(tvOS)
                     if #available(iOS 26.0, *) {
                         SwiftUI.Button(action: { isShowingWirelessPairing = true }) {
-                            Label("Lokales Pairing", systemImage: "antenna.radiowaves.left.and.right")
+                            Label("Self-Pairing", systemImage: "antenna.radiowaves.left.and.right")
                                 .font(.headline)
                                 .foregroundStyle(Color(uiColor: UIColor.altPrimary.contrastingText))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 12))
+                                .zLoaderGlassSurface(cornerRadius: 12, interactive: true, prominent: true)
                         }
                     }
 
@@ -260,7 +295,7 @@ private struct PairingFileStep: View {
                         .foregroundColor(.accentColor)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(.ultraThinMaterial)
+                        .zLoaderGlassSurface()
                         .cornerRadius(12)
                     }
 
@@ -293,7 +328,7 @@ private struct PairingFileStep: View {
                         .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(hasPairingFile ? Color.accentColor : Color.gray.opacity(0.4))
+                        .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                         .cornerRadius(14)
                 }
                 .disabled(!hasPairingFile)
@@ -316,12 +351,11 @@ private struct PairingFileStep: View {
         }) {
             if #available(iOS 26.0, *) {
                 NavigationStack {
-                    WirelessPairView(startsAsClient: false, onPairingFileReady: { url in
+                    WirelessPairView(startsAsClient: false, selfPairing: true, onPairingFileReady: { url in
                         try PairingFileManager.shared.importPairingFile(from: url, preferred: .rppairing)
                         PairingFileManager.shared.preferredProtocol = .rppairing
                         hasPairingFile = PairingFileManager.shared.hasPairingFile()
                         errorMessage = nil
-                        isShowingWirelessPairing = false
                     })
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
@@ -355,30 +389,163 @@ private struct PairingFileStep: View {
     }
 }
 
-private struct EmbeddedVPNStep: View {
+private struct ExternalLocalTunnelStep: View {
+    @ObservedObject private var connection = ConnectionConfig.shared
     let onNext: () -> Void
+    @State private var isConnected = false
+    @State private var errorMessage: String? = nil
+    @State private var checking = false
+    @State private var usingInternal = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer()
+
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(systemName: "network")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 80)
+                            .foregroundColor(.accentColor)
+
+                        if isConnected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.green)
+                            #if !os(tvOS)
+                                .background(Circle().fill(Color(uiColor: .settingsBackground)))
+                            #else
+                                .background(Circle().fill(Color.black))
+                            #endif
+                                .offset(x: 4, y: 4)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut, value: isConnected)
+
+                    VStack(spacing: 8) {
+                        Text(usingInternal ? NSLocalizedString("Connection", comment: "") : NSLocalizedString("External Local VPN Tunnel", comment: ""))
+                            .font(.system(size: 28, weight: .bold))
+
+                        Text(NSLocalizedString("An external local VPN tunnel is required for pairing, installation and refresh. Enable a compatible tunnel in your preferred VPN app. This status checks the device service at the tunnel IP; you can continue even when it is not reachable yet.", comment: ""))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+
+                    Label {
+                        VStack(spacing: 4) {
+                            Text(isConnected ? "Connected" : "Not Connected")
+                            Text(connection.tunnelPeerReachable ? (connection.tunnelPeerIp ?? connection.effectiveTunnelPeerIP) : connection.effectiveTunnelPeerIP)
+                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                            if !isConnected {
+                                Text("The device service is not reachable yet. A VPN may be enabled even when this probe fails.")
+                                    .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: isConnected ? "checkmark.circle.fill" : "network")
+                            .foregroundStyle(isConnected ? Color.green : Color.secondary)
+                    }
+                    .font(.footnote)
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center).padding(.horizontal, 32)
+                    }
+
+                    Spacer()
+
+                    VStack(spacing: 12) {
+                        SwiftUI.Button(action: onNext) {
+                            Text(NSLocalizedString("Continue", comment: ""))
+                                .font(.headline)
+                                .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
+                                .cornerRadius(14)
+                        }
+                    }
+                    .frame(maxWidth: 420)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                }
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+            }
+        }
+        .onReceive(connection.$tunnelPeerReachable.combineLatest(connection.$overrideTunnelPeerReachable)) { discovered, override in
+            guard !usingInternal else { return }
+            isConnected = connection.isEffectivePeerReachable(discovered: discovered, override: override)
+            if isConnected { errorMessage = nil }
+        }
+        .task { await checkStatus() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            Task { await checkStatus() }
+        }
+    }
+
+    @MainActor private func checkStatus() async {
+        guard !checking else { return }
+        checking = true
+        defer { checking = false }
+        #if os(iOS)
+        usingInternal = UserDefaults.standard.bool(forKey: "zLoader.useInternalVPN")
+            && EmbeddedTunnel.shared.unavailableReason == nil
+        if usingInternal {
+            do {
+                try await ZLoaderTransport.withLease { _ = try await fetchUDID(forceLive: true) }
+                isConnected = true
+                errorMessage = nil
+            } catch {
+                isConnected = false
+                errorMessage = error.localizedDescription
+            }
+            return
+        }
+        #endif
+        connection.useLocalVPN = true
+        syncMinimuxerBackendFromUserDefaults()
+        await bindConnectionConfig()
+        await minimuxer.network.refreshEndpoint()
+        isConnected = ConnectionConfig.shared.tunnelPeerActive == .yes
+        if isConnected { errorMessage = nil }
+    }
+
+
+}
+
+private struct InternalTunnelStep: View {
+    #if os(iOS)
+    @ObservedObject private var provisioning = SelfProvisioning.shared
+    #endif
+    let onNext: () -> Void
+    @State private var ready = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Image(systemName: "network")
-                    .font(.system(size: 72))
-                    .foregroundStyle(Color.accentColor)
-                Text("zLoader VPN").font(.largeTitle.bold())
+                Image(systemName: "network.badge.shield.half.filled")
+                    .font(.system(size: 64)).foregroundStyle(Color.accentColor)
+                Text("Use the Internal Tunnel?").font(.system(size: 28, weight: .bold)).multilineTextAlignment(.center)
                 #if os(iOS)
-                EmbeddedTunnelSetupView()
-                #else
-                Text("Configure a supported connection to the device before pairing.")
+                SelfProvisioningView(onReady: { ready = true },
+                                     automaticallyVerify: UserDefaults.standard.bool(forKey: TunnelBootstrapPayload.pendingKey))
                 #endif
-                SwiftUI.Button("Continue", action: onNext)
-                    .buttonStyle(.borderedProminent)
-                Text("You can also configure the VPN later in Settings → Connection Config.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(32)
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity)
+                if ready {
+                    SwiftUI.Button("Continue", action: onNext).buttonStyle(OnboardingPrimaryButtonStyle())
+                } else {
+                    SwiftUI.Button("Use External Local VPN Tunnel", action: onNext)
+                        .buttonStyle(OnboardingPrimaryButtonStyle(secondary: true))
+                        #if os(iOS)
+                        .disabled(provisioning.busy)
+                        #endif
+                }
+            }.padding(32).frame(maxWidth: 480).frame(maxWidth: .infinity)
         }
     }
 }
@@ -456,7 +623,7 @@ private struct AppleIDStep: View {
                     .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.accentColor)
+                    .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                     .cornerRadius(12)
                 }
                 .disabled(isSigningIn)
@@ -481,7 +648,7 @@ private struct AppleIDStep: View {
                         .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(isAuthenticated ? Color.accentColor : Color.gray.opacity(0.4))
+                        .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                         .cornerRadius(14)
                 }
                 .disabled(!isAuthenticated && !isSigningIn)
@@ -552,7 +719,7 @@ private struct CompleteStep: View {
                 )
             }
             .padding(16)
-            .background(.ultraThinMaterial)
+            .zLoaderGlassSurface()
             .cornerRadius(16)
             .frame(maxWidth: 420)
             .padding(.horizontal, 24)
@@ -565,7 +732,7 @@ private struct CompleteStep: View {
                     .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.accentColor)
+                    .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                     .cornerRadius(14)
             }
             .frame(maxWidth: 420)
@@ -604,5 +771,21 @@ private struct CompleteStep: View {
             Spacer()
         }
         .padding(.vertical, 2)
+    }
+}
+
+struct OnboardingPrimaryButtonStyle: ButtonStyle {
+    var secondary = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundStyle(secondary ? Color.accentColor : Color(uiColor: UIColor.altPrimary.contrastingText))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: !secondary)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
     }
 }

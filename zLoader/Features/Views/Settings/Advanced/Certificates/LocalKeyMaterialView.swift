@@ -31,14 +31,18 @@ struct LocalKeyMaterialView: View {
     var body: some View {
         List {
             Section {
-                SwiftUI.Button("Create Local Signing Request…") { creating = true }
-                Menu("Import Key…") {
+                SwiftUI.Button { creating = true } label: {
+                    SettingsEntryLabel(title: "Create Local Signing Request…", systemImage: "doc.badge.plus")
+                }
+                Menu {
                     SwiftUI.Button("Private RSA Key (.pem/.der)") { importPrivate = true; importing = true }
                     SwiftUI.Button("Public RSA Key (.pem/.der)") { importPrivate = false; importing = true }
+                } label: {
+                    SettingsEntryLabel(title: "Import Key…", systemImage: "key.horizontal")
                 }
             } footer: {
                 Text("Requests are created locally without an Apple login. Private keys remain in this app's protected keychain. Import Apple's returned certificate in the certificate manager to match it to its key.")
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
             Section("Keys and Signing Requests") {
                 ForEach(items) { item in
                     VStack(alignment: .leading, spacing: 8) {
@@ -61,10 +65,12 @@ struct LocalKeyMaterialView: View {
                     .padding(.vertical, 4)
                 }
                 if items.isEmpty { Text("No local keys or requests.").foregroundStyle(.secondary) }
-            }
-            if let message { Section { Text(message).textSelection(.enabled) } }
+            }.listRowBackground(ZLoaderGlassBackground())
+            if let message { Section { Text(message).textSelection(.enabled) }.listRowBackground(ZLoaderGlassBackground()) }
         }
         .navigationTitle("Keys & Signing Requests")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
         .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { dismiss() } } }
         .task { reload() }
         .sheet(isPresented: $creating) {
@@ -74,13 +80,15 @@ struct LocalKeyMaterialView: View {
                         TextField("Common Name", text: $commonName)
                         TextField("Email Address (optional)", text: $email).textInputAutocapitalization(.never).autocorrectionDisabled()
                         TextField("Organization (optional)", text: $organization)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                     Section {
                         Text("RSA 2048 • SHA-256. A key pair is generated and retained locally. Save the CSR to Files and submit it to Apple; the CSR contains no private key.")
                         if busy { ProgressView() }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Local Signing Request")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { SwiftUI.Button("Cancel") { creating = false }.disabled(busy) }
                     ToolbarItem(placement: .confirmationAction) {

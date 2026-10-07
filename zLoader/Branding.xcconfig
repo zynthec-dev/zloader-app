@@ -2,4 +2,3 @@
 PRODUCT_NAME = zLoader
 ORG_IDENTIFIER = com.zynthec
 BASE_BUNDLE_ID = $(ORG_IDENTIFIER).zLoader
-MAIN_BUNDLE_IDENTIFIER[config=Debug] = $(BASE_BUNDLE_ID).debug

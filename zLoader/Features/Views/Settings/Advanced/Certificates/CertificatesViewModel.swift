@@ -30,6 +30,8 @@ enum PrivateKeyImportError: LocalizedError {
 
 class CertificatesViewModel: ObservableObject {
     @Published var certificates: [ALTX509Certificate] = []
+    @Published var installationCertificate: ALTX509Certificate?
+    @Published var portalCertificates: [ALTX509Certificate] = []
     @Published var isLoading = false
     @Published var errorMessage: String? = nil {
         didSet { showErrorAlert = errorMessage != nil }
@@ -91,7 +93,7 @@ class CertificatesViewModel: ObservableObject {
     }
 
     var availableCertificateTypes: [CertificateType] {
-        CertificateType.allCases
+        CertificateType.allCases.filter { $0.portalType != nil }
     }
     
     var isActiveCertThirdParty: Bool {
@@ -115,7 +117,11 @@ class CertificatesViewModel: ObservableObject {
     }
     
     func loadLocalCertificates() -> [ALTX509Certificate] {
-        return CertificateManager.shared.getAllLocalX509Certificates()
+        return CertificateManager.shared.getAllLocalX509Certificates().filter {
+            CertificateManager.shared.getLocalCertificate(serialNumber: $0.serialNumber) != nil ||
+            explicitPublicImports.contains($0.serialNumber) ||
+            installationCertificate?.serialNumber == $0.serialNumber
+        }
     }
     
     func saveLocalCertificate(_ cert: ALTCertificate) {
@@ -142,6 +148,8 @@ class CertificatesViewModel: ObservableObject {
             if cert.sourceEndpoint == nil { cert.sourceEndpoint = existing.sourceEndpoint }
         }
         CertificateManager.shared.saveCertificate(cert)
+        self.installationCertificate = CertificateManager.shared.synchronizeInstallationCertificate()
+        self.fetchActiveSerialNumber()
     }
     
     func deleteLocalCertificate(serialNumber: String) {
@@ -152,6 +160,7 @@ class CertificatesViewModel: ObservableObject {
         if !isPullToRefresh { self.isLoading = true }
         self.hasFetchedRemote = false
         self.errorMessage = nil
+        self.installationCertificate = CertificateManager.shared.synchronizeInstallationCertificate()
         self.fetchActiveSerialNumber()
         
         let localCerts = self.loadLocalCertificates()
@@ -173,29 +182,7 @@ class CertificatesViewModel: ObservableObject {
                 self.session = try await AuthManager.shared.getAuthenticatedSession()
                 self.team    = try? await AuthManager.shared.getAuthenticatedTeam()
                 
-                let remoteCerts = try await DeveloperPortalProxy.shared.fetchCertificates()
-                var merged = [ALTX509Certificate]()
-                var matchedRemoteSerials = Set<String>()
-                
-                for remoteCert in remoteCerts {
-                    if let signable = CertificateManager.shared.getSignableCertificate(for: remoteCert.serialNumber) {
-                        self.saveLocalCertificate(signable)
-                    } else {
-                        CertificateManager.shared.saveX509Certificate(remoteCert)
-                    }
-                    merged.append(remoteCert)
-                    matchedRemoteSerials.insert(remoteCert.serialNumber)
-                }
-                for localCert in localCerts where !matchedRemoteSerials.contains(localCert.serialNumber) {
-                    merged.append(localCert)
-                }
-                if let active = activeCert, !matchedRemoteSerials.contains(active.serialNumber),
-                   !localCerts.contains(where: { $0.serialNumber == active.serialNumber }) {
-                    merged.append(active)
-                }
-                self.certificates  = merged
-                self.remoteSerials = matchedRemoteSerials
-                self.hasFetchedRemote = true
+                // Loading/refreshing the local keychain never downloads portal records.
             } catch {
                 if isPullToRefresh && !(error is CancellationError) {
                     self.errorMessage = error.localizedDescription
@@ -204,6 +191,37 @@ class CertificatesViewModel: ObservableObject {
         }
     }
     
+    private var explicitPublicImports: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: "zLoader.explicitCertificateImports") ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: "zLoader.explicitCertificateImports") }
+    }
+
+    func downloadPortalCertificates() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            portalCertificates = try await DeveloperPortalProxy.shared.fetchCertificates()
+            remoteSerials = Set(portalCertificates.map(\.serialNumber))
+            hasFetchedRemote = true
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func installPortalCertificate(_ certificate: ALTX509Certificate) {
+        do {
+            if let existing = CertificateManager.shared.getSignableCertificate(for: certificate.serialNumber) {
+                saveLocalCertificate(existing)
+            } else if let data = certificate.data, let key = try LocalKeyMaterialStore.matchingPrivateKey(certificate: data) {
+                saveLocalCertificate(ALTCertificate(x509: certificate, privateKey: key))
+            } else {
+                CertificateManager.shared.saveX509Certificate(certificate)
+            }
+            explicitPublicImports.insert(certificate.serialNumber)
+            loadCertificates(presentingViewController: nil)
+            alertMessage = "Certificate installed locally. A matching private key is required for signing; Apple cannot download it."
+            showAlert = true
+        } catch { errorMessage = error.localizedDescription }
+    }
+
     func startBulkImport(urls: [URL]) {
         self.pendingImports     = urls.map { PendingImport(url: $0, filename: $0.lastPathComponent) }
         self.currentImportIndex = 0
@@ -245,6 +263,7 @@ class CertificatesViewModel: ObservableObject {
                         recordSuccessfulImport(serial: rawCert.serialNumber, hasPrivateKey: true, filename: pending.filename)
                     } else {
                         CertificateManager.shared.saveX509Certificate(rawCert)
+                        explicitPublicImports.insert(rawCert.serialNumber)
                         recordSuccessfulImport(serial: rawCert.serialNumber, hasPrivateKey: false, filename: pending.filename)
                     }
                 } catch {
@@ -344,7 +363,7 @@ class CertificatesViewModel: ObservableObject {
             currentImportIndex += 1
             processNextImport()
         } catch ALTCertificateError.decryptionFailed {
-            self.errorMessage = "Incorrect password for " + pending.filename
+            self.errorMessage = NSLocalizedString("Incorrect password for ", comment: "") + pending.filename
         } catch {
             self.showPasswordPromptForImport = false
             failedImportsList.append("\(pending.filename): \(error.localizedDescription)")
@@ -367,31 +386,30 @@ class CertificatesViewModel: ObservableObject {
         self.showImportSummary = true
     }
     
-    func createCertificate(machineName: String, type: CertificateType = .development, presentingViewController: UIViewController?) {
-        self.isLoading = true; self.errorMessage = nil
-        Task { @MainActor in
-            defer { self.isLoading = false }
-            do {
-                self.session = try await AuthManager.shared.getAuthenticatedSession()
-                self.team    = try? await AuthManager.shared.getAuthenticatedTeam()
-                
-                let newCert = try await DeveloperPortalProxy.shared.createCertificate(machineName: machineName, type: type)
-                self.saveLocalCertificate(newCert)
-                self.alertMessage = "\(type.displayName) created successfully."
-                self.showAlert    = true
-                self.loadCertificates(presentingViewController: presentingViewController)
-            } catch {
-                if !(error is CancellationError) { self.errorMessage = error.localizedDescription }
-            }
+    func createCertificate(machineName: String, type: CertificateType = .development, presentingViewController: UIViewController?) async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            session = try await AuthManager.shared.getAuthenticatedSession()
+            let selectedTeam = try await AuthManager.shared.getAuthenticatedTeam()
+            team = selectedTeam
+            let newCert = try await DeveloperPortalProxy.shared.createCertificate(machineName: machineName, type: type, team: selectedTeam)
+            guard let data = newCert.data else { throw PortablePKCS12.Failure.invalidKey }
+            try PortablePKCS12.validate(certificate: data, key: newCert.privateKey)
+            saveLocalCertificate(newCert)
+            alertMessage = "\(type.displayName) created and its matching private key saved successfully."
+            showAlert = true
+            loadCertificates(presentingViewController: presentingViewController)
+            return true
+        } catch {
+            if !(error is CancellationError) { errorMessage = error.localizedDescription }
+            return false
         }
     }
-    
+
     func revokeCertificate(_ certificate: ALTX509Certificate, keepLocal: Bool = false, presentingViewController: UIViewController? = nil) {
-        guard self.remoteSerials.contains(certificate.serialNumber) else {
-            self.errorMessage = "This certificate is already revoked on Apple's servers."
-            return
-        }
-        
         self.isLoading = true; self.errorMessage = nil
         Task { @MainActor in
             defer { self.isLoading = false }
@@ -402,6 +420,7 @@ class CertificatesViewModel: ObservableObject {
                 let success = try await DeveloperPortalProxy.shared.revokeCertificate(certificate)
                 if success {
                     self.remoteSerials.remove(certificate.serialNumber)
+                    self.portalCertificates.removeAll { $0.serialNumber == certificate.serialNumber }
                     if !keepLocal {
                         self.deleteLocalCertificate(serialNumber: certificate.serialNumber)
                         self.certificates.removeAll { $0.serialNumber == certificate.serialNumber }
@@ -416,7 +435,7 @@ class CertificatesViewModel: ObservableObject {
                     self.showAlert    = true
                     self.loadCertificates(presentingViewController: presentingViewController)
                 } else {
-                    self.errorMessage = "Failed to revoke certificate."
+                    self.errorMessage = NSLocalizedString("Failed to revoke certificate.", comment: "")
                 }
             } catch {
                 if !(error is CancellationError) { self.errorMessage = error.localizedDescription }
@@ -426,7 +445,11 @@ class CertificatesViewModel: ObservableObject {
     
     func deleteCertificate(_ certificate: ALTX509Certificate) {
         deleteLocalCertificate(serialNumber: certificate.serialNumber)
+        explicitPublicImports.remove(certificate.serialNumber)
         self.certificates.removeAll { $0.serialNumber == certificate.serialNumber }
+        if self.installationCertificate?.serialNumber == certificate.serialNumber {
+            self.installationCertificate = nil
+        }
         if self.activeSerialNumber == certificate.serialNumber {
             CertificateManager.shared.clearActiveCertificate()
             self.activeSerialNumber = nil
@@ -437,7 +460,7 @@ class CertificatesViewModel: ObservableObject {
     
     func makeCertificateActive(_ certificate: ALTX509Certificate) {
         guard let signable = self.getSignableCertificate(for: certificate.serialNumber) else {
-            self.errorMessage = "Cannot activate certificate: private key missing."
+            self.errorMessage = NSLocalizedString("Cannot activate certificate: private key missing.", comment: "")
             return
         }
         do {
@@ -667,6 +690,9 @@ class CertificatesViewModel: ObservableObject {
     }
     
     func clearPrivateKey(for cert: ALTX509Certificate) {
+        if CertificateManager.shared.activeCertificate?.serialNumber == cert.serialNumber {
+            CertificateManager.shared.clearActiveCertificate()
+        }
         CertificateManager.shared.saveX509Certificate(cert)
         self.loadCertificates(presentingViewController: nil)
         self.alertMessage = "Successfully removed private key from certificate \(cert.name)."
@@ -687,7 +713,7 @@ class CertificatesViewModel: ObservableObject {
         if importedSerials[cert.serialNumber] != nil {
             return true
         }
-        if self.certificates.contains(where: { $0.serialNumber == cert.serialNumber }) {
+        if CertificateManager.shared.getSignableCertificate(for: cert.serialNumber) != nil {
             return true
         }
         return false

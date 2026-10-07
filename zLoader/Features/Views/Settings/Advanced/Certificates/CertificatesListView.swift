@@ -28,7 +28,7 @@ struct CertificatesListView: View {
                 } else {
                     Text("No local certificates found.").foregroundColor(.secondary)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         } else {
             ForEach(viewModel.groupedCertificatesList) { group in
                 Section {
@@ -49,18 +49,18 @@ struct CertificatesListView: View {
                         }
                         #if !os(tvOS)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if viewModel.remoteSerials.contains(cert.serialNumber) {
+                            if viewModel.team != nil {
                                 SwiftUI.Button(role: .destructive) {
                                     onRevoke(cert)
                                 } label: {
-                                    Label("Revoke", systemImage: "xmark.circle")
+                                    SettingsEntryLabel(title: "Revoke", systemImage: "xmark.circle")
                                 }
                             }
                             if viewModel.isCertificateLocallyCached(cert) {
                                 SwiftUI.Button(role: .destructive) {
                                     onDelete(cert)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    SettingsEntryLabel(title: "Delete", systemImage: "trash")
                                 }
                             }
                         }
@@ -69,16 +69,16 @@ struct CertificatesListView: View {
                                 SwiftUI.Button {
                                     viewModel.deactivateActiveCertificate()
                                 } label: {
-                                    Label("Deactivate", systemImage: "xmark.seal")
+                                    SettingsEntryLabel(title: "Deactivate", systemImage: "xmark.seal")
                                 }
                                 .tint(.gray)
                             } else {
                                 SwiftUI.Button {
                                     viewModel.makeCertificateActive(cert)
                                 } label: {
-                                    Label("Activate", systemImage: "checkmark.seal")
+                                    SettingsEntryLabel(title: "Activate", systemImage: "checkmark.seal")
                                 }
-                                .tint(.green)
+                                .tint(Color(uiColor: .altPrimary))
                             }
                         }
                         #endif
@@ -89,7 +89,7 @@ struct CertificatesListView: View {
                     if group.id == viewModel.groupedCertificatesList.last?.id {
                         Text("Suffix (R) indicates the certificate is registered remotely on Apple's developer portal.")
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
     }

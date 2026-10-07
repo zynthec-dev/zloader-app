@@ -32,6 +32,16 @@ public extension UserDefaults
         get { self.bool(forKey: #function) }
         set { self.set(newValue, forKey: #function) }
     }
+    func automaticJITEnabled(for bundleIdentifier: String) -> Bool {
+        (stringArray(forKey: "zLoader.automaticJITApps") ?? []).contains(bundleIdentifier)
+    }
+
+    func setAutomaticJIT(_ enabled: Bool, for bundleIdentifier: String) {
+        var apps = Set(stringArray(forKey: "zLoader.automaticJITApps") ?? [])
+        if enabled { apps.insert(bundleIdentifier) } else { apps.remove(bundleIdentifier) }
+        set(apps.sorted(), forKey: "zLoader.automaticJITApps")
+    }
+
     @objc var isSideJITServerEnabled: Bool {
         get { self.bool(forKey: #function) }
         set { self.set(newValue, forKey: #function) }
@@ -117,10 +127,6 @@ public extension UserDefaults
     @objc(backgroundServiceMode) private var _backgroundServiceMode: String? {
         get { self.string(forKey: "backgroundServiceMode") }
         set { self.set(newValue, forKey: "backgroundServiceMode") }
-    }
-    @objc var enableEMPforWireguard: Bool {
-        get { self.bool(forKey: #function) }
-        set { self.set(newValue, forKey: #function) }
     }
     @objc var minimuxerGatewayBackend: String {
         get { self.string(forKey: #function) ?? GatewayBackend.idevice.rawValue }
@@ -438,10 +444,6 @@ public extension UserDefaults
         get { self.bool(forKey: #function) }
         set { self.set(newValue, forKey: #function) }
     }
-    @objc var alwaysShowWireGuardConfig: Bool {
-        get { self.bool(forKey: #function) }
-        set { self.set(newValue, forKey: #function) }
-    }
     @objc var acceptIPv6ConnectionConfig: Bool {
         get { self.bool(forKey: #function) }
         set { self.set(newValue, forKey: #function) }
@@ -548,7 +550,6 @@ public extension UserDefaults
             #keyPath(UserDefaults.useLocalVPN): true,
             #keyPath(UserDefaults.acceptIPv6ConnectionConfig): false,
             #keyPath(UserDefaults.isAutoRetryRemotePairingPortEnabled): true,
-            #keyPath(UserDefaults.enableEMPforWireguard): false,
             #keyPath(UserDefaults.skipNonCopyableBackupFiles): true,
             
             #keyPath(UserDefaults.responseCachingDisabled): false,

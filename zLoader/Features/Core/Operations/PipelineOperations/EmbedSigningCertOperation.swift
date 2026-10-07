@@ -25,31 +25,18 @@ final class EmbedSigningCertOperation: BasePipelineOperation<InstallAppOperation
             throw OperationError.invalidParameters("EmbedSigningCertOperation: No signing certificate found in context.")
         }
         
-        guard let certData = cert.data else {
-            debugLog("[EmbedSigningCertOperation] WARNING: Certificate has no data to embed.")
-            return
-        }
-        
-        // 2. Write ALTCertificate.p12 (if p12) or ALTCertificate.der (if der) directly inside the target app bundle
         guard let appBundle = self.context.targetAppBundle else {
             throw OperationError.invalidParameters("EmbedSigningCertOperation: targetAppBundle is missing in context.")
         }
-        
-        let p12Password = CertificateManager.shared.getPassword(for: cert)
-        
-        do {
-            if let p12Data = try? CertificateManager.convert(cert, password: p12Password) {
-                let p12URL = appBundle.fileURL.appendingPathComponent("ALTCertificate.p12")
-                try p12Data.write(to: p12URL, options: .atomic)
-                debugLog("[EmbedSigningCertOperation] Successfully embedded ALTCertificate.p12 in app bundle: \(p12URL.path)")
-            } else {
-                let derURL = appBundle.fileURL.appendingPathComponent("ALTCertificate.der")
-                try certData.write(to: derURL, options: .atomic)
-                debugLog("[EmbedSigningCertOperation] Successfully embedded ALTCertificate.der in app bundle: \(derURL.path)")
+        // IPA distribution must never include an exportable signing private key.
+        // Existing installations retain their active key in the local Keychain.
+        for component in [appBundle] + appBundle.appExtensions {
+            let keyArchive = component.fileURL.appendingPathComponent("ALTCertificate.p12")
+            if FileManager.default.fileExists(atPath: keyArchive.path) {
+                try FileManager.default.removeItem(at: keyArchive)
             }
-        } catch {
-            debugLog("[EmbedSigningCertOperation] ERROR: Failed to embed signing certificate into app bundle: \(error)")
-            throw error
         }
+        let publicCertificate = appBundle.fileURL.appendingPathComponent("ALTCertificate.der")
+        try cert.certificate.rawDER.write(to: publicCertificate, options: .atomic)
     }
 }

@@ -41,6 +41,7 @@ struct BonjourDiscoveryView: View {
             }
         }
         .navigationTitle("Discovery")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -73,7 +74,7 @@ struct BonjourDiscoveryView: View {
                             Label("First Letter", systemImage: viewModel.domainGroupByFirstLetter ? "checkmark" : "")
                         }
                     } label: {
-                        Label("Group By", systemImage: "rectangle.3.group")
+                        SettingsEntryLabel(title: "Group By", systemImage: "rectangle.3.group")
                     }
                     
                     Menu {
@@ -88,7 +89,7 @@ struct BonjourDiscoveryView: View {
                             Label("Name (Z to A)", systemImage: !viewModel.domainSortAscending ? "checkmark" : "")
                         }
                     } label: {
-                        Label("Sort By", systemImage: "arrow.up.arrow.down")
+                        SettingsEntryLabel(title: "Sort By", systemImage: "arrow.up.arrow.down")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -155,7 +156,7 @@ struct BonjourDiscoveryView: View {
             SwiftUI.Button {
                 startAutoRefresh()
             } label: {
-                Label("Retry", systemImage: "arrow.clockwise")
+                SettingsEntryLabel(title: "Retry", systemImage: "arrow.clockwise")
                     .font(.subheadline.weight(.medium))
             }
             .padding(.top, 4)
@@ -194,7 +195,7 @@ struct BonjourDiscoveryView: View {
                         }
                         .id(domain)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         #if !os(tvOS)
@@ -243,6 +244,7 @@ struct ServiceTypesView: View {
             }
         }
         .navigationTitle(domain)
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -272,7 +274,7 @@ struct ServiceTypesView: View {
                             }
                         }
                     } label: {
-                        Label("Group By", systemImage: "rectangle.3.group")
+                        SettingsEntryLabel(title: "Group By", systemImage: "rectangle.3.group")
                     }
                     
                     Menu {
@@ -284,7 +286,7 @@ struct ServiceTypesView: View {
                             }
                         }
                     } label: {
-                        Label("Sort By", systemImage: "arrow.up.arrow.down")
+                        SettingsEntryLabel(title: "Sort By", systemImage: "arrow.up.arrow.down")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -363,7 +365,7 @@ struct ServiceTypesView: View {
             SwiftUI.Button {
                 startAutoRefresh()
             } label: {
-                Label("Retry", systemImage: "arrow.clockwise")
+                SettingsEntryLabel(title: "Retry", systemImage: "arrow.clockwise")
                     .font(.subheadline.weight(.medium))
             }
             .padding(.top, 4)
@@ -425,7 +427,7 @@ struct ServiceTypesView: View {
                         }
                         .id(typeInfo.rawType)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         #if !os(tvOS)
@@ -489,6 +491,7 @@ struct ServiceInstancesView: View {
             }
         }
         .navigationTitle(friendlyName ?? serviceType)
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -518,7 +521,7 @@ struct ServiceInstancesView: View {
                             }
                         }
                     } label: {
-                        Label("Group By", systemImage: "rectangle.3.group")
+                        SettingsEntryLabel(title: "Group By", systemImage: "rectangle.3.group")
                     }
                     
                     Menu {
@@ -530,7 +533,7 @@ struct ServiceInstancesView: View {
                             }
                         }
                     } label: {
-                        Label("Sort By", systemImage: "arrow.up.arrow.down")
+                        SettingsEntryLabel(title: "Sort By", systemImage: "arrow.up.arrow.down")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -609,7 +612,7 @@ struct ServiceInstancesView: View {
             SwiftUI.Button {
                 startAutoRefresh()
             } label: {
-                Label("Retry", systemImage: "arrow.clockwise")
+                SettingsEntryLabel(title: "Retry", systemImage: "arrow.clockwise")
                     .font(.subheadline.weight(.medium))
             }
             .padding(.top, 4)
@@ -654,7 +657,7 @@ struct ServiceInstancesView: View {
                         }
                         .id(instance.id)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         #if !os(tvOS)
@@ -720,6 +723,7 @@ struct ServiceDetailView: View {
             }
         }
         .navigationTitle("Service Details")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -832,7 +836,7 @@ struct ServiceDetailView: View {
             SwiftUI.Button {
                 viewModel.resolveService(service)
             } label: {
-                Label("Retry", systemImage: "arrow.clockwise")
+                SettingsEntryLabel(title: "Retry", systemImage: "arrow.clockwise")
                     .font(.subheadline.weight(.medium))
             }
             .padding(.top, 4)
@@ -877,7 +881,7 @@ struct ServiceDetailView: View {
                     HStack(spacing: 8) {
                         Text(resolved.type.contains("_tcp") ? "TCP" : "UDP")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(Capsule().fill(resolved.type.contains("_tcp") ? Color.blue : Color.orange))
@@ -897,7 +901,7 @@ struct ServiceDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
             
             // Connection Info (Hostname, Addresses, Port, Type, Domain)
             Section(header: Text("Connection")) {
@@ -912,7 +916,7 @@ struct ServiceDetailView: View {
                 DetailRow(label: "Port", value: "\(resolved.port)", onCopy: copyWithFeedback)
                 DetailRow(label: "Type", value: resolved.type, onCopy: copyWithFeedback)
                 DetailRow(label: "Domain", value: resolved.domain, onCopy: copyWithFeedback)
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
             
             // Interfaces
             if !service.interfaces.isEmpty {
@@ -939,11 +943,11 @@ struct ServiceDetailView: View {
                             SwiftUI.Button {
                                 copyWithFeedback("\(iface.name) (\(nameForInterfaceType(iface.type)))")
                             } label: {
-                                Label("Copy Interface", systemImage: "doc.on.doc")
+                                SettingsEntryLabel(title: "Copy Interface", systemImage: "doc.on.doc")
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Decoded Device / Software Information
@@ -959,7 +963,7 @@ struct ServiceDetailView: View {
                     if let os = osRecord {
                         DetailRow(label: "OS Version", value: os, onCopy: copyWithFeedback)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // TXT Records
@@ -987,11 +991,11 @@ struct ServiceDetailView: View {
                             SwiftUI.Button {
                                 copyWithFeedback("\(record.key) = \(record.value)")
                             } label: {
-                                Label("Copy", systemImage: "doc.on.doc")
+                                SettingsEntryLabel(title: "Copy", systemImage: "doc.on.doc")
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // DNS-SD Raw Records
@@ -1023,7 +1027,7 @@ struct ServiceDetailView: View {
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
             
             // Quick Actions (Moved to Bottom)
             Section(header: Text("Quick Actions")) {
@@ -1044,14 +1048,14 @@ struct ServiceDetailView: View {
                     SwiftUI.Button {
                         copyWithFeedback("ssh \(resolved.hostname) -p \(resolved.port)")
                     } label: {
-                        Label("Copy SSH Command", systemImage: "terminal")
+                        SettingsEntryLabel(title: "Copy SSH Command", systemImage: "terminal")
                     }
                 }
                 
                 SwiftUI.Button {
                     copyWithFeedback(endpointStr)
                 } label: {
-                    Label("Copy Host:Port Endpoint", systemImage: "link")
+                    SettingsEntryLabel(title: "Copy Host:Port Endpoint", systemImage: "link")
                 }
                 
                 SwiftUI.Button {
@@ -1059,9 +1063,9 @@ struct ServiceDetailView: View {
                         copyWithFeedback(jsonStr)
                     }
                 } label: {
-                    Label("Copy Details as JSON", systemImage: "curlybraces")
+                    SettingsEntryLabel(title: "Copy Details as JSON", systemImage: "curlybraces")
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(.insetGrouped)
@@ -1096,7 +1100,7 @@ struct ServiceDetailView: View {
     private var copiedBanner: some View {
         Text("Copied to Clipboard")
             .font(.subheadline.weight(.medium))
-            .foregroundColor(.white)
+            .foregroundColor(.primary)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .background(

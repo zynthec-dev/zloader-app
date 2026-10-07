@@ -22,6 +22,7 @@ struct CertificatesView: View {
         ["key", "pem", "der"].compactMap { UTType(filenameExtension: $0) }
     }
     
+    @State private var showPortalCertificates = false
     @State private var showKeyMaterials = false
     @State private var showCreateSheet            = false
     @State private var showFileImporter           = false
@@ -50,8 +51,15 @@ struct CertificatesView: View {
         ZStack {
             List {
                 Section {
-                    SwiftUI.Button("Keys & Local Signing Requests…") { showKeyMaterials = true }
-                }
+                    SwiftUI.Button { showKeyMaterials = true } label: {
+                        SettingsEntryLabel(title: "Keys & Local Signing Requests…", systemImage: "key.horizontal")
+                    }
+                    SwiftUI.Button {
+                        showPortalCertificates = true
+                    } label: {
+                        SettingsEntryLabel(title: "Developer Account Certificates", systemImage: "icloud.and.arrow.down")
+                    }
+                }.listRowBackground(ZLoaderGlassBackground())
                 ActiveCertSectionView(
                     viewModel: viewModel,
                     hasCopiedActiveSerial: $hasCopiedActiveSerial,
@@ -87,6 +95,8 @@ struct CertificatesView: View {
                 }
             }
             .navigationTitle("Certificates & Keys")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     SwiftUI.Button {
@@ -124,6 +134,19 @@ struct CertificatesView: View {
             SwiftUI.Button("OK", role: .cancel) { viewModel.errorMessage = nil }
         } message: {
             Text(viewModel.errorMessage ?? "An unknown error occurred.")
+        }
+        .sheet(isPresented: $showPortalCertificates) {
+            NavigationStack {
+                AccountCertificatesView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            SwiftUI.Button("Done") {
+                                showPortalCertificates = false
+                                viewModel.loadCertificates(presentingViewController: nil)
+                            }
+                        }
+                    }
+            }
         }
         .sheet(isPresented: $showKeyMaterials) {
             NavigationStack { LocalKeyMaterialView() }
@@ -185,6 +208,8 @@ struct CertificatesView: View {
                     }
                 }
                 .navigationTitle("Import Failures")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
                 #if !os(tvOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
@@ -239,7 +264,7 @@ struct CertificatesView: View {
                         do {
                             viewModel.importPrivateKey(data: try Data(contentsOf: url), for: cert)
                         } catch {
-                            viewModel.errorMessage = "Failed to read private key: " + error.localizedDescription
+                            viewModel.errorMessage = NSLocalizedString("Failed to read private key: ", comment: "") + error.localizedDescription
                         }
                     }
                 }
@@ -343,7 +368,7 @@ struct CertificatesView: View {
                 let data = try Data(contentsOf: fileURL)
                 viewModel.importPrivateKey(data: data, for: cert)
             } catch {
-                viewModel.errorMessage = "Failed to read private key: " + error.localizedDescription
+                viewModel.errorMessage = NSLocalizedString("Failed to read private key: ", comment: "") + error.localizedDescription
             }
             certificateToAddKeyFor = nil
         }
@@ -397,7 +422,7 @@ private struct CreateCertificateSheetView: View {
     }
 
     private var canCreate: Bool {
-        !machineName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !machineName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isLoading && !isPaidWarningVisible
     }
 
     var body: some View {
@@ -416,9 +441,13 @@ private struct CreateCertificateSheetView: View {
                     }
 
                     TextField("Machine Name", text: $machineName)
-                }
+                    if viewModel.isLoading { ProgressView("Creating certificate…") }
+                    if let error = viewModel.errorMessage { Text(error).foregroundStyle(.red).textSelection(.enabled) }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             .navigationTitle("New Certificate")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     SwiftUI.Button("Cancel") {
@@ -429,16 +458,66 @@ private struct CreateCertificateSheetView: View {
                     SwiftUI.Button("Create") {
                         let name = machineName.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !name.isEmpty else { return }
-                        isPresented = false
-                        viewModel.createCertificate(
-                            machineName: name,
-                            type: selectedCertificateType,
-                            presentingViewController: presentingViewController
-                        )
+                        Task {
+                            if await viewModel.createCertificate(machineName: name, type: selectedCertificateType, presentingViewController: presentingViewController) {
+                                isPresented = false
+                            }
+                        }
                     }
                     .disabled(!canCreate)
                 }
             }
+        }
+    }
+}
+
+/// Remote account inventory stays separate from the local signing identities.
+struct AccountCertificatesView: View {
+    @StateObject private var viewModel = CertificatesViewModel()
+
+    var body: some View {
+        List {
+            Section {
+                if viewModel.hasFetchedRemote && viewModel.portalCertificates.isEmpty {
+                    Text("There are no certificates on this developer team.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(viewModel.portalCertificates, id: \.serialNumber) { cert in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(cert.name).font(.headline)
+                        Text(cert.certificateTypeName ?? cert.certificateType ?? cert.serialNumber)
+                            .font(.caption).foregroundStyle(.secondary)
+                        SwiftUI.Button("In zLoader importieren") {
+                            viewModel.installPortalCertificate(cert)
+                        }.buttonStyle(.borderless)
+                        SwiftUI.Button("Zertifikat als Datei herunterladen") {
+                            CertificateExporter.sharePublicCertAsDER(cert, onShare: { viewModel.shareURL = $0 }) {
+                                viewModel.errorMessage = $0
+                            }
+                        }.buttonStyle(.borderless)
+                    }.padding(.vertical, 4)
+                }
+            } footer: {
+                Text("Apple provides the public certificate. A matching local private key is associated automatically. For a certificate from your Mac, import its .p12 containing the private key.")
+            }.listRowBackground(ZLoaderGlassBackground())
+        }
+        .navigationTitle("Certificates from Account")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
+        .task { await viewModel.downloadPortalCertificates() }
+        .refreshable { await viewModel.downloadPortalCertificates() }
+        .overlay { if viewModel.isLoading { ProgressView() } }
+        .alert("Error", isPresented: $viewModel.showErrorAlert) {
+            SwiftUI.Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: { Text(viewModel.errorMessage ?? "") }
+        .alert("Zertifikat importiert", isPresented: $viewModel.showAlert) {
+            SwiftUI.Button("OK", role: .cancel) {}
+        } message: { Text(viewModel.alertMessage ?? "") }
+        .sheet(isPresented: Binding(
+            get: { viewModel.shareURL != nil },
+            set: { if !$0 { viewModel.shareURL = nil } }
+        )) {
+            if let url = viewModel.shareURL { ActivityViewController(activityItems: [url]) }
         }
     }
 }

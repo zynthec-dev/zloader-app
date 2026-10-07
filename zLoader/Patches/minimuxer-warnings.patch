@@ -36,9 +36,18 @@ index 0a581fb..93fd936 100644
          try await start(pairingFileContent: pairingFileContent, preferred: preferred)
      }
 diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
-index e9310d0..e5cbdaa 100644
+index e9310d0..7363f20 100644
 --- a/DeviceGateway/idevice/IdeviceGateway.swift
 +++ b/DeviceGateway/idevice/IdeviceGateway.swift
+@@ -43,7 +43,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+         plist_get_string_val(node, &valPtr)
+         if let ptr = valPtr {
+             let val = String(cString: ptr)
+-            free(ptr)
++            plist_mem_free(ptr)
+             return val
+         }
+         return nil
 @@ -126,6 +126,55 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          try await super.stop()
      }
@@ -70,7 +79,7 @@ index e9310d0..e5cbdaa 100644
 +            var bytes: UnsafeMutablePointer<UInt8>?
 +            var count: UInt = 0
 +            try check(idevice_pairing_file_serialize(pairing, &bytes, &count))
-+            guard let bytes else { throw IdeviceGatewayError(.serviceError, reason: "Lockdown returned no serialized record") }
++            guard let bytes, count > 0, count <= 16 * 1024 * 1024 else { throw IdeviceGatewayError(.serviceError, reason: "Lockdown returned an invalid serialized record") }
 +            defer { idevice_data_free(bytes, count) }
 +            let serialized = Data(bytes: bytes, count: Int(count))
 +            guard var record = try PropertyListSerialization.propertyList(from: serialized, options: [], format: nil) as? [String: Any] else {
@@ -213,11 +222,67 @@ index 44de525..522cef1 100644
              defer { if let p = plist { plist_free(p) } }
              plist_dict_set_item(plist, "Command", plist_new_string("Pico"))
  
+diff --git a/Sources/MinimuxerImpl.swift b/Sources/MinimuxerImpl.swift
+index 4c05971..4e1e3fc 100644
+--- a/Sources/MinimuxerImpl.swift
++++ b/Sources/MinimuxerImpl.swift
+@@ -137,14 +137,14 @@ final internal class MinimuxerImpl: MinimuxerAPI {
+                 let uTunPresent = net.isUTunAvailable
+                 if !uTunPresent {
+                     debugLog("[minimuxer] minimuxer not ready: no utun interface found")
+-                    return .failure(.noVPN("No utun interface detected — LocalDevVPN is not connected"))
++                    return .failure(.noVPN("No utun interface detected — the local VPN tunnel is not connected"))
+                 }
+ 
+                 // check iKEv2 too if in lockdown mode and ios >= 26.4
+                 if self.gateway.pairingFileType != .rppairing && !net.isIKEv2IPSecAvailable {
+                     if #available(iOS 26.4, *) {
+                         debugLog("[minimuxer] minimuxer not ready: no ipsec interface (required for lockdown on iOS 26.4+)")
+-                        return .failure(.invalidVPN("utun is present but no ipsec/IKEv2 interface found — LocalDevVPN may not support the lockdown protocol on iOS 26.4+"))
++                        return .failure(.invalidVPN("utun is present but no ipsec/IKEv2 interface found — this local tunnel may not support the Lockdown protocol on iOS 26.4+"))
+                     }
+                 }
+ 
 diff --git a/Sources/Services/DeviceConnectionManager.swift b/Sources/Services/DeviceConnectionManager.swift
-index 01b6e27..c052040 100644
+index 01b6e27..c3a28b3 100644
 --- a/Sources/Services/DeviceConnectionManager.swift
 +++ b/Sources/Services/DeviceConnectionManager.swift
-@@ -102,7 +102,6 @@ actor DeviceConnectionManager {
+@@ -19,6 +19,7 @@ actor DeviceConnectionManager {
+     private var interfacesCache: Set<NetInfo> = []
+     private var connectionConfigCache: ConnectionConfigBinding?
+     private var lastConnectionMode: DeviceConnectionMode? = nil
++    private var refreshTask: Task<Bool, Never>?
+     
+     // local vpn params
+     var vpnIface: TunnelNetInfo?
+@@ -48,6 +49,8 @@ actor DeviceConnectionManager {
+ 
+     func bindConnectionConfig(_ binding: ConnectionConfigBinding) {
+         connectionConfigCache = binding
++        // New subscribers need fresh probe results even if the network did not change.
++        lastConnectionMode = nil
+         // ensure started if not started already
+         let connectionMode = binding.getConnectionMode()
+         verboseLog("""
+@@ -91,6 +94,17 @@ actor DeviceConnectionManager {
+ 
+     @discardableResult
+     func refresh(quietScan: Bool = false) async -> Bool {
++        // Actor methods can interleave at TCP-probe awaits. Coalesce overlapping
++        // scans so a pre-tunnel scan cannot overwrite a newer reachable peer.
++        if let refreshTask { return await refreshTask.value }
++        let task = Task { await self.refreshSerially(quietScan: quietScan) }
++        refreshTask = task
++        let changed = await task.value
++        refreshTask = nil
++        return changed
++    }
++
++    private func refreshSerially(quietScan: Bool) async -> Bool {
+         let connectionMode = getPreferredConnectionMode()
+         defer { lastConnectionMode = connectionMode }
+ 
+@@ -102,7 +116,6 @@ actor DeviceConnectionManager {
              case .localVPN:
                  // cache last state in locals
                  let lastInterfacesCache = interfacesCache
@@ -225,7 +290,7 @@ index 01b6e27..c052040 100644
                  let lastReportedPeer = reportedPeerIp
                  let lastDerivedPeer = derivedPeerIp
                  let lastDerivedPeerMask = derivedPeerSubnetMask
-@@ -208,7 +207,7 @@ actor DeviceConnectionManager {
+@@ -208,7 +221,7 @@ actor DeviceConnectionManager {
              .compactMap { $0 as? TunnelNetInfo }
              .filter { 
                  $0.tunnelType == .utun && 
@@ -234,7 +299,7 @@ index 01b6e27..c052040 100644
              }
              .sorted { $0.name < $1.name }
      }
-@@ -218,6 +217,16 @@ actor DeviceConnectionManager {
+@@ -218,6 +231,16 @@ actor DeviceConnectionManager {
      }
  
      private func resolveLocalVPNTunnel(from interfaces: Set<NetInfo>) async -> (tunnel: TunnelNetInfo?, candidatePeer: CandidatePeer?, isReachable: Bool) {
@@ -242,7 +307,7 @@ index 01b6e27..c052040 100644
 +        // merely because route-table inference sees IPv6 or unrelated utuns.
 +        if let configured = connectionConfigCache?.getOverrideTunnelPeerIp(), !configured.isEmpty {
 +            let tunnels = Self.resolveCandidateTunnels(from: interfaces)
-+            let owned = tunnels.first { $0.interfaceAddresses.v4.contains { $0.host == "10.7.1.1" } }
++            let owned = tunnels.first { $0.interfaceAddresses.v4.contains { $0.host == "10.7.0.2" || $0.host == "10.7.1.1" } }
 +            if let tunnel = owned ?? tunnels.first,
 +               await tcpProbe(configured) {
 +                return (tunnel, CandidatePeer(tunnel: tunnel, ip: configured, mask: "255.255.255.255"), true)

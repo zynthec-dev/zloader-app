@@ -9,6 +9,7 @@
 @preconcurrency import UIKit
 import CoreData
 import Nuke
+import SwiftUI
 
 @objc(SourcesFooterView)
 private final class SourcesFooterView: TextCollectionReusableView
@@ -50,7 +51,7 @@ final class SourcesViewController: UICollectionViewController
         #endif
 
         // Set title
-        navigationItem.title = "Sources"
+        navigationItem.title = NSLocalizedString("Sources", comment: "")
         navigationController?.navigationBar.layoutMargins.left = 20
         
         let layout = self.makeLayout()
@@ -102,8 +103,6 @@ final class SourcesViewController: UICollectionViewController
             self.placeholderView.bottomAnchor.constraint(equalTo: self.placeholderView.stackView.bottomAnchor),
         ])
 
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem
-        
         NotificationCenter.default.addObserver(self, selector: #selector(SourcesViewController.showInstallingAppToastView(_:)), name: AppManager.willInstallAppFromNewSourceNotification, object: nil)
         
         self.update()

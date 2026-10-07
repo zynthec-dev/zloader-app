@@ -305,6 +305,7 @@ class InstallAppOperationContext: PipelineOperationContext
         return temporaryDirectory
     }()
 
+    var includeAllRegisteredDevices = false
     var ipaURL: URL?
     var resignedAppBundle: ALTApplication?
     var installedApp: InstalledApp?

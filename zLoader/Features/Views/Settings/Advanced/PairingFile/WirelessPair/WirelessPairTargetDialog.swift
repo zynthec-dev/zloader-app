@@ -34,6 +34,7 @@ struct WirelessPairTargetDialog: View {
             #else
             .background(Color.black.ignoresSafeArea())
             .navigationTitle(viewModel.dialogMode == .client ? "Select Device To Pair" : "Select Server Interface")
+        .labelStyle(.titleOnly)
             #endif
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -43,7 +44,7 @@ struct WirelessPairTargetDialog: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
+.foregroundColor(.accentColor)
                             .frame(width: 30, height: 30)
                             .background(Color.white.opacity(0.18))
                             .clipShape(Circle())
@@ -205,7 +206,7 @@ struct WirelessPairTargetDialog: View {
         
         // Section: Discovered Devices
         VStack(alignment: .leading, spacing: 10) {
-            Text("DISCOVERED NEARBY")
+            Text("NEARBY DEVICES")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
@@ -252,7 +253,7 @@ struct WirelessPairTargetDialog: View {
                         .foregroundColor(isSelected ? .accentColor : .secondary)
                         .frame(width: 20)
                     
-                    interfaceTypeTag(name: target.rawType, color: .accentColor)
+                    interfaceTypeTag(name: target.typeBadge, color: .accentColor)
                     
                     Spacer()
                     
@@ -262,8 +263,7 @@ struct WirelessPairTargetDialog: View {
                 }
                 
                 Text(target.name)
-                    .font(.footnote)
-                    .fontWeight(.bold)
+                    .font(.headline)
                     .foregroundColor(.primary)
                 
                 VStack(alignment: .leading, spacing: 3) {

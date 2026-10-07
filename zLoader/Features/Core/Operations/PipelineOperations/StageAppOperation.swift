@@ -46,8 +46,10 @@ final class StageAppOperation: BasePipelineOperation<InstallAppOperationContext,
         
         if fileURL.path.hasPrefix(tempDir.path) {
             debugLog("[StageAppOperation] App is already in temporary directory: \(fileURL)")
+            let prepared = try TunnelBootstrapPayload.prepare(appBundle)
+            self.context.targetAppBundle = prepared
             self.setProgress(100)
-            return appBundle
+            return prepared
         }
         
         let destinationURL = tempDir.appendingPathComponent(fileURL.lastPathComponent)
@@ -68,8 +70,9 @@ final class StageAppOperation: BasePipelineOperation<InstallAppOperationContext,
             throw OperationError.missingAppBundle(reason: "Could not load staged app bundle at '\(destinationURL.lastPathComponent)'")
         }
         
-        self.context.targetAppBundle = stagedAppBundle
+        let prepared = try TunnelBootstrapPayload.prepare(stagedAppBundle)
+        self.context.targetAppBundle = prepared
         self.setProgress(100)
-        return stagedAppBundle
+        return prepared
     }
 }

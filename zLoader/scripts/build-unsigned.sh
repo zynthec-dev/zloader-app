@@ -10,3 +10,5 @@ xcodebuild -project zLoader.xcodeproj -scheme zLoader -configuration Release \
   APP_GROUP_IDENTIFIER=com.zynthec.zLoader build
 python3 zLoader/scripts/package-unsigned.py
 python3 zLoader/scripts/package-resignable.py
+python3 zLoader/scripts/package-unsigned.py --internal
+python3 zLoader/scripts/package-resignable.py --internal

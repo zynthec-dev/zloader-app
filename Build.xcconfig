@@ -1,8 +1,8 @@
 // Configuration settings file format documentation can be found at:
 // https://help.apple.com/xcode/#/dev745c5c974
 
-MARKETING_VERSION = 0.7.14
-CURRENT_PROJECT_VERSION = 0714
+MARKETING_VERSION = 0.7.24
+CURRENT_PROJECT_VERSION = 0724
 
 // Matches the minimum encoded in the pinned Unicorn/Idevice binaries.
 ZLOADER_MIN_IOS_VERSION = 26.5
@@ -16,8 +16,7 @@ CODE_SIGN_ENTITLEMENTS = zLoader/Host.entitlements
 PRODUCT_NAME = zLoader
 
 BASE_BUNDLE_ID                                  = $(ORG_IDENTIFIER).zLoader
-MAIN_BUNDLE_IDENTIFIER[config=Debug]            = $(BASE_BUNDLE_ID).debug
-MAIN_BUNDLE_IDENTIFIER[config=Release]          = $(BASE_BUNDLE_ID)
+MAIN_BUNDLE_IDENTIFIER          = $(BASE_BUNDLE_ID)
 APP_GROUP_IDENTIFIER                            = $(MAIN_BUNDLE_IDENTIFIER)
 ICLOUD_CONTAINER_IDENTIFIER                     = iCloud.$(ORG_IDENTIFIER).$(PROJECT_NAME)
 

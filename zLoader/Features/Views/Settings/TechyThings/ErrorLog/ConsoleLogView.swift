@@ -245,7 +245,7 @@ public struct ConsoleLogView: View {
            HStack(spacing: 12) {
                Text(viewModel.activeHeaderTitle)
                    .font(.system(size: 22, weight: .semibold))
-                   .foregroundColor(.white)
+                   .foregroundColor(.primary)
                    .lineLimit(1)
                Spacer()
                
@@ -254,7 +254,7 @@ public struct ConsoleLogView: View {
                        searchBarState.toggle()
                    }) {
                        Image(systemName: "magnifyingglass")
-                           .foregroundColor(.white)
+.foregroundColor(.accentColor)
                            .imageScale(.large)
                    }
                }
@@ -263,7 +263,7 @@ public struct ConsoleLogView: View {
                     fontSize = max(6, fontSize - 1)
                 }) {
                     Image(systemName: "minus")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .imageScale(.medium)
                 }
                 
@@ -271,7 +271,7 @@ public struct ConsoleLogView: View {
                     fontSize = min(30, fontSize + 1)
                 }) {
                     Image(systemName: "plus")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .imageScale(.medium)
                 }
                 
@@ -279,7 +279,7 @@ public struct ConsoleLogView: View {
                     showTimestamp.toggle()
                 }) {
                     Image(systemName: showTimestamp ? "clock.fill" : "clock")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .font(.system(size: 19))
                 }
 
@@ -293,7 +293,7 @@ public struct ConsoleLogView: View {
                     #endif
                 }) {
                     Image(systemName: "square.and.arrow.up")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .font(.system(size: 19))
                 }
                 
@@ -340,18 +340,18 @@ public struct ConsoleLogView: View {
                         SwiftUI.Button(action: {
                             showFileImporter = true
                         }) {
-                            Label("Import Log...", systemImage: "square.and.arrow.down")
+                            SettingsEntryLabel(title: "Import Log...", systemImage: "square.and.arrow.down")
                         }
                     } else {
                         SwiftUI.Button(role: .destructive, action: {
                             viewModel.clearImportedLog()
                         }) {
-                            Label("Remove Imported", systemImage: "xmark.circle")
+                            SettingsEntryLabel(title: "Remove Imported", systemImage: "xmark.circle")
                         }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .imageScale(.large)
                 } primaryAction: {
                     scrollToBottom.toggle()
@@ -361,7 +361,7 @@ public struct ConsoleLogView: View {
                     showTvMenu = true
                 }) {
                     Image(systemName: "ellipsis")
-                        .foregroundColor(.white)
+.foregroundColor(.accentColor)
                         .imageScale(.large)
                 }
                 #endif
@@ -445,7 +445,7 @@ public struct ConsoleLogView: View {
                             let displayLine = showTimestamp ? line : stripTimestamp(from: line)
                              Text(displayLine)
                                  .font(.system(size: fontSize, design: .monospaced))
-                                 .foregroundColor(.white)
+                                 .foregroundColor(.primary)
                                  #if !os(tvOS)
                                  .textSelection(.enabled)
                                  #endif
@@ -529,7 +529,7 @@ public struct ConsoleLogView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(Color.gray.opacity(0.9))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                         .cornerRadius(20)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .padding(.top, 50)

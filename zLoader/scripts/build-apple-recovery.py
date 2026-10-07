@@ -56,14 +56,14 @@ def main():
         log.parent.mkdir(exist_ok=True)
         with log.open('w') as output:
             result = subprocess.run([
-                'xcodebuild', '-project', str(project), '-scheme', 'zLoader', '-configuration', 'Debug',
+                'xcodebuild', '-project', str(project), '-scheme', 'zLoader', '-configuration', 'Release',
                 '-destination', 'generic/platform=iOS', '-derivedDataPath', '.build/Recovery',
                 '-clonedSourcePackagesDirPath', '.build/SourcePackages', '-allowProvisioningUpdates',
                 'MAIN_BUNDLE_IDENTIFIER=' + args.bundle_id,
                 'APP_GROUP_IDENTIFIER=' + args.app_group.removeprefix('group.'), 'build',
             ], cwd=ROOT, stdout=output, stderr=subprocess.STDOUT)
         checks['require'](result.returncode == 0, 'Apple build failed; inspect .build/apple-recovery-build.log')
-    products = ROOT / '.build/Recovery/Build/Products/Debug-iphoneos'
+    products = ROOT / '.build/Recovery/Build/Products/Release-iphoneos'
     with tempfile.TemporaryDirectory(dir=ROOT / '.build') as folder:
         temporary = Path(folder)
         app = temporary / 'Payload/zLoader.app'
@@ -78,7 +78,7 @@ def main():
                               'Repair bundle identity differs from the requested installation')
             entitlements = checks['entitlements'](component)
             checks['check_profile'](component, entitlements)
-            if component.name in ('zLoader.app', 'zLoaderWidget.appex'):
+            if component.name in ('zLoader.app', 'zLoaderWidget.appex', 'zLoaderTunnel.appex'):
                 checks['require'](args.app_group in entitlements.get(checks['GROUPS'], []),
                                   'Repair would change the installed shared App Group')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic',

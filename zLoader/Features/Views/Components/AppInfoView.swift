@@ -109,7 +109,7 @@ struct AppInfoView: View {
                         }
                     }
                     .padding(.vertical, 8)
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
                 
                 // Metadata Section
                 Section(header: Text("General Metadata")) {
@@ -144,7 +144,7 @@ struct AppInfoView: View {
                         }
                     }
                     InfoRow(label: "Uses Main Profile", value: installedApp.useMainProfile ? "Yes" : "No")
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
                 
                 // Provisioning Profile Section
                 if resignedProfileURL != nil || bundleProfileURL != nil {
@@ -204,7 +204,7 @@ struct AppInfoView: View {
                                 .font(.caption)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 
                 // Info.plist Section
@@ -260,7 +260,7 @@ struct AppInfoView: View {
                                 .font(.caption)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 
                 // App Extensions Section
@@ -277,7 +277,7 @@ struct AppInfoView: View {
                                 }
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 // Resources Section
@@ -286,7 +286,7 @@ struct AppInfoView: View {
                         Text("Browse Bundle Contents")
                             .font(.subheadline)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             #if !os(tvOS)
             .listStyle(InsetGroupedListStyle())
@@ -354,7 +354,7 @@ struct ProvisioningProfileDetailView: View {
                 ProfileInfoRow(label: "Created", value: formatDate(profile.creationDate))
                 ProfileInfoRow(label: "Expires", value: formatDate(profile.expirationDate))
                 ProfileInfoRow(label: "Free Developer Profile", value: profile.isFreeProvisioningProfile ? "Yes" : "No")
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
             
             if !profile.certificates.isEmpty {
                 Section(header: Text("Developer Certificates (\(profile.certificates.count))")) {
@@ -369,7 +369,7 @@ struct ProvisioningProfileDetailView: View {
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             if !profile.deviceIDs.isEmpty {
@@ -377,7 +377,7 @@ struct ProvisioningProfileDetailView: View {
                     NavigationLink(destination: DeviceIDsView(devices: profile.deviceIDs)) {
                         Text("View Provisioned Devices")
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             Section(header: Text("Entitlements (\(profile.entitlements.count))")) {
@@ -385,7 +385,7 @@ struct ProvisioningProfileDetailView: View {
                 ForEach(sortedEntitlements, id: \.key) { entitlement, value in
                     EntitlementRow(key: entitlement, value: value)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -707,7 +707,7 @@ struct ExtensionInfoView: View {
                     InfoRow(label: "Profile Created", value: formatDate(profile.creationDate))
                     InfoRow(label: "Profile Expires", value: formatDate(profile.expirationDate))
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             // Provisioning Profile
             if resignedProfileURL != nil || bundleProfileURL != nil {
@@ -770,7 +770,7 @@ struct ExtensionInfoView: View {
                             .font(.caption)
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // Info.plist
@@ -826,7 +826,7 @@ struct ExtensionInfoView: View {
                             .font(.caption)
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // Nested Sub-Extensions (recursive)
@@ -848,7 +848,7 @@ struct ExtensionInfoView: View {
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         #if !os(tvOS)
@@ -942,7 +942,7 @@ struct BundleInspectorView: View {
                 if let minOS = infoPlist?["MinimumOSVersion"] as? String {
                     InfoRow(label: "Min iOS", value: minOS)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             if let profile = provisioningProfile {
                 Section(header: Text("Provisioning Profile")) {
@@ -958,7 +958,7 @@ struct BundleInspectorView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             if let plist = infoPlist {
@@ -967,7 +967,7 @@ struct BundleInspectorView: View {
                         Text("View Info.plist (\(plist.count) keys)")
                             .font(.subheadline)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             if !subExtensions.isEmpty {
@@ -988,7 +988,7 @@ struct BundleInspectorView: View {
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // Resources
@@ -997,7 +997,7 @@ struct BundleInspectorView: View {
                     Text("Browse Bundle Contents")
                         .font(.subheadline)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())

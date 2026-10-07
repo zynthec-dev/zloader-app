@@ -112,6 +112,7 @@ public struct DirectoryExplorerView: View {
             }
         }
         .navigationTitle(viewModel.currentURL.lastPathComponent)
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -222,25 +223,25 @@ private struct DirectoryItemListSectionView: View {
                     ForEach(folders) { item in
                         renderRow(item: item)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
                 
                 Section("Files (\(files.count))") {
                     ForEach(files) { item in
                         renderRow(item: item)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             } else if !folders.isEmpty {
                 Section("Folders (\(folders.count))") {
                     ForEach(folders) { item in
                         renderRow(item: item)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             } else {
                 Section("Files (\(files.count))") {
                     ForEach(files) { item in
                         renderRow(item: item)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         .onAppear {
@@ -306,7 +307,7 @@ private struct EmptyPasteAreaSectionView: View {
                 .contextMenu {
                     EmptyAreaContextMenuView(viewModel: viewModel, clipboard: clipboard)
                 }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
 }
 
@@ -349,7 +350,7 @@ private struct SelectionActionBarView: View {
                     .font(.caption.bold())
                     .lineLimit(1)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(ZLoaderGlassButtonStyle())
             .controlSize(.small)
             .fixedSize(horizontal: true, vertical: false)
             .disabled(selectedURLs.isEmpty)
@@ -368,7 +369,7 @@ private struct SelectionActionBarView: View {
                     .font(.caption.bold())
                     .lineLimit(1)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(ZLoaderGlassButtonStyle())
             .controlSize(.small)
             .fixedSize(horizontal: true, vertical: false)
             .disabled(selectedURLs.isEmpty)
@@ -382,7 +383,7 @@ private struct SelectionActionBarView: View {
                     .font(.caption.bold())
                     .lineLimit(1)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(ZLoaderGlassButtonStyle(prominent: true))
             .tint(.red)
             .controlSize(.small)
             .fixedSize(horizontal: true, vertical: false)
@@ -440,7 +441,7 @@ private struct BottomInformationBarView: View {
                     Label(pasteLabelText, systemImage: "doc.on.clipboard")
                         .font(.caption.bold())
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ZLoaderGlassButtonStyle(prominent: true))
                 .controlSize(.small)
             }
         }
@@ -586,7 +587,7 @@ private struct ItemContextMenuView: View {
             SwiftUI.Button {
                 viewModel.copyToClipboard(item: item)
             } label: {
-                Label("Copy", systemImage: "doc.on.doc")
+                SettingsEntryLabel(title: "Copy", systemImage: "doc.on.doc")
             }
             
             SwiftUI.Button {
@@ -594,21 +595,21 @@ private struct ItemContextMenuView: View {
                 viewModel.itemToRename = item
                 viewModel.activeAlert = .rename(item)
             } label: {
-                Label("Rename", systemImage: "pencil")
+                SettingsEntryLabel(title: "Rename", systemImage: "pencil")
             }
             
             if !item.isDirectory {
                 SwiftUI.Button {
                     viewModel.shareURL = item.url
                 } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    SettingsEntryLabel(title: "Share", systemImage: "square.and.arrow.up")
                 }
             }
             
             SwiftUI.Button(role: .destructive) {
                 viewModel.activeAlert = .confirmSingleDelete(item)
             } label: {
-                Label("Delete", systemImage: "trash")
+                SettingsEntryLabel(title: "Delete", systemImage: "trash")
             }
         }
     }

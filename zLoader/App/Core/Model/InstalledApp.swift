@@ -400,7 +400,7 @@ public extension InstalledApp
                                              sortedBy: [NSSortDescriptor(keyPath: \InstalledApp.expirationDate, ascending: true)],
                                              in: context)
         
-        if let zLoaderApp = InstalledApp.fetchZLoader(in: context)
+        if SelfRefreshPolicy.canRefresh(in: context), let zLoaderApp = InstalledApp.fetchZLoader(in: context)
         {
             // Refresh ZLoader last since it causes app to quit.
             
@@ -440,7 +440,7 @@ public extension InstalledApp
                                              sortedBy: [NSSortDescriptor(keyPath: \InstalledApp.expirationDate, ascending: true)],
                                              in: context)
         
-        if let zLoaderApp = InstalledApp.fetchZLoader(in: context), zLoaderApp.refreshedDate < date
+        if SelfRefreshPolicy.canRefresh(in: context), let zLoaderApp = InstalledApp.fetchZLoader(in: context), zLoaderApp.refreshedDate < date
         {
             if let storeApp = zLoaderApp.storeApp
             {
@@ -464,6 +464,13 @@ public extension InstalledApp
 public extension InstalledApp
 {
     var openAppURL: URL {
+        if (UserDefaults.standard.legacySideloadedApps ?? []).contains(self.bundleIdentifier),
+           let bundle = Bundle(url: self.fileURL),
+           let types = bundle.infoDictionary?["CFBundleURLTypes"] as? [[String: Any]],
+           let scheme = types.compactMap({ $0["CFBundleURLSchemes"] as? [String] }).flatMap({ $0 }).first,
+           let url = URL(string: scheme + "://") {
+            return url
+        }
         return InstalledApp.openAppURL(targetBundleIdentifier: self.resignedBundleIdentifier)
     }
     

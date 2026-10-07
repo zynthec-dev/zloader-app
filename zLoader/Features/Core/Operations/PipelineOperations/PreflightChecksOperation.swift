@@ -30,6 +30,11 @@ final class PreflightChecksOperation: BasePipelineOperation<StandaloneOperationC
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         self.setProgress(10)
 
+        // Validate zLoader's installed identity before self-signing.
+        guard operations.contains(where: { ($0.app as? ALTApplication)?.isZLoaderApp == true || $0.bundleIdentifier.isZLoaderAppID }) else {
+            self.setProgress(100)
+            return true
+        }
         let currentTeam = try await AuthManager.shared.getAuthenticatedTeam()
         let currentTeamID = currentTeam.identifier
 
@@ -48,6 +53,14 @@ final class PreflightChecksOperation: BasePipelineOperation<StandaloneOperationC
                                operation.bundleIdentifier.isZLoaderAppID
             guard isZLoader else { continue }
             guard let installedApp = operation.app as? InstalledApp else { continue }
+
+            if installedApp.resignedBundleIdentifier == Bundle.main.bundleIdentifier,
+               let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
+                guard running.provisioningProfile?.teamIdentifier == currentTeamID else {
+                    throw OperationError.invalidParameters("For zLoader itself, use the team of the installed app. Switching teams cannot reliably preserve its App ID and App Group.")
+                }
+                continue
+            }
 
             let activeResignedID = installedApp.resignedBundleIdentifier
             let activeEffectiveID = installedApp.customBundleIdentifier ?? activeResignedID

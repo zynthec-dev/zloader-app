@@ -39,7 +39,8 @@ public enum InstallAppDialog {
         barButtonItem: UIBarButtonItem? = nil,
         mode: AppImportSourceMode = UserDefaults.standard.appImportSourceMode,
         onChooseFiles: @escaping () -> Void,
-        onConfirm: @escaping (URL) -> Void
+        onConfirm: @escaping (URL) -> Void,
+        onChooseLibrary: (() -> Void)? = nil
     ) {
         switch mode {
         case .prompt:
@@ -69,6 +70,9 @@ public enum InstallAppDialog {
             alertController.addAction(UIAlertAction(title: NSLocalizedString("Install from URL", comment: ""), style: .default) { _ in
                 self.presentURLInputDialog(from: presentingVC, onConfirm: onConfirm)
             })
+            if let onChooseLibrary {
+                alertController.addAction(UIAlertAction(title: NSLocalizedString("Choose from Library", comment: ""), style: .default) { _ in onChooseLibrary() })
+            }
             alertController.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel))
             
             presentingVC.present(alertController, animated: true)

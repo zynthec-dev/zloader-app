@@ -11,8 +11,8 @@ import MinimuxerCommon
 import CryptoKit
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct PairingFileDetailView: View {
@@ -86,8 +86,9 @@ struct PairingFileDetailView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle(titleText)
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -101,7 +102,7 @@ struct PairingFileDetailView: View {
                     SwiftUI.Button("Save") {
                         saveEditedContent()
                     }
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.body)
                 } else {
                     if !rawContent.isEmpty {
                         SwiftUI.Button {
@@ -133,7 +134,7 @@ struct PairingFileDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("FILE INFORMATION")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 0) {
@@ -155,7 +156,7 @@ struct PairingFileDetailView: View {
                     }
                 }
             }
-            .background(Color.settingsRowBackground)
+            .zLoaderGlassSurface()
             .cornerRadius(14)
         }
     }
@@ -165,13 +166,13 @@ struct PairingFileDetailView: View {
             HStack {
                 Text(isEditing ? "EDIT RAW XML" : "RAW XML CONTENT")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color.white.opacity(0.6))
+                    .foregroundColor(Color.secondary)
                 Spacer()
                 let displayed = isEditing ? editedContent : rawContent
                 if !displayed.isEmpty {
                     Text("\(displayed.count) bytes")
                         .font(.system(size: 12))
-                        .foregroundColor(Color.white.opacity(0.4))
+                        .foregroundColor(Color.primary.opacity(0.4))
                 }
             }
             .padding(.horizontal, 4)
@@ -179,7 +180,7 @@ struct PairingFileDetailView: View {
             if isEditing {
                 TextEditor(text: $editedContent)
                     .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .background(Color.black.opacity(0.3))
                     .cornerRadius(12)
                     .frame(minHeight: 380)
@@ -187,7 +188,7 @@ struct PairingFileDetailView: View {
                 ScrollView([.horizontal, .vertical]) {
                     Text(rawContent)
                         .font(.system(size: 12, weight: .regular, design: .monospaced))
-                        .foregroundColor(Color.white.opacity(0.9))
+                        .foregroundColor(Color.primary.opacity(0.9))
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -197,10 +198,10 @@ struct PairingFileDetailView: View {
             } else {
                 Text("No pairing file installed.")
                     .font(.system(size: 14))
-                    .foregroundColor(Color.white.opacity(0.5))
+                    .foregroundColor(Color.primary.opacity(0.5))
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
             }
         }
@@ -210,7 +211,7 @@ struct PairingFileDetailView: View {
         HStack {
             Text(label)
                 .font(.system(size: 15))
-                .foregroundColor(Color.white.opacity(0.7))
+                .foregroundColor(Color.primary.opacity(0.7))
             Spacer()
             Text(value)
                 .font(.system(size: 15, weight: .medium))

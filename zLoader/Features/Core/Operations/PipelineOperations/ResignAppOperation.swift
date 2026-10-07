@@ -12,6 +12,8 @@ import SideSign
 
 final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext, ALTApplication>, @unchecked Sendable {
     
+    private var signingEntitlements: [String: [String: any Sendable]] = [:]
+
     override func execute(parentProgress: Progress?) async throws -> ALTApplication {
         let startTime = CFAbsoluteTimeGetCurrent()
         debugLog("[ResignAppOperation] execute() started")
@@ -145,6 +147,18 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         var infoDictionary = parser.rawDictionary as [String: Any]
         
         let newBundleID = appexBundleIds[identifier] ?? profile.bundleIdentifier
+        var requested = context.customEntitlementsByBundleID[appBundle.bundleIdentifier] ?? appBundle.entitlements
+        if appBundle.fileURL.pathExtension.lowercased() != "appex" {
+            for (key, value) in context.additionalEntitlements { requested[key] = value }
+        }
+        if context.targetAppBundle?.isZLoaderApp == true,
+           let groups = profile.entitlements["com.apple.security.application-groups"] as? [String], !groups.isEmpty {
+            requested["com.apple.security.application-groups"] = groups
+        }
+        if PacketTunnelProvisioning.requiresCapability(infoPlist: appBundle.infoPlist, extensions: appBundle.appExtensions.map { $0.infoPlist }) {
+            requested[PacketTunnelProvisioning.entitlement] = [PacketTunnelProvisioning.provider]
+        }
+        signingEntitlements[newBundleID] = requested
         infoDictionary[kCFBundleIdentifierKey as String] = newBundleID
 
         // Fix-up BGTaskScheduler identifiers so they stay under the new bundle ID.
@@ -204,7 +218,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
     }
     
     private func resignAppBundle(at fileURL: URL, team: ALTTeam, certificate: ALTCertificate, profiles: [ALTProvisioningProfile]) async throws -> URL {
-        let signer = ALTSigner(team: team, certificate: certificate)
+        let signer = AppBundleSigner(team: team, keyStore: certificate, entitlementOverrides: signingEntitlements)
         try await signer.signApp(at: fileURL, provisioningProfiles: profiles, progress: nil)
         return fileURL
     }

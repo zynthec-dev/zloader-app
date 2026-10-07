@@ -45,7 +45,11 @@ final class AuthenticationViewController: UIViewController
         }
         
         self.signInButton.activityIndicatorView.style = .medium
-        self.signInButton.activityIndicatorView.color = .white
+        self.signInButton.activityIndicatorView.color = UIColor.altPrimary.contrastingText
+        self.appleIDBackgroundView.backgroundColor = .settingsCard
+        self.passwordBackgroundView.backgroundColor = .settingsCard
+        self.appleIDTextField.textColor = .label
+        self.passwordTextField.textColor = .label
         
         for view in [self.appleIDBackgroundView!, self.passwordBackgroundView!, self.signInButton!]
         {
@@ -131,6 +135,9 @@ private extension AuthenticationViewController
 {
     func update()
     {
+        self.signInButton.backgroundColor = .altPrimary
+        self.signInButton.setTitleColor(UIColor.altPrimary.contrastingText, for: .normal)
+        self.signInButton.setTitleColor(UIColor.altPrimary.contrastingText, for: .disabled)
         if let _ = self.validate()
         {
             self.signInButton.isEnabled = true

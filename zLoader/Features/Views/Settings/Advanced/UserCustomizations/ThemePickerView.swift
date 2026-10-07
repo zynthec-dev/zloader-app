@@ -1,265 +1,148 @@
-//
-//  ThemePickerView.swift
-//  ZLoader
-//
-//  Created by Magesh K on 9/8/26.
-//  Copyright © 2026 SideStore. All rights reserved.
-//
-
+// Created by Magesh K on 9/8/26.
+// Copyright © 2026 SideStore. All rights reserved.
 import SwiftUI
-
-private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
-}
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct ThemePickerView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var selectedColor: Color = Color(uiColor: ThemeManager.shared.primaryColor)
+    @ObservedObject private var theme = ThemeManager.shared
+    @State private var selectedColor = Color(uiColor: ThemeManager.shared.primaryColor)
+    @State private var selectedLanguage = AppLanguage.selected
+    @State private var wallpaperMode: WallpaperMode = .both
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var importsWallpaper = false
+    @State private var wallpaperError: String?
+    @State private var showsLanguageRestart = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Section 1: LIVE INTERFACE PREVIEW
-                previewSection
-
-                // Section 2: FULL SPECTRUM COLOR WHEEL & SELECTION
-                #if !os(tvOS)
-                colorWheelSection
-                #endif
-
-                // Section 3: PRESET THEME PALETTES
-                presetsSection
-
-                // Section 4: PRECISE COLOR METRICS
-                metricsSection
-
-                // Section 5: RESET BUTTON
-                resetButtonSection
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
-        }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
-        .navigationTitle("Theme Manager")
-        #if !os(tvOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .onAppear {
-            selectedColor = Color(uiColor: themeManager.primaryColor)
-        }
-    }
-
-    private var previewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("LIVE INTERFACE PREVIEW")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
-                .padding(.horizontal, 16)
-            
-            VStack(spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("zLoader")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("v0.6.0 • Installed")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color.white.opacity(0.6))
+        Form {
+            Section("Appearance") {
+                Picker(selection: $theme.appearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
                     }
-                    Spacer()
-                    
-                    // Mock Pill Button
-                    Text("7 DAYS")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(selectedColor)
-                        .cornerRadius(16)
+                } label: {
+                    SettingsEntryLabel(title: "Appearance", systemImage: "circle.lefthalf.filled")
                 }
-                
-                // Mock Progress Bar
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.white.opacity(0.2))
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(selectedColor)
-                            .frame(width: geo.size.width * 0.7)
+                .pickerStyle(.menu)
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section {
+                ColorPicker("Accent Color", selection: $selectedColor, supportsOpacity: false)
+            } footer: {
+                Text("Used for buttons, switches and selections throughout zLoader. Backgrounds and text follow the system Light and Dark appearance.")
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section {
+                ColorPicker("Symbol Color", selection: Binding(
+                    get: { Color(uiColor: theme.symbolColor) },
+                    set: { theme.customSymbolColor = UIColor($0) }
+                ), supportsOpacity: false)
+                if theme.customSymbolColor != nil {
+                    SwiftUI.Button("Use Accent Color for Symbols") { theme.customSymbolColor = nil }
+                }
+                ColorPicker("Text Field Background", selection: Binding(
+                    get: { Color(uiColor: theme.fieldColor) },
+                    set: { theme.customFieldColor = UIColor($0) }
+                ), supportsOpacity: false)
+                if theme.customFieldColor != nil {
+                    SwiftUI.Button("Use System Text Field Background") { theme.customFieldColor = nil }
+                }
+            } footer: {
+                Text("Symbol and text field colors are independent of the accent color. Resetting text fields to System restores their automatic Light and Dark appearance.")
+            }.listRowBackground(ZLoaderGlassBackground())
+            wallpaperSection
+            presetsSection
+            Section {
+                Picker(selection: $selectedLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.title).tag(language)
                     }
+                } label: {
+                    SettingsEntryLabel(title: "Language", systemImage: "globe")
                 }
-                .frame(height: 6)
-                
-                HStack {
-                    Text("Active Theme Accent")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(Color.white.opacity(0.7))
-                    Spacer()
-                    Circle()
-                        .fill(selectedColor)
-                        .frame(width: 14, height: 14)
-                }
-            }
-            .padding(16)
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
+                .pickerStyle(.menu)
+            } footer: {
+                Text("System follows your preferred iOS language. English is used when that language is not supported. Language changes take effect the next time you fully close and reopen zLoader.")
+            }.listRowBackground(ZLoaderGlassBackground())
         }
-    }
-
-    #if !os(tvOS)
-    private var colorWheelSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("COLOR SELECTION & WHEEL")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
-                .padding(.horizontal, 16)
-
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Full Spectrum Color Wheel")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    ColorPicker("", selection: $selectedColor, supportsOpacity: false)
-                        .labelsHidden()
-                        .onValueChange(of: selectedColor) { newColor in
-                            let uiColor = UIColor(newColor)
-                            themeManager.primaryColor = uiColor
-                        }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
+        .fileImporter(isPresented: $importsWallpaper, allowedContentTypes: [.image]) { result in
+            do {
+                let url = try result.get()
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                try theme.importWallpaper(Data(contentsOf: url), for: wallpaperMode)
+            } catch { wallpaperError = error.localizedDescription }
         }
+        .onChange(of: selectedPhoto) { _, photo in
+            let mode = wallpaperMode
+            Task { @MainActor in
+                do {
+                    guard let data = try await photo?.loadTransferable(type: Data.self) else { return }
+                    try theme.importWallpaper(data, for: mode)
+                } catch { wallpaperError = error.localizedDescription }
+                selectedPhoto = nil
+            }
+        }
+        .alert("Background Image", isPresented: Binding(get: { wallpaperError != nil }, set: { if !$0 { wallpaperError = nil } })) {
+            SwiftUI.Button("OK", role: .cancel) { wallpaperError = nil }
+        } message: { Text(verbatim: wallpaperError ?? "") }
+        .navigationTitle("Appearance")
+        .labelStyle(.titleOnly)
+        .onChange(of: selectedLanguage) { _, language in
+            language.save()
+            showsLanguageRestart = true
+        }
+        .alert("Language Changed", isPresented: $showsLanguageRestart) {
+            SwiftUI.Button("OK", role: .cancel) { }
+        } message: {
+            Text("Finish any running operation, then fully close and reopen zLoader to apply the selected language.")
+        }
+        .onChange(of: selectedColor) { _, color in
+            let chosen = UIColor(color)
+            // Selecting a dynamic preset must not flatten its Light/Dark variants.
+            if chosen.hexString.uppercased() != theme.primaryColor.hexString.uppercased() {
+                theme.primaryColor = chosen
+            }
+        }
+        .tint(Color(uiColor: theme.primaryColor))
     }
-    #endif
-
     private var presetsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("PRESET THEMES")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
-                .padding(.horizontal, 16)
-
-            VStack(spacing: 0) {
-                let presets = ThemePreset.presets
-                ForEach(0..<presets.count, id: \.self) { index in
-                    let preset = presets[index]
-                    presetRow(preset: preset, isLast: index == presets.count - 1)
-                }
-            }
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
-        }
-    }
-
-    private func presetRow(preset: ThemePreset, isLast: Bool) -> some View {
-        VStack(spacing: 0) {
-            SwiftUI.Button(action: {
-                let uiColor = preset.color
-                selectedColor = Color(uiColor: uiColor)
-                themeManager.primaryColor = uiColor
-            }) {
-                HStack {
-                    Circle()
-                        .fill(Color(uiColor: preset.color))
-                        .frame(width: 24, height: 24)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-
-                    Text(preset.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.leading, 8)
-
-                    Spacer()
-
-                    Text(preset.hex)
-                        .font(.system(size: 14, design: .monospaced))
-                        .foregroundColor(Color.white.opacity(0.6))
-
-                    if isPresetSelected(preset) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(selectedColor)
-                            .padding(.leading, 8)
+            Section("Presets") {
+                ForEach(ThemePreset.presets) { preset in
+                    SwiftUI.Button {
+                        theme.primaryColor = preset.color
+                        selectedColor = Color(uiColor: preset.color)
+                    } label: {
+                        HStack {
+                            Circle().fill(Color(uiColor: preset.color)).frame(width: 22, height: 22)
+                            Text(LocalizedStringKey(preset.name)).foregroundStyle(.primary)
+                            Spacer()
+                            if theme.primaryColor.hexString.uppercased() == preset.color.hexString.uppercased() {
+                                Image(systemName: "checkmark").foregroundStyle(Color(uiColor: .altPrimary))
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-
-            if !isLast {
-                Rectangle()
-                    .fill(Color.settingsDivider)
-                    .frame(height: 0.5)
-                    .padding(.horizontal, 16)
-            }
-        }
+            }.listRowBackground(ZLoaderGlassBackground())
     }
 
-    private var metricsSection: some View {
-        let uiColor = UIColor(selectedColor)
-        let rgb = uiColor.rgbComponents
-        let hsl = uiColor.hslComponents
-
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("PRECISE COLOR METRICS")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
-                .padding(.horizontal, 16)
-
-            VStack(spacing: 0) {
-                metricRow(label: "HEX Code", value: uiColor.hexString)
-                Rectangle().fill(Color.settingsDivider).frame(height: 0.5).padding(.horizontal, 16)
-                metricRow(label: "RGB Format", value: "R: \(rgb.r)  G: \(rgb.g)  B: \(rgb.b)")
-                Rectangle().fill(Color.settingsDivider).frame(height: 0.5).padding(.horizontal, 16)
-                metricRow(label: "HSL Format", value: "H: \(hsl.h)°  S: \(hsl.s)%  L: \(hsl.l)%")
-            }
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
-        }
+    private var wallpaperSection: some View {
+            Section {
+                Picker("Background Mode", selection: $wallpaperMode) {
+                    ForEach(WallpaperMode.allCases) { mode in Text(mode.title).tag(mode) }
+                }.pickerStyle(.segmented)
+                #if !os(tvOS)
+                PhotosPicker("Choose from Photos", selection: $selectedPhoto, matching: .images)
+                #endif
+                SwiftUI.Button("Choose from Files") { importsWallpaper = true }
+                SwiftUI.Button("Remove Background", role: .destructive) {
+                    do { try theme.removeWallpaper(for: wallpaperMode) }
+                    catch { wallpaperError = error.localizedDescription }
+                }
+            } header: {
+                Text("App Background")
+            } footer: {
+                Text("Both uses the same image in Light and Dark. Choose Light or Dark to change only that background. Images are stored locally on this device.")
+            }.listRowBackground(ZLoaderGlassBackground())
     }
 
-    private var resetButtonSection: some View {
-        SwiftUI.Button(action: {
-            themeManager.resetToDefault()
-            selectedColor = Color(uiColor: themeManager.primaryColor)
-        }) {
-            HStack {
-                Spacer()
-                Text("Reset to zLoader Classic")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.red)
-                Spacer()
-            }
-            .padding(.vertical, 14)
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
-        }
-    }
-
-    private func isPresetSelected(_ preset: ThemePreset) -> Bool {
-        return themeManager.primaryColor.hexString.uppercased() == preset.hex.uppercased()
-    }
-
-    private func metricRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color.white.opacity(0.8))
-            Spacer()
-            Text(value)
-                .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
 }

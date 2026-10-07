@@ -98,6 +98,7 @@ struct SideJITServerConfigView: View {
         .listStyle(.grouped)
         #endif
         .navigationTitle("SideJITServer")
+        .labelStyle(.titleOnly)
         .overlay(
             Group {
                 if showCopiedToast {
@@ -141,7 +142,7 @@ struct SideJITServerConfigView: View {
                     resolvedAddress = ""
                 }
             }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private var statusSection: some View {
@@ -177,7 +178,7 @@ struct SideJITServerConfigView: View {
                         showCopied()
                         #endif
                     } label: {
-                        Label("Copy Address", systemImage: "doc.on.doc")
+                        SettingsEntryLabel(title: "Copy Address", systemImage: "doc.on.doc")
                     }
                 }
             }
@@ -189,7 +190,7 @@ struct SideJITServerConfigView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private var configurationSection: some View {
@@ -223,7 +224,7 @@ struct SideJITServerConfigView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private var diagnosticActionsSection: some View {
@@ -232,7 +233,7 @@ struct SideJITServerConfigView: View {
                 testHealthCheck()
             } label: {
                 HStack {
-                    Label("Test Connection (Ping)", systemImage: "network")
+                    SettingsEntryLabel(title: "Test Connection (Ping)", systemImage: "network")
                         .foregroundColor(.primary)
                     Spacer()
                     if activeAction == .ping {
@@ -249,7 +250,7 @@ struct SideJITServerConfigView: View {
                 triggerDeviceRefresh()
             } label: {
                 HStack {
-                    Label("Refresh Device Cache (/re/)", systemImage: "arrow.clockwise")
+                    SettingsEntryLabel(title: "Refresh Device Cache (/re/)", systemImage: "arrow.clockwise")
                         .foregroundColor(.primary)
                     Spacer()
                     if activeAction == .refresh {
@@ -266,7 +267,7 @@ struct SideJITServerConfigView: View {
                 queryVersionEndpoint()
             } label: {
                 HStack {
-                    Label("Check Version Info (/ver/)", systemImage: "info.circle")
+                    SettingsEntryLabel(title: "Check Version Info (/ver/)", systemImage: "info.circle")
                         .foregroundColor(.primary)
                     Spacer()
                     if activeAction == .version {
@@ -278,7 +279,7 @@ struct SideJITServerConfigView: View {
             }
             .buttonStyle(.plain)
             .disabled(activeAction != nil)
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private func responseInspectorSection(log: SideJITResponseLog) -> some View {
@@ -321,7 +322,7 @@ struct SideJITServerConfigView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(maxHeight: 200)
                 #if !os(tvOS)
-                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .background(Color(UIColor.settingsCard))
                 #else
                 .background(Color.white.opacity(0.1))
                 #endif
@@ -339,10 +340,10 @@ struct SideJITServerConfigView: View {
                     showCopied()
                     #endif
                 } label: {
-                    Label("Copy Response", systemImage: "doc.on.doc")
+                    SettingsEntryLabel(title: "Copy Response", systemImage: "doc.on.doc")
                 }
             }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private var aboutSection: some View {
@@ -357,13 +358,13 @@ struct SideJITServerConfigView: View {
                     .foregroundColor(.secondary)
             }
             .padding(.vertical, 2)
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
     
     private var copiedToastView: some View {
         Text("Copied to Clipboard")
             .font(.subheadline.weight(.medium))
-            .foregroundColor(.white)
+            .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .background(Capsule().fill(Color.accentColor))

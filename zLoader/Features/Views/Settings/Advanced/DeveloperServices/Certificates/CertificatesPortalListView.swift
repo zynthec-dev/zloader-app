@@ -56,7 +56,7 @@ struct CertificatesPortalListView: View {
                                 certificateToRevoke = cert
                                 showRevokeConfirmation = true
                             } label: {
-                                Label("Revoke", systemImage: "trash")
+                                SettingsEntryLabel(title: "Revoke", systemImage: "trash")
                             }
                         }
                         #endif
@@ -65,12 +65,12 @@ struct CertificatesPortalListView: View {
                                 certificateToRevoke = cert
                                 showRevokeConfirmation = true
                             } label: {
-                                Label("Revoke", systemImage: "trash")
+                                SettingsEntryLabel(title: "Revoke", systemImage: "trash")
                             }
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -78,7 +78,15 @@ struct CertificatesPortalListView: View {
         #else
         .listStyle(GroupedListStyle())
         #endif
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: PortalSelectionView(viewModel: viewModel, kind: .certificates)) {
+                    Label("Select", systemImage: "checklist")
+                }
+            }
+        }
         .navigationTitle("Certificates")
+        .labelStyle(.titleOnly)
         .refreshable {
             await viewModel.fetchCertificates(presentingViewController: presentingViewController, isPullToRefresh: true)
         }

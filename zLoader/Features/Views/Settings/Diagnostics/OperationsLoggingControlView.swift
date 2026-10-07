@@ -9,8 +9,8 @@
 import SwiftUI
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 private let pipelineStepToggles: [(name: String, step: PipelineStep)] = [
@@ -61,7 +61,7 @@ struct OperationsLoggingControlView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("STANDALONE STEPS")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
@@ -72,7 +72,7 @@ struct OperationsLoggingControlView: View {
                             stepToggle(entry.name, step: entry.step)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -80,7 +80,7 @@ struct OperationsLoggingControlView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("PIPELINE STEPS")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
@@ -91,7 +91,7 @@ struct OperationsLoggingControlView: View {
                             stepToggle(entry.name, step: entry.step)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
             }
@@ -99,8 +99,9 @@ struct OperationsLoggingControlView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("Operations Logging")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
@@ -108,9 +109,9 @@ struct OperationsLoggingControlView: View {
 
     private func stepToggle(_ title: String, step: some OperationStep) -> some View {
         HStack {
-            Text(title)
-                .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.white)
+            Text(LocalizedStringKey(title))
+                .font(.body)
+                .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Toggle("", isOn: Binding(
@@ -121,7 +122,7 @@ struct OperationsLoggingControlView: View {
                 }
             ))
             .labelsHidden()
-            .tint(.green)
+            .tint(Color(uiColor: .altPrimary))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

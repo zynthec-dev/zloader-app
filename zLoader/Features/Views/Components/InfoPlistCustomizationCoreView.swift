@@ -899,7 +899,7 @@ public struct InfoPlistCustomizationCoreView: View {
                 Section(header: Text("Key Name")) {
                     TextField("e.g. CFBundleURLTypes", text: $newKeyName)
                         .autocapitalization(.none)
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 Section(header: Text("Value Type")) {
                     Picker("Type", selection: $newKeyType) {
@@ -908,7 +908,7 @@ public struct InfoPlistCustomizationCoreView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 Section(header: Text("Value")) {
                     if newKeyType == .boolean {
@@ -921,7 +921,7 @@ public struct InfoPlistCustomizationCoreView: View {
                         TextField("Value", text: $newKeyValue)
                             .autocapitalization(.none)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             .navigationTitle("Add Plist Key")
             .navigationBarItems(

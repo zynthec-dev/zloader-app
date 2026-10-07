@@ -109,14 +109,14 @@ struct DevicesListView: View {
                             SwiftUI.Button(role: .destructive) {
                                 activeAlert = .delete(device)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
 
                             if device.status != "d" {
                                 SwiftUI.Button {
                                     activeAlert = .disable(device)
                                 } label: {
-                                    Label("Disable", systemImage: "slash.circle")
+                                    SettingsEntryLabel(title: "Disable", systemImage: "slash.circle")
                                 }
                                 .tint(.orange)
                             }
@@ -125,7 +125,7 @@ struct DevicesListView: View {
                                 editDeviceName = device.name
                                 deviceToEdit = device
                             } label: {
-                                Label("Edit", systemImage: "pencil")
+                                SettingsEntryLabel(title: "Edit", systemImage: "pencil")
                             }
                             .tint(.blue)
                         }
@@ -135,31 +135,31 @@ struct DevicesListView: View {
                                 editDeviceName = device.name
                                 deviceToEdit = device
                             } label: {
-                                Label("Edit Name", systemImage: "pencil")
+                                SettingsEntryLabel(title: "Edit Name", systemImage: "pencil")
                             }
                             #if !os(tvOS)
                             SwiftUI.Button {
                                 UIPasteboard.general.string = device.identifier
                             } label: {
-                                Label("Copy UDID", systemImage: "doc.on.doc")
+                                SettingsEntryLabel(title: "Copy UDID", systemImage: "doc.on.doc")
                             }
                             #endif
                             if device.status != "d" {
                                 SwiftUI.Button {
                                     activeAlert = .disable(device)
                                 } label: {
-                                    Label("Disable Device", systemImage: "slash.circle")
+                                    SettingsEntryLabel(title: "Disable Device", systemImage: "slash.circle")
                                 }
                             }
                             SwiftUI.Button(role: .destructive) {
                                 activeAlert = .delete(device)
                             } label: {
-                                Label("Delete Device", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete Device", systemImage: "trash")
                             }
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -167,7 +167,15 @@ struct DevicesListView: View {
         #else
         .listStyle(GroupedListStyle())
         #endif
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: PortalSelectionView(viewModel: viewModel, kind: .devices)) {
+                    Label("Select", systemImage: "checklist")
+                }
+            }
+        }
         .navigationTitle("Devices")
+        .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -200,7 +208,7 @@ struct DevicesListView: View {
                             Text("Mac").tag(ALTDeviceType.mac)
                             Text("Vision Pro").tag(ALTDeviceType.visionPro)
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section {
                         SwiftUI.Button {
@@ -259,9 +267,10 @@ struct DevicesListView: View {
                             }
                         }
                         .disabled(isFetchingUDID)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Register Device")
+        .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         showRegisterSheet = false
@@ -289,13 +298,13 @@ struct DevicesListView: View {
                 Form {
                     Section(header: Text("Device Name")) {
                         TextField("Device Name", text: $editDeviceName)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section(header: Text("Device Identifier (UDID)")) {
                         Text(device.identifier.isEmpty ? "Not Available" : device.identifier)
                             .font(.system(.subheadline, design: .monospaced))
                             .foregroundColor(.secondary)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section(header: Text("Device Details")) {
                         InfoRow(label: "Type", value: device.type.displayName)
@@ -303,7 +312,7 @@ struct DevicesListView: View {
                         if let devID = device.deviceID, !devID.isEmpty {
                             InfoRow(label: "Portal ID", value: devID)
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section {
                         if device.status != "d" {
@@ -332,9 +341,10 @@ struct DevicesListView: View {
                                 Spacer()
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Edit Device")
+        .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         deviceToEdit = nil

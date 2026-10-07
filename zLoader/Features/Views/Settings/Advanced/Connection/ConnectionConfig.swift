@@ -15,8 +15,6 @@ final class ConnectionConfig: ObservableObject {
     // yeah we dont use default coz we expect auto discovery to find it
     private static var defaultOverrideIP: String { "" }     
     private static var defaultRemoteServerIP: String { AppConstants.Connection.defaultRemoteServerIP }
-    private static var defaultWireGuardServerHost: String { AppConstants.Proxy.address }
-    private static var defaultWireGuardServerPort: UInt16 { AppConstants.Proxy.defaultPort }
 
     @Published var tunnelIfaceIp: String?
     @Published var tunnelIfaceSubnetMask: String?
@@ -38,14 +36,6 @@ final class ConnectionConfig: ObservableObject {
         didSet { Self.useLocalVPNStorage = useLocalVPN }
     }
 
-    @Published var wireguardServerHost: String = wireguardServerHostStorage {
-        didSet { Self.wireguardServerHostStorage = wireguardServerHost }
-    }
-
-    @Published var wireguardServerPort: UInt16 = wireguardServerPortStorage {
-        didSet { Self.wireguardServerPortStorage = wireguardServerPort }
-    }
-
     private static var overrideIPStorage: String {
         get { UserDefaults.standard.tunnelOverridePeerIp ?? defaultOverrideIP }
         set { UserDefaults.standard.tunnelOverridePeerIp = newValue }
@@ -61,17 +51,23 @@ final class ConnectionConfig: ObservableObject {
         set { UserDefaults.standard.useLocalVPN = newValue }
     }
 
-    private static var wireguardServerHostStorage: String {
-        get { UserDefaults.standard.wireGuardServerHost ?? defaultWireGuardServerHost }
-        set { UserDefaults.standard.wireGuardServerHost = newValue }
+    var effectiveTunnelPeerIP: String {
+        let override = overrideTunnelPeerIp.trimmingCharacters(in: .whitespacesAndNewlines)
+        return override.isEmpty && useLocalVPN ? "10.7.0.1" : override
     }
 
-    private static var wireguardServerPortStorage: UInt16 {
-        get { UserDefaults.standard.wireGuardServerPort ?? defaultWireGuardServerPort }
-        set { UserDefaults.standard.wireGuardServerPort = newValue }
+    func isEffectivePeerReachable(discovered: Bool, override: Bool) -> Bool {
+        // Without an explicit override, accept the discovered routed peer too.
+        // External local tunnels need not use External Local VPN Tunnel's default 10.7.0.1.
+        if overrideTunnelPeerIp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return discovered || override
+        }
+        return override
     }
 
-    var tunnelPeerActive: ActiveState { tunnelPeerReachable ? .yes : .no }
+    var tunnelPeerActive: ActiveState {
+        isEffectivePeerReachable(discovered: tunnelPeerReachable, override: overrideTunnelPeerReachable) ? .yes : .no
+    }
     var overrideTunnelPeerActive: ActiveState { overrideTunnelPeerReachable ? .yes : .no }
     var remoteActive: ActiveState { remoteReachable ? .yes : .no }
 
@@ -109,28 +105,4 @@ extension UserDefaults {
         set { self.set(newValue, forKey: "RemoteServerIp") }
     }
 
-    @objc var wireGuardServerHost: String? {
-        get { self.string(forKey: "WireGuardServerHost") }
-        set { self.set(newValue, forKey: "WireGuardServerHost") }
-    }
-
-    var wireGuardServerPort: UInt16? {
-        get {
-            guard self.object(forKey: "WireGuardServerPort") != nil else { return nil }
-            let val = self._wireGuardServerPort
-            return (val > 0 && val <= 65535) ? UInt16(val) : nil
-        }
-        set {
-            if let newValue {
-                self._wireGuardServerPort = Int(newValue)
-            } else {
-                self.removeObject(forKey: "WireGuardServerPort")
-            }
-        }
-    }
-
-    @objc(wireGuardServerPort) private var _wireGuardServerPort: Int {
-        get { self.integer(forKey: "WireGuardServerPort") }
-        set { self.set(newValue, forKey: "WireGuardServerPort") }
-    }
 }

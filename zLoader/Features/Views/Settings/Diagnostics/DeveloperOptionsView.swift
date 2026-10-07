@@ -18,8 +18,8 @@ import SideSign
 import MinimuxerCommon
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct DeveloperOptionsView: View {
@@ -31,7 +31,6 @@ struct DeveloperOptionsView: View {
     @State private var isMinimuxerVerboseLoggingEnabled: Bool = UserDefaults.standard.isMinimuxerVerboseLoggingEnabled
     @State private var isRotateLogsOnStartupEnabled: Bool = UserDefaults.standard.isRotateLogsOnStartupEnabled
     @State private var recreateDatabaseOnNextStart: Bool = UserDefaults.standard.recreateDatabaseOnNextStart
-    @State private var alwaysShowWireGuardConfig: Bool = UserDefaults.standard.alwaysShowWireGuardConfig
     @State private var acceptIPv6ConnectionConfig: Bool = UserDefaults.standard.acceptIPv6ConnectionConfig
     @State private var isAutoRetryRemotePairingPortEnabled: Bool = UserDefaults.standard.isAutoRetryRemotePairingPortEnabled
     @State private var tcpProbeTimeoutText: String = ""
@@ -43,6 +42,7 @@ struct DeveloperOptionsView: View {
     @State private var showExportPasswordPrompt: Bool = false
     @State private var exportCertPassword: String = ""
     @State private var showOnboardingSheet: Bool = false
+    @State private var exportedProfilesURL: URL?
     @State private var isDumpingProfiles: Bool = false
     @State private var showDumpProfilesAlert: Bool = false
     @State private var dumpProfilesAlertMessage: String = ""
@@ -50,11 +50,29 @@ struct DeveloperOptionsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                ZLoaderGlassGroup { HStack(alignment: .top, spacing: 12) {
+                    NavigationLink(destination: DeveloperServicesView()) {
+                        Text("Developer Portal")
+                            .font(.body).foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 76)
+                            .padding(.horizontal, 12)
+                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
+                    }
+                    NavigationLink(destination: WirelessPairView()) {
+                        Text("Wireless Pairing")
+                            .font(.body).foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, minHeight: 76)
+                            .padding(.horizontal, 12)
+                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
+                    }
+                }
+                }
+                .buttonStyle(.plain)
                 // Section 1: Logging & Diagnostics
                 VStack(alignment: .leading, spacing: 8) {
                     Text("LOGGING & DIAGNOSTICS")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
@@ -143,18 +161,18 @@ struct DeveloperOptionsView: View {
                         NavigationLink(destination: OperationsLoggingControlView()) {
                             HStack {
                                 Text("Operations Logging Control")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -165,26 +183,23 @@ struct DeveloperOptionsView: View {
                     #else
                     let title = "TOP SHELF OPTIONS"
                     #endif
-                    Text(title)
+                    SettingsEntryLabel(title: title)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
                         SwiftUI.Button(action: { triggerReloadAllWidgets() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "arrow.clockwise")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
 
                                 #if !os(tvOS)
                                 let title = "Reload All Widgets"
                                 #else
                                 let title = "Reload Top Shelf"
                                 #endif
-                                Text(title)
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                SettingsEntryLabel(title: title)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
@@ -195,25 +210,22 @@ struct DeveloperOptionsView: View {
                         
                         SwiftUI.Button(action: { triggerRotateWidgetLog() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 
                                 #if !os(tvOS)
                                 let title = "Rotate Widget Log"
                                 #else
                                 let title = "Rotate Top Shelf Log"
                                 #endif
-                                Text(title)
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                SettingsEntryLabel(title: title)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -221,18 +233,15 @@ struct DeveloperOptionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("DATABASE OPTIONS")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
                         SwiftUI.Button(action: { exportDatabase() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Export Database")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 if isExportingDB {
                                     ProgressView()
@@ -248,11 +257,8 @@ struct DeveloperOptionsView: View {
                         
                         SwiftUI.Button(action: { showClearRefreshAttemptsConfirmation = true }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Text("Clear Refresh Attempts")
-                                    .font(.system(size: 17, weight: .bold))
+                                    .font(.body)
                                     .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Spacer()
                             }
@@ -264,11 +270,8 @@ struct DeveloperOptionsView: View {
                         
                         SwiftUI.Button(action: { showDeleteConfirmation = true }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Text("Delete Database")
-                                    .font(.system(size: 17, weight: .bold))
+                                    .font(.body)
                                     .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Spacer()
                             }
@@ -280,11 +283,8 @@ struct DeveloperOptionsView: View {
                         
                         SwiftUI.Button(action: { showClearKeychainConfirmation = true }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "key")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Text("Clear Keychain Items")
-                                    .font(.system(size: 17, weight: .bold))
+                                    .font(.body)
                                     .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
                                 Spacer()
                             }
@@ -302,77 +302,22 @@ struct DeveloperOptionsView: View {
                             }
                         ))
                     }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
-                
-                // Section 3: WireGuard Configuration
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("WIREGUARD CONFIGURATION")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { triggerStartEMProxy() }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "play.circle")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                                Text("Start EMProxy")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { triggerStopEMProxy() }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "stop.circle")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                                Text("Stop EMProxy")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
-                        }
-                        
-                        divider
-                        
-                        toggleRow(title: "Show WireGuard Settings", isOn: Binding(
-                            get: { alwaysShowWireGuardConfig },
-                            set: { newValue in
-                                alwaysShowWireGuardConfig = newValue
-                                UserDefaults.standard.alwaysShowWireGuardConfig = newValue
-                            }
-                        ))
-                    }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("BACKGROUND SERVICE")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
                         SwiftUI.Button(action: { triggerStartBackgroundService() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "play.circle")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Start Background Service")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
@@ -383,19 +328,16 @@ struct DeveloperOptionsView: View {
                         
                         SwiftUI.Button(action: { triggerStopBackgroundService() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "stop.circle")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Stop Background Service")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -403,21 +345,21 @@ struct DeveloperOptionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("DEVICE (TCP) PROBE TIMEOUT")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
                         HStack(spacing: 12) {
                             Text("Timeout (ms)")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(.white)
+                                .font(.body)
+                                .foregroundColor(.primary)
                             
                             Spacer()
                             
                             TextField("ms", text: $tcpProbeTimeoutText)
                                 .keyboardType(.numberPad)
                                 .multilineTextAlignment(.trailing)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .font(.system(size: 17))
                                 .frame(width: 90)
                                 .onValueChange(of: tcpProbeTimeoutText) { newValue in
@@ -441,19 +383,16 @@ struct DeveloperOptionsView: View {
                             minimuxerSetDeviceProbeTimeout(defaultTimeout)
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Use Default (\(AppConstants.Minimuxer.defaultTCPProbeTimeoutMs) ms)")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -461,7 +400,7 @@ struct DeveloperOptionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("CONNECTION CONFIG")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
@@ -483,7 +422,7 @@ struct DeveloperOptionsView: View {
                             }
                         ))
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 
@@ -492,18 +431,15 @@ struct DeveloperOptionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("ACCOUNT MANAGEMENT")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
                         SwiftUI.Button(action: { showImportAccountPicker() }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.down")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Import Account JSON")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
@@ -526,19 +462,16 @@ struct DeveloperOptionsView: View {
                             }
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Export Account JSON")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
                 #endif
@@ -546,7 +479,7 @@ struct DeveloperOptionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("PROVISIONING PROFILES")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
 
                     VStack(spacing: 0) {
@@ -556,12 +489,9 @@ struct DeveloperOptionsView: View {
                             }
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "arrow.down.doc")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Dump Provisioning Profiles")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 if isDumpingProfiles {
                                     ProgressView()
@@ -573,29 +503,26 @@ struct DeveloperOptionsView: View {
                         }
                         .disabled(isDumpingProfiles)
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("ONBOARDING")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
 
                     VStack(spacing: 0) {
                         SwiftUI.Button(action: { showOnboardingSheet = true }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Replay Onboarding")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
@@ -610,6 +537,8 @@ struct DeveloperOptionsView: View {
 
                         SwiftUI.Button(action: {
                             UserDefaults.standard.hasCompletedOnboarding = false
+                            UserDefaults.standard.set(0, forKey: "zLoader.onboarding.currentStep")
+                            UserDefaults.standard.set(false, forKey: "zLoader.onboarding.eligibleForTunnel")
                             UserDefaults.standard.synchronize()
                             if let top = UIApplication.shared.topViewController() {
                                 let toastView = ToastView(text: NSLocalizedString("Onboarding reset for next launch", comment: ""), detailText: nil)
@@ -617,19 +546,16 @@ struct DeveloperOptionsView: View {
                             }
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
                                 Text("Reset Onboarding State")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
             }
@@ -637,8 +563,9 @@ struct DeveloperOptionsView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("Developer Options")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
@@ -678,6 +605,9 @@ struct DeveloperOptionsView: View {
         } message: {
             Text("Do you want to clear all keychain items related to this zLoader instance?")
         }
+        .sheet(isPresented: Binding(get: { exportedProfilesURL != nil }, set: { if !$0 { exportedProfilesURL = nil } })) {
+            if let url = exportedProfilesURL { ActivityViewController(activityItems: [url]) }
+        }
         .alert("Dump Profiles", isPresented: $showDumpProfilesAlert) {
             SwiftUI.Button("OK", role: .cancel) {}
         } message: {
@@ -694,11 +624,14 @@ struct DeveloperOptionsView: View {
         defer { isDumpingProfiles = false }
         do {
             let zipPath = try await safeDumpProfiles(docsURL.path)
-            let fileName = URL(fileURLWithPath: zipPath).lastPathComponent
-            dumpProfilesAlertMessage = "Profiles saved to:\n\(fileName)"
-            showDumpProfilesAlert = true
+            let url = URL(fileURLWithPath: zipPath)
+            guard !zipPath.isEmpty, FileManager.default.fileExists(atPath: url.path),
+                  (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0 else {
+                throw OperationError.invalidParameters(NSLocalizedString("No provisioning profile archive was created.", comment: ""))
+            }
+            exportedProfilesURL = url
         } catch {
-            dumpProfilesAlertMessage = "Failed to dump profiles:\n\(error.localizedDescription)"
+            dumpProfilesAlertMessage = error.localizedDescription
             showDumpProfilesAlert = true
         }
     }
@@ -714,7 +647,7 @@ struct DeveloperOptionsView: View {
                 do {
                     try await ImportExport.importAccountJSON(from: url)
                     let email = AuthManager.shared.currentAppleID ?? ""
-                    let toastView = ToastView(text: NSLocalizedString("Successfully imported '\(email)'!", comment: ""), detailText: "zLoader should be fully operational!")
+                    let toastView = ToastView(text: String(format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email), detailText: "zLoader should be fully operational!")
                     toastView.show(in: top)
                 } catch {
                     let toastView = ToastView(text: NSLocalizedString("Failed to import account JSON!", comment: ""), detailText: error.localizedDescription)
@@ -735,7 +668,7 @@ struct DeveloperOptionsView: View {
                 do {
                     try await ImportExport.importAccountJSON(from: url)
                     let email = AuthManager.shared.currentAppleID ?? ""
-                    let toastView = ToastView(text: NSLocalizedString("Successfully imported '\(email)'!", comment: ""), detailText: "zLoader should be fully operational!")
+                    let toastView = ToastView(text: String(format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email), detailText: "zLoader should be fully operational!")
                     toastView.show(in: top)
                 } catch {
                     let toastView = ToastView(text: NSLocalizedString("Failed to import account JSON!", comment: ""), detailText: error.localizedDescription)
@@ -788,14 +721,14 @@ struct DeveloperOptionsView: View {
     
     private func toggleRow(title: String, isOn: Binding<Bool>) -> some View {
         HStack {
-            Text(title)
-                .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.white)
+            SettingsEntryLabel(title: title)
+                .font(.body)
+                .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
-                .tint(.green)
+                .tint(Color(uiColor: .altPrimary))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -830,42 +763,6 @@ struct DeveloperOptionsView: View {
     }
 
     
-    private func triggerStartEMProxy() {
-        guard let top = UIApplication.shared.topViewController() else { return }
-        Task {
-            do {
-                try await startEMProxy()
-                await MainActor.run {
-                    let toastView = ToastView(text: NSLocalizedString("Started EMProxy", comment: ""), detailText: "EMProxy loopback server is running.")
-                    toastView.show(in: top)
-                }
-            } catch {
-                await MainActor.run {
-                    let toastView = ToastView(text: NSLocalizedString("Failed to start EMProxy!", comment: ""), detailText: error.localizedDescription)
-                    toastView.show(in: top)
-                }
-            }
-        }
-    }
-    
-    private func triggerStopEMProxy() {
-        guard let top = UIApplication.shared.topViewController() else { return }
-        Task {
-            do {
-                try await stopEMProxy()
-                await MainActor.run {
-                    let toastView = ToastView(text: NSLocalizedString("Stopped EMProxy", comment: ""), detailText: "EMProxy loopback server stopped.")
-                    toastView.show(in: top)
-                }
-            } catch {
-                await MainActor.run {
-                    let toastView = ToastView(text: NSLocalizedString("Failed to stop EMProxy!", comment: ""), detailText: error.localizedDescription)
-                    toastView.show(in: top)
-                }
-            }
-        }
-    }
-
     private func triggerStartBackgroundService() {
         guard let top = UIApplication.shared.topViewController() else { return }
         let started = BackgroundServiceManager.ensureBackgroundServicesStarted()
@@ -911,10 +808,10 @@ struct DeveloperOptionsView: View {
         #endif
         do {
             if let rotatedURL = try WidgetLogManager.rotateLog() {
-                let toastView = ToastView(text: NSLocalizedString("Rotated \(logName) Log", comment: ""), detailText: "Saved to WidgetLogs/\(rotatedURL.lastPathComponent)")
+                let toastView = ToastView(text: String(format: NSLocalizedString("Rotated %@ Log", comment: ""), logName), detailText: "Saved to WidgetLogs/\(rotatedURL.lastPathComponent)")
                 toastView.show(in: top)
             } else {
-                let toastView = ToastView(text: NSLocalizedString("\(logName) Log Empty", comment: ""), detailText: "Nothing to rotate.")
+                let toastView = ToastView(text: String(format: NSLocalizedString("%@ Log Empty", comment: ""), logName), detailText: "Nothing to rotate.")
                 toastView.show(in: top)
             }
         } catch {

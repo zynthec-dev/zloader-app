@@ -11,11 +11,13 @@ import UniformTypeIdentifiers
 import MinimuxerCommon
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct PairingFileManagementView: View {
+    var onBack: (() -> Void)?
+    @State private var isRootVisible = true
     @StateObject private var viewModel = PairingFileManagementViewModel()
 
     var body: some View {
@@ -30,12 +32,21 @@ struct PairingFileManagementView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("Pairing File Management")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .onAppear { isRootVisible = true }
+        .onDisappear { isRootVisible = false }
         .toolbar {
+            if isRootVisible, let onBack {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    SwiftUI.Button(action: onBack) { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Back")
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
                     viewModel.toggleGlobalHide()
@@ -96,14 +107,14 @@ struct PairingFileManagementView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("ACTIVE PROTOCOL")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 0) {
                 HStack {
                     Text("Active Protocol")
                         .font(.system(size: 16))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
 
                     Spacer()
 
@@ -115,7 +126,7 @@ struct PairingFileManagementView: View {
 
                         Text(activeProtocolTagText(for: viewModel.activeProtocol))
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -131,7 +142,7 @@ struct PairingFileManagementView: View {
                 HStack {
                     Text("Preferred Protocol")
                         .font(.system(size: 16))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
 
                     Spacer()
 
@@ -143,7 +154,7 @@ struct PairingFileManagementView: View {
 
                         Text(viewModel.preferredProtocol != nil ? activeProtocolTagText(for: viewModel.preferredProtocol!) : "None")
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -156,12 +167,12 @@ struct PairingFileManagementView: View {
                         SwiftUI.Button(role: .destructive) {
                             viewModel.clearPreferred()
                         } label: {
-                            Label("Clear Preferred Protocol", systemImage: "star.slash")
+                            SettingsEntryLabel(title: "Clear Preferred Protocol", systemImage: "star.slash")
                         }
                     }
                 }
             }
-            .background(Color.settingsRowBackground)
+            .zLoaderGlassSurface()
             .cornerRadius(14)
         }
     }
@@ -170,7 +181,7 @@ struct PairingFileManagementView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PAIRING FILES")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 12) {
@@ -209,7 +220,7 @@ struct PairingFileManagementView: View {
                                     await viewModel.activate(proto: proto)
                                 }
                             } label: {
-                                Label("Activate", systemImage: "bolt.fill")
+                                SettingsEntryLabel(title: "Activate", systemImage: "bolt.fill")
                             }
                         }
 
@@ -217,19 +228,19 @@ struct PairingFileManagementView: View {
                             SwiftUI.Button {
                                 viewModel.setPreferred(proto: proto)
                             } label: {
-                                Label("Set as Preferred", systemImage: "star.fill")
+                                SettingsEntryLabel(title: "Set as Preferred", systemImage: "star.fill")
                             }
                         } else {
                             SwiftUI.Button {
                                 viewModel.clearPreferred()
                             } label: {
-                                Label("Remove as Preferred", systemImage: "star.slash")
+                                SettingsEntryLabel(title: "Remove as Preferred", systemImage: "star.slash")
                             }
                         }
 
                         if proto == viewModel.activeProtocol {
                             SwiftUI.Button { } label: {
-                                Label("Currently Active", systemImage: "checkmark.circle.fill")
+                                SettingsEntryLabel(title: "Currently Active", systemImage: "checkmark.circle.fill")
                             }
                             .disabled(true)
                         }
@@ -238,13 +249,13 @@ struct PairingFileManagementView: View {
                     SwiftUI.Button {
                         viewModel.promptImport(for: proto)
                     } label: {
-                        Label("Import / Replace File", systemImage: "square.and.arrow.down")
+                        SettingsEntryLabel(title: "Import / Replace File", systemImage: "square.and.arrow.down")
                     }
 
                     SwiftUI.Button(role: .destructive) {
                         viewModel.confirmDelete(for: proto)
                     } label: {
-                        Label("Delete Pairing File", systemImage: "trash")
+                        SettingsEntryLabel(title: "Delete Pairing File", systemImage: "trash")
                     }
                 }
 
@@ -308,12 +319,12 @@ struct PairingFileManagementView: View {
                     SwiftUI.Button {
                         viewModel.promptImport(for: proto)
                     } label: {
-                        Label("Import Pairing File", systemImage: "square.and.arrow.down")
+                        SettingsEntryLabel(title: "Import Pairing File", systemImage: "square.and.arrow.down")
                     }
                 }
             }
         }
-        .background(Color.settingsRowBackground)
+        .zLoaderGlassSurface()
         .cornerRadius(14)
     }
 
@@ -323,9 +334,9 @@ struct PairingFileManagementView: View {
                 .font(.system(size: 22))
                 .foregroundColor(proto == .rppairing ? .cyan : .green)
 
-            Text(proto == .rppairing ? "Remote Pairing File" : "Lockdown Pairing File")
+            Text(LocalizedStringKey(proto == .rppairing ? "Remote Pairing File" : "Lockdown Pairing File"))
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
 
             Spacer()
 
@@ -349,7 +360,7 @@ struct PairingFileManagementView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.3))
+                .foregroundColor(Color.primary.opacity(0.3))
         }
         .padding(.horizontal, 16)
         .frame(height: 56)
@@ -359,11 +370,11 @@ struct PairingFileManagementView: View {
         HStack(spacing: 12) {
             Image(systemName: proto == .rppairing ? "bolt.horizontal.circle" : "lock.shield")
                 .font(.system(size: 22))
-                .foregroundColor(Color.white.opacity(0.3))
+                .foregroundColor(Color.primary.opacity(0.3))
 
-            Text(proto == .rppairing ? "Remote Pairing File" : "Lockdown Pairing File")
+            Text(LocalizedStringKey(proto == .rppairing ? "Remote Pairing File" : "Lockdown Pairing File"))
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(Color.white.opacity(0.8))
+                .foregroundColor(Color.primary.opacity(0.8))
 
             Spacer()
 
@@ -393,11 +404,11 @@ struct PairingFileManagementView: View {
             HStack {
                 Text(label)
                     .font(.system(size: 14))
-                    .foregroundColor(Color.white.opacity(0.6))
+                    .foregroundColor(Color.secondary)
                 Spacer()
                 Text(displayValue)
                     .font(.system(size: 13, weight: .medium, design: isRevealed ? .monospaced : .default))
-                    .foregroundColor(Color.white.opacity(0.9))
+                    .foregroundColor(Color.primary.opacity(0.9))
             }
             .padding(.horizontal, 16)
             .frame(height: 40)
@@ -409,11 +420,11 @@ struct PairingFileManagementView: View {
         HStack {
             Text(label)
                 .font(.system(size: 14))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
             Spacer()
             Text(value)
                 .font(.system(size: 13, weight: .medium, design: isMonospaced ? .monospaced : .default))
-                .foregroundColor(Color.white.opacity(0.85))
+                .foregroundColor(Color.primary.opacity(0.85))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -426,7 +437,7 @@ struct PairingFileManagementView: View {
         HStack {
             Text("Status")
                 .font(.system(size: 14))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
 
             Spacer()
 
@@ -440,7 +451,7 @@ struct PairingFileManagementView: View {
 
                         Text("Active")
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -456,7 +467,7 @@ struct PairingFileManagementView: View {
 
                         Text("Preferred")
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -472,28 +483,18 @@ struct PairingFileManagementView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PAIRING METHODS")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 0) {
-                NavigationLink(destination: WirelessPairView()) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                        Text("Wireless Pairing")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.white)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color.white.opacity(0.4))
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(height: 50)
+                NavigationLink(destination: WirelessPairView(selfPairing: true)) {
+                    SettingsEntryLabel(title: "Self-Pairing")
+                        .font(.body).foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                        .padding(.horizontal, 16)
                 }
             }
-            .background(Color.settingsRowBackground)
+            .zLoaderGlassSurface()
             .cornerRadius(14)
         }
     }
@@ -502,7 +503,7 @@ struct PairingFileManagementView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("MANAGEMENT")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(Color.secondary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 0) {
@@ -514,7 +515,7 @@ struct PairingFileManagementView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.red)
                         Text("Reset Pairing Files")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.body)
                             .foregroundColor(.red)
                         Spacer()
                     }
@@ -522,12 +523,12 @@ struct PairingFileManagementView: View {
                     .frame(height: 50)
                 }
             }
-            .background(Color.settingsRowBackground)
+            .zLoaderGlassSurface()
             .cornerRadius(14)
 
             Text("Resetting pairing files removes stored Lockdown and Remote Pairing credentials. You will need to re-pair or re-import a pairing file and restart zLoader.")
                 .font(.system(size: 12))
-                .foregroundColor(Color.white.opacity(0.5))
+                .foregroundColor(Color.primary.opacity(0.5))
                 .padding(.horizontal, 4)
                 .padding(.top, 4)
         }
@@ -572,11 +573,12 @@ struct PairingFileManagementView: View {
 
 /// UIKit Settings hosts this container so its detail and wireless links can push.
 struct PairingFileNavigationView: View {
+    var onBack: (() -> Void)?
     var body: some View {
         if #available(iOS 16.0, tvOS 16.0, *) {
-            NavigationStack { PairingFileManagementView() }
+            NavigationStack { PairingFileManagementView(onBack: onBack) }
         } else {
-            LegacyPairingNavigationView()
+            LegacyPairingNavigationView(onBack: onBack)
         }
     }
 }
@@ -584,8 +586,9 @@ struct PairingFileNavigationView: View {
 @available(iOS, introduced: 15.0, deprecated: 16.0)
 @available(tvOS, introduced: 15.0, deprecated: 16.0)
 private struct LegacyPairingNavigationView: View {
+    var onBack: (() -> Void)?
     var body: some View {
-        NavigationView { PairingFileManagementView() }
+        NavigationView { PairingFileManagementView(onBack: onBack) }
             .navigationViewStyle(.stack)
     }
 }

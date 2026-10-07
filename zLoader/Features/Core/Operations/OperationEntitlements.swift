@@ -10,9 +10,7 @@ import Foundation
 import SideSign
 
 struct OperationEntitlements {
-    static let defaultAdditionalEntitlements: [ALTEntitlement: any Sendable] = [
-        .increasedDebuggingMemoryLimit  : ALTEntitlement.increasedDebuggingMemoryLimit,
-        .increasedMemoryLimit           : ALTEntitlement.increasedMemoryLimit,
-        .extendedVirtualAddressing      : ALTEntitlement.extendedVirtualAddressing
-    ]
+    // Sign the rights declared by the IPA. Extra rights are an explicit customization,
+    // not unconditional memory capabilities inserted into every app and profile.
+    static let defaultAdditionalEntitlements: [ALTEntitlement: any Sendable] = [:]
 }

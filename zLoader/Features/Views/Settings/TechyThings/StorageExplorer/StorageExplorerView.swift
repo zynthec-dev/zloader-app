@@ -50,7 +50,7 @@ public struct StorageExplorerView: View {
                 ForEach(locations) { location in
                     StorageLocationRowView(location: location, onSelectFolder: onSelectFolder)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(.insetGrouped)
@@ -59,6 +59,7 @@ public struct StorageExplorerView: View {
         .listStyle(.grouped)
         #endif
         .navigationTitle("Storage Explorer")
+        .labelStyle(.titleOnly)
         .onAppear {
             verboseLog("[StorageExplorerView] onAppear triggered")
             self.loadLocations()

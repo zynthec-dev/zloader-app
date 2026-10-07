@@ -718,7 +718,7 @@ private extension AddSourceViewController
                 let dispatchGroup = DispatchGroup()
                 
                 var sourcesByURL = [URL: Source]()
-                let fetchError: Error? = nil
+                var fetchError: Error? = nil
                 
                 for sourceURL in featuredSourceURLs
                 {
@@ -732,6 +732,7 @@ private extension AddSourceViewController
                                 switch result
                                 {
                                 case .failure(let error):
+                                    fetchError = error
                                     debugLog("Failed to load recommended source \(sourceURL.absoluteString): \(error.localizedDescription) \(error)")
                                     
                                 case .success(let source):
@@ -744,6 +745,7 @@ private extension AddSourceViewController
                     }
                     catch
                     {
+                        context.performAndWait { fetchError = error }
                         debugLog("Failed to start loading recommended source \(sourceURL.absoluteString): \(error.localizedDescription)")
                         dispatchGroup.leave()
                     }

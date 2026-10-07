@@ -35,6 +35,7 @@ class InsetGroupTableViewCell: UITableViewCell
     
     private let separatorView = UIView()
     private let insetView = UIView()
+    private var glassView: UIVisualEffectView?
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?)
     {
@@ -45,6 +46,14 @@ class InsetGroupTableViewCell: UITableViewCell
     required init?(coder: NSCoder)
     {
         super.init(coder: coder)
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        // Keep the margins transparent after the shared UITableViewCell appearance
+        // is applied. The inset card owns the themed fill and rounded corners.
+        self.backgroundColor = .clear
+        self.contentView.backgroundColor = .clear
     }
 
     override func awakeFromNib()
@@ -61,6 +70,14 @@ class InsetGroupTableViewCell: UITableViewCell
         self.separatorView.backgroundColor = .separator
         self.addSubview(self.separatorView)
         
+        #if !os(tvOS)
+        if #available(iOS 26.0, *) {
+            let glass = UIVisualEffectView(effect: UIGlassEffect(style: .regular))
+            glass.isUserInteractionEnabled = false
+            self.insetView.addSubview(glass, pinningEdgesWith: .zero)
+            self.glassView = glass
+        }
+        #endif
         self.insetView.layer.masksToBounds = true
         self.insetView.layer.cornerRadius = 16
         
@@ -68,7 +85,7 @@ class InsetGroupTableViewCell: UITableViewCell
         if let bgColor = self.backgroundColor, bgColor != .clear {
             self.insetView.backgroundColor = bgColor
         } else {
-            self.insetView.backgroundColor = UIColor.secondarySystemGroupedBackground
+            self.insetView.backgroundColor = UIColor.settingsCard
         }
         self.backgroundColor = nil
         
@@ -145,7 +162,7 @@ private extension InsetGroupTableViewCell
         }
         else
         {
-            self.insetView.backgroundColor = UIColor.secondarySystemGroupedBackground
+            self.insetView.backgroundColor = glassView == nil ? UIColor.settingsCard : .clear
         }
     }
 }

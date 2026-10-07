@@ -79,7 +79,8 @@ final class CertificateProvisioningFlow: @unchecked Sendable {
         let portalCertificates = try await DeveloperPortalProxy.shared.fetchCertificates(team: team)
         self.portalCertificates = portalCertificates
         
-        let mainBundleCertSerial = Bundle.main.object(forInfoDictionaryKey: Bundle.Info.certificateID) as? String
+        let mainBundleCertSerial = CertificateManager.shared.getSigningCertificate(at: Bundle.Info.activeBundleURL)?.serialNumber
+            ?? Bundle.main.object(forInfoDictionaryKey: Bundle.Info.certificateID) as? String
         
         if let activeCert = CertificateManager.shared.activeCertificate,
            let certificate = portalCertificates.first(where: { $0.serialNumber == activeCert.serialNumber }) 

@@ -52,6 +52,16 @@ private extension Button
 {
     func update()
     {
+        if #available(iOS 26.0, tvOS 26.0, *) {
+            var config = UIButton.Configuration.prominentGlass()
+            config.title = self.currentTitle
+            config.image = self.currentImage
+            config.baseBackgroundColor = self.tintColor
+            config.baseForegroundColor = self.tintColor.contrastingText
+            self.backgroundColor = .clear
+            self.configuration = config
+            return
+        }
         self.setTitleColor(self.tintColor.contrastingText, for: .normal)
         self.setTitleColor(UIColor.lightGray.contrastingText, for: .disabled)
         if self.isEnabled

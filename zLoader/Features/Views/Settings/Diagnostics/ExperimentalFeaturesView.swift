@@ -9,8 +9,8 @@
 import SwiftUI
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct ExperimentalFeaturesView: View {
@@ -19,55 +19,11 @@ struct ExperimentalFeaturesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Section 1: STANDALONE FEATURES
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("STANDALONE FEATURES")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        if #available(iOS 26.0, *) {
-                            NavigationLink(destination: WirelessPairView()) {
-                                HStack {
-                                    Text("Wireless Pairing")
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Color.white.opacity(0.4))
-                                }
-                                .padding(.horizontal, 16)
-                                .frame(height: 50)
-                            }
-                            
-                            divider
-                        }
-                        
-                        NavigationLink(destination: CacheManagementView()) {
-                            HStack {
-                                Text("Cache Management")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
-                        }
-                    }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
-
                 // Section 2: MINIMUXER
                 VStack(alignment: .leading, spacing: 8) {
                     Text("MINIMUXER")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(Color.secondary)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 0) {
@@ -79,7 +35,7 @@ struct ExperimentalFeaturesView: View {
                             }
                         ))
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
             }
@@ -87,8 +43,9 @@ struct ExperimentalFeaturesView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("Experimental Features")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
@@ -96,14 +53,14 @@ struct ExperimentalFeaturesView: View {
 
     private func toggleRow(title: String, isOn: Binding<Bool>) -> some View {
         HStack {
-            Text(title)
-                .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.white)
+            SettingsEntryLabel(title: title)
+                .font(.body)
+                .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
-                .tint(.green)
+                .tint(Color(uiColor: .altPrimary))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

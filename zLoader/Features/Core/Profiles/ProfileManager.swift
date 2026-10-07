@@ -11,6 +11,69 @@ import SideSign
 import CoreData
 
 public final class ProfileManager: @unchecked Sendable {
+    private struct ProfilePackage: Codable {
+        let formatVersion: Int
+        let profiles: [Data]
+    }
+
+    /// One transport file; Apple's individual CMS signatures remain unchanged.
+    public func exportPackage(profileDirectory: URL) throws -> URL {
+        let files = try fileManager.contentsOfDirectory(at: profileDirectory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "mobileprovision" }
+        return try exportPackage(profiles: files.map { try ALTProvisioningProfile(data: Data(contentsOf: $0)) })
+    }
+
+    public func exportOwnPackage() throws -> URL {
+        guard let app = ALTApplication(fileURL: Bundle.main.bundleURL) else {
+            throw OperationError.invalidParameters("The running app bundle cannot be read.")
+        }
+        var profiles: [ALTProvisioningProfile] = []
+        for component in [app] + app.appExtensions {
+            guard let profile = component.provisioningProfile else {
+                throw OperationError.invalidParameters("Missing profile for " + component.bundleIdentifier)
+            }
+            profiles.append(profile)
+        }
+        let backupIPA = app.fileURL.appendingPathComponent("zLoaderBackup.ipa")
+        if fileManager.fileExists(atPath: backupIPA.path) {
+            let temporary = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? fileManager.removeItem(at: temporary) }
+            try fileManager.unzipArchive(at: backupIPA, to: temporary)
+            let payload = temporary.appendingPathComponent("Payload")
+            guard let backupURL = try fileManager.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil).first(where: { $0.pathExtension == "app" }),
+                  let profile = ALTApplication(fileURL: backupURL)?.provisioningProfile else {
+                throw OperationError.invalidParameters("The embedded Backup IPA has no readable profile.")
+            }
+            profiles.append(profile)
+        }
+        return try exportPackage(profiles: profiles)
+    }
+
+    private func exportPackage(profiles: [ALTProvisioningProfile]) throws -> URL {
+        guard !profiles.isEmpty else { throw OperationError.invalidParameters("No cached signed profiles are available for this app.") }
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        let data = try encoder.encode(ProfilePackage(formatVersion: 1, profiles: profiles.map { $0.data }))
+        let folder = fileManager.temporaryDirectory.appendingPathComponent("ProfileExports", isDirectory: true)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appendingPathComponent(UUID().uuidString + ".zloaderprofiles")
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+
+    @discardableResult
+    public func importPackage(data: Data) throws -> Int {
+        guard data.count <= 50_000_000 else { throw OperationError.invalidParameters("Profile package is too large.") }
+        let package = try PropertyListDecoder().decode(ProfilePackage.self, from: data)
+        guard package.formatVersion == 1, !package.profiles.isEmpty, package.profiles.count <= 128 else {
+            throw OperationError.invalidParameters("Unsupported or empty profile package.")
+        }
+        // Parse every profile before importing any entry; no archive paths exist.
+        let profiles = try package.profiles.map { try ALTProvisioningProfile(data: $0) }
+        for profile in profiles { _ = try importProfile(data: profile.data) }
+        return profiles.count
+    }
+
     public static let shared = ProfileManager()
 
     private let fileManager = FileManager.default

@@ -317,7 +317,7 @@ extension ReviewPermissionsViewController
         cell.backgroundConfiguration = backgroundConfiguration
         
         // Ensure text is legible on gradient background.
-        cell.overrideUserInterfaceStyle = .dark
+        cell.overrideUserInterfaceStyle = .unspecified
     }
 }
 

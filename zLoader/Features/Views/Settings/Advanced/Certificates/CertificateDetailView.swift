@@ -101,8 +101,8 @@ struct CertificateDetailView: View {
                     }
                 } header: {
                     Text("Developer Portal Info")
-                }
-            }
+                }.listRowBackground(ZLoaderGlassBackground())
+            }.listRowBackground(ZLoaderGlassBackground())
             
             if let certData = certificate.data {
                 let details = parseCertificate(derData: certData)
@@ -114,7 +114,7 @@ struct CertificateDetailView: View {
                     detailRow(title: "Serial Number (dec)", value: details.serialDec)
                 } header: {
                     Text("X.509 Fields")
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
                 
                 if let from = details.validFrom, let until = details.validUntil {
                     let stats = computeValidityStats(from: from, until: until)
@@ -136,7 +136,7 @@ struct CertificateDetailView: View {
                         detailRow(title: "Validity Days", value: "Total: \(stats.totalDays), Elapsed: \(stats.elapsedDays), Remaining: \(stats.remainingDays)")
                     } header: {
                         Text("Validity Period")
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 
                 Section {
@@ -210,7 +210,7 @@ struct CertificateDetailView: View {
                     .padding(.vertical, 4)
                 } header: {
                     Text("Signature & Public Key Details")
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             Section {
@@ -304,9 +304,11 @@ struct CertificateDetailView: View {
                 }
             } header: {
                 Text("Cryptographic Keys")
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Certificate Details")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -337,7 +339,7 @@ struct CertificateDetailView: View {
     
     private func detailRow(title: String, value: String) -> some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.subheadline)
                 .foregroundColor(.primary)
             Spacer()
@@ -353,7 +355,7 @@ struct CertificateDetailView: View {
     
     private func detailRowWithCopy(title: String, value: String, isCopied: Binding<Bool>) -> some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.subheadline)
                 .foregroundColor(.primary)
             Spacer()

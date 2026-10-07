@@ -11,12 +11,16 @@ import SwiftUI
 struct WirelessPairView: View {
     @StateObject private var viewModel: WirelessPairViewModel
     private let startsAsClient: Bool
+    private let selfPairing: Bool
+    private let onPairingFileReady: ((URL) throws -> Void)?
     @State private var didOpenClient = false
+    @Environment(\.dismiss) private var dismiss
 
-    init(startsAsClient: Bool = false, onPairingFileReady: ((URL) throws -> Void)? = nil) {
+    init(startsAsClient: Bool = false, selfPairing: Bool = false, onPairingFileReady: ((URL) throws -> Void)? = nil) {
         self.startsAsClient = startsAsClient
+        self.selfPairing = selfPairing
+        self.onPairingFileReady = onPairingFileReady
         let model = WirelessPairViewModel.shared
-        model.onPairingFileReady = onPairingFileReady
         _viewModel = StateObject(wrappedValue: model)
     }
     
@@ -24,18 +28,23 @@ struct WirelessPairView: View {
     private let pulse = Animation.interactiveSpring(response: 1.5, dampingFraction: 0.55)
     
     var body: some View {
+        Group {
+            if selfPairing && viewModel.pairedDevice != nil {
+                pairingCompleteView
+            } else {
         VStack(spacing: 24) {
-            SwiftUI.Button("Einstellungen zum Pairen öffnen") {
-                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-            }
-            Text("In Einstellungen zu Entwickler → Remote Pairing wechseln. Die PIN erscheint in der Live-Aktivität. Der iOS-Link öffnet zunächst die zLoader-App-Einstellungen.")
+            if selfPairing {
+            Text("Start Pairing opens Settings when the server is ready. Go to Privacy & Security → Developer Mode. The PIN appears in the Live Activity and, with your permission, a notification. After pairing, tap the notification or Live Activity to return to zLoader.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
-            if viewModel.isSavingLockdown { ProgressView("Lockdown wird gekoppelt…") }
-            else {
-                SwiftUI.Button("Lockdown separat koppeln") { Task { await viewModel.pairLockdown() } }
-            }
             if let confirmation = viewModel.confirmationMessage {
                 Text(confirmation).font(.footnote).textSelection(.enabled).padding(.horizontal)
+            }
+            } else {
+                Text("Pair another device on your local network. Select a network interface to advertise, or connect to a discovered target. Pairing files for other devices are exported without replacing zLoader’s own pairing files.")
+                    .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
+                if let device = viewModel.pairedDevice {
+                    ShareLink("Export Pairing File", item: URL(fileURLWithPath: device.pairingFilePath))
+                }
             }
             // Pulsing Status Orb
                 ZStack {
@@ -84,7 +93,7 @@ struct WirelessPairView: View {
                         }
                     }
                     .font(.system(size: 36, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 }
                 .frame(height: 220)
                 .padding(.top, 20)
@@ -116,9 +125,11 @@ struct WirelessPairView: View {
                             Image(systemName: "wifi")
                                 .font(.subheadline)
                                 .foregroundColor(.accentColor)
-                            Text("Ensure both devices are on the same Wi-Fi network.")
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
+                            if startsAsClient {
+                                Text("Both devices must be on the same Wi-Fi network.")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         .padding(.top, 4)
                 }
@@ -139,30 +150,35 @@ struct WirelessPairView: View {
                 SwiftUI.Button(action: togglePairing) {
                     HStack {
                         if viewModel.isAdvertising {
-                            Text("Stop Pairing Server")
+                            SettingsEntryLabel(title: "Stop Pairing")
                                 .transition(.scale.combined(with: .opacity))
                         } else {
-                            Text("Start Pairing Server")
+                            Text("Start Pairing")
                                 .transition(.scale.combined(with: .opacity))
                         }
                     }
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
                     .background(viewModel.isAdvertising ? Color.red : Color.accentColor)
                     .clipShape(Capsule())
                     .shadow(color: (viewModel.isAdvertising ? Color.red : Color.accentColor).opacity(0.3), radius: 10, y: 5)
                 }
+                .disabled(viewModel.isSavingLockdown)
                 .animation(.spring(response: 0.28, dampingFraction: 0.65), value: viewModel.isAdvertising)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 32)
         }
-        .navigationTitle("Lokales Pairing")
+            }
+        }
+        .navigationTitle(selfPairing ? "Self-Pairing" : "Wireless Pairing")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            if !selfPairing {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
                     debugLog("[WirelessPairView] Trailing toolbar bolt button tapped -> openClientDialog()")
@@ -173,8 +189,10 @@ struct WirelessPairView: View {
                 }
                 .accessibilityLabel("Connect to Target Device")
             }
+            }
         }
         .onAppear {
+            viewModel.configurePurpose(selfPairing: selfPairing, onPairingFileReady: onPairingFileReady)
             if startsAsClient && !didOpenClient {
                 didOpenClient = true
                 viewModel.openClientDialog()
@@ -230,10 +248,32 @@ struct WirelessPairView: View {
 
     }
     
+    private var pairingCompleteView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 72)).foregroundStyle(.green)
+            Text("Pairing Complete").font(.title.bold())
+            Text("Your remote pairing file is saved in zLoader. The pairing server has stopped.")
+                .foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if let message = viewModel.confirmationMessage {
+                Text(message).font(.footnote).foregroundStyle(.secondary).textSelection(.enabled)
+            }
+            Spacer()
+            SwiftUI.Button("Continue") { dismiss() }
+                .buttonStyle(OnboardingPrimaryButtonStyle())
+        }.padding(32)
+    }
+
     private func togglePairing() {
         debugLog("[WirelessPairView] togglePairing tapped (currently isAdvertising=\(viewModel.isAdvertising))")
         withAnimation(spring) {
-            viewModel.togglePairing()
+            if viewModel.isAdvertising {
+                viewModel.stopPairing()
+            } else {
+                if selfPairing { viewModel.startLocalPairingAndOpenSettings() }
+                else { viewModel.openServerDialog() }
+            }
         }
     }
 }

@@ -58,7 +58,7 @@ struct ProfilesListView: View {
                                 profileToDelete = profile
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
                         #endif
@@ -67,12 +67,12 @@ struct ProfilesListView: View {
                                 profileToDelete = profile
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             if !viewModel.profiles.isEmpty {
                 Section {
@@ -87,7 +87,7 @@ struct ProfilesListView: View {
                             Spacer()
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
         }
         #if !os(tvOS)
@@ -96,7 +96,15 @@ struct ProfilesListView: View {
         #else
         .listStyle(GroupedListStyle())
         #endif
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: PortalSelectionView(viewModel: viewModel, kind: .profiles)) {
+                    Label("Select", systemImage: "checklist")
+                }
+            }
+        }
         .navigationTitle("Profiles")
+        .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {

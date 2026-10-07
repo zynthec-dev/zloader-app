@@ -1,0 +1,347 @@
+diff --git a/Sources/CodeSigning/CodeSignerAPI.swift b/Sources/CodeSigning/CodeSignerAPI.swift
+index c43fd90..697a28a 100644
+--- a/Sources/CodeSigning/CodeSignerAPI.swift
++++ b/Sources/CodeSigning/CodeSignerAPI.swift
+@@ -25,6 +25,7 @@ public extension CodeSignerAPI {
+ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+     public let team: Team
+     public let keyStore: KeyStore
++    public let entitlementOverrides: [String: [String: any Sendable]]
+ 
+     private enum SigningTargetType: CustomStringConvertible {
+         case mainAppBundleDirectory
+@@ -55,9 +56,10 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+         }
+     }
+ 
+-    public init(team: Team, keyStore: KeyStore) {
++    public init(team: Team, keyStore: KeyStore, entitlementOverrides: [String: [String: any Sendable]] = [:]) {
+         self.team = team
+         self.keyStore = keyStore
++        self.entitlementOverrides = entitlementOverrides
+     }
+ 
+     public func signApp(at appURL: URL, provisioningProfiles profiles: [ProvisioningProfile], progress: Progress? = nil) async throws
+@@ -75,10 +77,13 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+         verboseLog("[SideSign] BundleID: \(appBundle.bundleIdentifier)")
+ 
+         func profile(for app: AppBundle) -> ProvisioningProfile? {
+-            for p in profiles where p.bundleIdentifier == app.bundleIdentifier {
+-                return p
++            let candidates = profiles.filter {
++                SigningEntitlements.matchesBundleIdentifier($0.bundleIdentifier, bundleIdentifier: app.bundleIdentifier)
++            }.sorted { $0.bundleIdentifier.count > $1.bundleIdentifier.count }
++            return candidates.first {
++                (try? SigningEntitlements.prepare(application: entitlementOverrides[app.bundleIdentifier] ?? app.entitlements,
++                    profile: $0.entitlements, teamID: $0.teamIdentifier, bundleIdentifier: app.bundleIdentifier)) != nil
+             }
+-            return profiles.first
+         }
+ 
+         var entitlementsByURL: [URL: String] = [:]
+@@ -92,35 +97,12 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+                 throw SignerError.missingProvisioningProfile(bundleIdentifier: app.bundleIdentifier)
+             }
+ 
+-            var filteredEntitlements = matchedProfile.entitlements
+-            verboseLog("[SideSign] Original profile entitlements: \(filteredEntitlements)")
+-
+-            let applicationEntitlements = app.entitlements
+-
+-            for (key, _) in filteredEntitlements {
+-                if let applicationValue = applicationEntitlements[key] {
+-                    if key == "keychain-access-groups" {
+-                        guard let groups = applicationValue as? [String] else {
+-                            verboseLog("[SideSign] The app's keychain-access-groups entitlement is not an array of strings.")
+-                            continue
+-                        }
+-
+-                        filteredEntitlements[key] = try groups.map { group in
+-                            guard let separator = group.firstIndex(of: ".") else {
+-                                debugLog("[SideSign] The keychain access group does not contain a Team ID prefix")
+-                                verboseLog("[SideSign] Group: '\(group)'")
+-                                throw SignerError.invalidApp(cause: "The keychain access group '\(group)' does not contain a Team ID prefix.")
+-                            }
+-                            return matchedProfile.teamIdentifier + group[separator...]
+-                        }
+-                    }
+-                } else if key != "application-identifier"               &&
+-                          key != "com.apple.developer.team-identifier"  &&
+-                          key != "get-task-allow" 
+-                {
+-                    filteredEntitlements.removeValue(forKey: key)
+-                }
+-            }
++            let filteredEntitlements = try SigningEntitlements.prepare(
++                application: entitlementOverrides[app.bundleIdentifier] ?? app.entitlements,
++                profile: matchedProfile.entitlements,
++                teamID: matchedProfile.teamIdentifier,
++                bundleIdentifier: app.bundleIdentifier
++            )
+ 
+             verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
+ 
+diff --git a/Sources/DeveloperPortal/Certificates.swift b/Sources/DeveloperPortal/Certificates.swift
+index 6127e16..4adc43b 100644
+--- a/Sources/DeveloperPortal/Certificates.swift
++++ b/Sources/DeveloperPortal/Certificates.swift
+@@ -58,55 +58,29 @@ public extension DeveloperPortal {
+ 
+         let csrString = String(decoding: certRequest.csrData, as: UTF8.self)
+ 
+-        let parameters = [
+-            "csrContent": csrString,
+-            "machineName": machineName,
+-            "machineId": UUID().uuidString.uppercased()
+-        ]
+-
+-        let submitURL: URL
+-        switch type.category {
+-        case .distribution:
+-            submitURL = Constants.URLs.submitDistributionCSR
+-        case .development:
+-            submitURL = Constants.URLs.submitDevelopmentCSR
++        guard let portalType = type.portalType else {
++            throw DeveloperPortalError.invalidParameters(cause: "Create \(type.displayName) in Xcode or on Apple's website, then import the certificate and its private key.")
+         }
+-
+-        let response: AddCertificateResponse = try await sendRequest(
+-            url: submitURL,
+-            additionalParameters: parameters,
+-            session: session,
+-            team: team,
+-            resultCodeHandler: { code, message in
+-                switch code {
+-                case DeveloperPortalResultCodes.invalidCertificateRequest:
+-                    return DeveloperPortalError.invalidCertificateRequest(cause: message)
+-                case DeveloperPortalResultCodes.maximumCertificatesReachedAlternate, DeveloperPortalResultCodes.maximumCertificatesReached:
+-                    debugLog("[SideSign] addCertificate: maximum certificates reached (\(code)): \(message)")
+-                    return DeveloperPortalError.tooManyCertificates(cause: message)
+-                default: return nil
+-                }
+-            }
+-        )
+-
+-        let cert: X509Certificate
+-        if let directCert = response.certRequest?.toCertificate() {
+-            cert = directCert
+-        } else {
+-            let serial = response.certRequest?.serialNumber
+-            let certId = response.certRequest?.certificateId ?? response.certRequest?.certRequestId
+-            let allCerts = try await fetchCertificates(for: team, session: session)
+-
+-            guard let matchedCert = allCerts.first(where: {
+-                if let serial, $0.serialNumber.caseInsensitiveCompare(serial) == .orderedSame { return true }
+-                if let certId, $0.identifier == certId { return true }
+-                return false
+-            }) else {
+-                debugLog("[SideSign] addCertificate error: Failed to retrieve new certificate from Developer Portal")
+-                throw ServerError.badServerResponse(reason: "Failed to retrieve new certificate from Developer Portal", jsonPayload: "")
+-            }
+-            cert = matchedCert
++        let endpoint: X509Certificate.CertificateEndpoint = team.type == .free ? .developerServices2 : .developerPortal
++        var request = URLRequest(url: endpoint.url)
++        request.httpMethod = "POST"
++        request.httpBody = try JSONSerialization.data(withJSONObject: [
++            "data": [
++                "type": "certificates",
++                "attributes": [
++                    "certificateType": portalType,
++                    "csrContent": csrString,
++                    "teamId": team.identifier
++                ]
++            ]
++        ])
++        let response: CreatedCertificateResponse = try await sendServicesRequest(request, session: session, team: team)
++        guard response.data.attributes?.certificateType == portalType,
++              var cert = response.data.toCertificate() else {
++            throw DeveloperPortalError.invalidCertificateRequest(cause: "Apple did not return the requested \(type.displayName) certificate. No different certificate type will be activated.")
+         }
++        cert.machineName = machineName
++        cert.sourceEndpoint = endpoint
+ 
+         debugLog("[SideSign] addCertificate succeeded")
+         verboseLog("[SideSign] SerialNumber: \(cert.serialNumber)")
+@@ -114,12 +88,19 @@ public extension DeveloperPortal {
+     }
+ 
+     func revokeCertificate(_ certificate: X509Certificate, for team: Team, session: Session) async throws -> Bool {
+-        let certIdentifier = certificate.identifier ?? certificate.serialNumber
++        // Imported DER/P12 certificates may have no portal resource ID. Serial numbers
++        // are not resource IDs: resolve the live record before DELETE.
++        let remote = try await fetchCertificates(for: team, session: session)
++        guard let registered = remote.first(where: {
++            $0.serialNumber.caseInsensitiveCompare(certificate.serialNumber) == .orderedSame
++        }), let certIdentifier = registered.identifier else {
++            throw DeveloperPortalError.invalidParameters(cause: "This certificate is not registered on the selected Apple Developer team.")
++        }
+         debugLog("[SideSign] revokeCertificate starting...")
+         verboseLog("[SideSign] Name: '\(certificate.name)', ID: '\(certIdentifier)', SN: \(certificate.serialNumber), Team: \(team.name)")
+ 
+         let endpoint: X509Certificate.CertificateEndpoint
+-        if let source = certificate.sourceEndpoint {
++        if let source = registered.sourceEndpoint {
+             endpoint = source
+         } else {
+             endpoint = (team.type != .free) ? .developerPortal : .developerServices2
+@@ -130,8 +111,16 @@ public extension DeveloperPortal {
+         request.httpMethod = "DELETE"
+ 
+         let _: EmptyResponse = try await sendServicesRequest(request, additionalParameters: nil, session: session, team: team)
++        let remaining = try await fetchCertificates(for: team, session: session)
++        guard !remaining.contains(where: { $0.serialNumber.caseInsensitiveCompare(certificate.serialNumber) == .orderedSame }) else {
++            throw DeveloperPortalError.invalidParameters(cause: "Apple still lists the certificate after revocation. Refresh the portal and retry; the local certificate has been preserved.")
++        }
+         debugLog("[SideSign] revokeCertificate succeeded")
+         verboseLog("[SideSign] Revoked Certificate: \(certIdentifier)")
+         return true
+     }
+ }
++
++private struct CreatedCertificateResponse: Decodable {
++    let data: CertificatesResponseDeveloperPortal.Item
++}
+diff --git a/Sources/DeveloperPortal/DeveloperPortalAPI.swift b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
+index dfea7cc..546e019 100644
+--- a/Sources/DeveloperPortal/DeveloperPortalAPI.swift
++++ b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
+@@ -308,7 +308,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+         )
+ 
+         let url = URL(string: "\(requestURL.absoluteString)?clientId=\(h.developerServices.clientID)")!
+-        var request = URLRequest(url: url)
++        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
+         request.httpMethod = "POST"
+         request.httpBody = bodyData
+ 
+@@ -318,6 +318,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+             "User-Agent": h.developerServices.userAgent,
+             "Accept": "text/x-xml-plist",
+             "Accept-Language": "en-us",
++            "X-Requested-With": "XMLHttpRequest",
+             "X-Apple-App-Info": h.grandSlam.authApp,
+             "X-Xcode-Version": apiSession.xcodeVersion,
+             "X-Apple-I-Identity-Id": apiSession.dsid,
+@@ -352,6 +353,10 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+         let httpResponse = response as? HTTPURLResponse
+         let statusCode = httpResponse?.statusCode ?? 0
+ 
++        guard (200..<300).contains(statusCode) else {
++            throw ServerError.underlyingError(code: statusCode, message: "Apple Developer Portal request failed (HTTP \(statusCode)).")
++        }
++
+         guard !data.isEmpty else {
+             if statusCode == HTTPStatusCodes.noContent || T.self == EmptyResponse.self {
+                 if let empty = EmptyResponse() as? T {
+@@ -404,6 +409,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+                                            resultCodeHandler: ((Int, String) -> Error?)? = nil) async throws -> T
+     {
+         var request = originalRequest
++        request.cachePolicy = .reloadIgnoringLocalCacheData
+ 
+         var items = [URLQueryItem(name: "teamId", value: team.identifier)]
+         additionalParameters?.forEach { items.append(.init(name: $0, value: $1)) }
+@@ -412,7 +418,10 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+         comps.queryItems = items
+         let query = comps.query ?? ""
+ 
+-        let bodyData = try JSONSerialization.data(withJSONObject: ["urlEncodedQueryParams": query])
++        // Creation requests carry JSON:API attributes, not a GET-style query wrapper.
++        let bodyData = try originalRequest.httpBody ?? JSONSerialization.data(
++            withJSONObject: ["urlEncodedQueryParams": query, "teamId": team.identifier]
++        )
+         let methodOverride = request.httpMethod ?? "GET"
+ 
+         request.httpMethod = "POST"
+@@ -425,6 +434,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+             "User-Agent": h.developerServices.userAgent,
+             "Accept": "application/vnd.api+json",
+             "Accept-Language": "en-us",
++            "X-Requested-With": "XMLHttpRequest",
+             "X-Apple-App-Info": h.grandSlam.authApp,
+             "X-Xcode-Version": apiSession.xcodeVersion,
+             "X-Apple-I-Identity-Id": apiSession.dsid,
+@@ -466,6 +476,15 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+         let isDelete = methodOverride == "DELETE"
+         let isNoContent = statusCode == HTTPStatusCodes.noContent
+ 
++        guard (200..<300).contains(statusCode) else {
++            // A failed DELETE must never be reported as a successful revocation.
++            if let status = try? JSONDecoder().decode(DeveloperPortalStatusResponse.self, from: data),
++               let detail = status.errors?.first?.detail {
++                throw ServerError.underlyingError(code: statusCode, message: detail)
++            }
++            throw ServerError.underlyingError(code: statusCode, message: "Apple Developer Portal request failed (HTTP \(statusCode)).")
++        }
++
+         guard !data.isEmpty else {
+             if isDelete || isNoContent || T.self == EmptyResponse.self {
+                 verboseLog("[SideSign] sendServicesRequest: successful empty response for DELETE or \(HTTPStatusCodes.noContent)")
+diff --git a/Sources/Models/CertificateType.swift b/Sources/Models/CertificateType.swift
+index 5bb6fcc..7b3e500 100644
+--- a/Sources/Models/CertificateType.swift
++++ b/Sources/Models/CertificateType.swift
+@@ -118,6 +118,20 @@ public struct CertificateType: RawRepresentable, Sendable, Codable, Equatable, H
+         rawValue
+     }
+ 
++    /// Exact JSON:API type; DEVELOPMENT is the unified Apple certificate.
++    public var portalType: String? {
++        switch self {
++        case .development: return "DEVELOPMENT"
++        case .distribution: return "DISTRIBUTION"
++        case .iosDevelopment: return "IOS_DEVELOPMENT"
++        case .iosDistribution: return "IOS_DISTRIBUTION"
++        case .macDevelopment: return "MAC_APP_DEVELOPMENT"
++        case .macAppStore: return "MAC_APP_DISTRIBUTION"
++        case .macInstaller: return "MAC_INSTALLER_DISTRIBUTION"
++        default: return nil // Developer ID requires Apple's website or Xcode.
++        }
++    }
++
+     public var submitEndpointAction: String {
+         switch self.category {
+         case .development:  return "ios/submitDevelopmentCSR.action"
+diff --git a/Sources/Models/Feature.swift b/Sources/Models/Feature.swift
+index 554fc75..5b10eab 100644
+--- a/Sources/Models/Feature.swift
++++ b/Sources/Models/Feature.swift
+@@ -53,24 +53,26 @@ public struct Feature: RawRepresentable, Hashable, Codable, Sendable, Expressibl
+ }
+ 
+ public extension Feature {
++    // Service identifiers expected by the legacy Developer Services updateAppID API.
++    // These are distinct from entitlement names and modern capability identifiers.
+     static let appGroups: Feature                       = "APG3427HIY"
+     static let gameCenter: Feature                      = "gameCenter"
+     static let inAppPurchase: Feature                   = "inAppPurchase"
+     static let pushNotifications: Feature               = "push"
+     static let interAppAudio: Feature                   = "IAD53UNK2F"
+-    static let associatedDomains: Feature               = "associatedDomains"
++    static let associatedDomains: Feature               = "SKC3T5S89Y"
+     static let dataProtection: Feature                  = "dataProtection"
+-    static let siri: Feature                            = "siri"
+-    static let applePay: Feature                        = "applePay"
+-    static let vpn: Feature                             = "vpn"
+-    static let networkExtensions: Feature               = "networkExtensions"
+-    static let multipath: Feature                       = "multipath"
+-    static let hotspot: Feature                         = "hotspot"
+-    static let nfc: Feature                             = "nfc"
+-    static let classKit: Feature                        = "classKit"
+-    static let autoFillCredentialProvider: Feature      = "autoFillCredentialProvider"
+-    static let accessWiFiInformation: Feature           = "accessWiFiInformation"
+-    static let wirelessAccessoryConfiguration: Feature  = "wirelessAccessoryConfiguration"
++    static let siri: Feature                            = "SI015DKUHP"
++    static let applePay: Feature                        = "OM633U5T5G"
++    static let vpn: Feature                             = "V66P55NK2I"
++    static let networkExtensions: Feature               = "NWEXT04537"
++    static let multipath: Feature                       = "MP49FN762P"
++    static let hotspot: Feature                         = "HSC639VEI8"
++    static let nfc: Feature                             = "NFCTRMAY17"
++    static let classKit: Feature                        = "PKTJAN2017"
++    static let autoFillCredentialProvider: Feature      = "CPEQ28MX4E"
++    static let accessWiFiInformation: Feature           = "AWEQ28MY3E"
++    static let wirelessAccessoryConfiguration: Feature  = "WC421J6T7P"
+     static let increasedMemoryLimit: Feature            = "increasedMemoryLimit"
+     static let extendedVirtualAddressing: Feature       = "extendedVirtualAddressing"
+     static let increasedDebuggingMemoryLimit: Feature   = "increasedDebuggingMemoryLimit"

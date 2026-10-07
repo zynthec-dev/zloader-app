@@ -27,7 +27,7 @@ final class EmbeddedTunnel {
         _ = try await configuredManager()
     }
 
-    private func configuredManager() async throws -> NETunnelProviderManager {
+    func validateInstalledAuthorization() throws {
         guard let providerID else {
             throw OperationError.invalidVPN(reason: "ZLoaderTunnel is missing from this build.")
         }
@@ -38,22 +38,64 @@ final class EmbeddedTunnel {
         for app in [host, provider] {
             guard let profile = app.provisioningProfile,
                   profile.expirationDate > Date(),
-                  PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) else {
+                  PacketTunnelProvisioning.isAuthorized(by: profile.entitlements),
+                  PacketTunnelProvisioning.isAuthorized(by: app.entitlements) else {
                 throw OperationError.invalidVPN(reason: PacketTunnelProvisioning.installedProfileFailure(
                     for: app.bundleIdentifier, missing: app.provisioningProfile == nil,
                     expired: app.provisioningProfile.map { $0.expirationDate <= Date() } ?? false
                 ))
             }
         }
+    }
+    var unavailableReason: String? {
+        do { try validateInstalledAuthorization(); return nil }
+        catch { return error.localizedDescription }
+    }
+    /// Read-only readiness for the status dot. An idle provider is expected to be disconnected.
+    func isConfiguredAndIdle() async -> Bool {
+        guard unavailableReason == nil, let providerID else { return false }
+        do {
+            let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
+            guard let selected = configurations.first(where: {
+                ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == providerID
+            }), selected.isEnabled,
+                let config = selected.protocolConfiguration as? NETunnelProviderProtocol,
+                let values = config.providerConfiguration,
+                let peer = values["peer"] as? String, let iface = values["interface"] as? String,
+                isPrivateTunnelIPv4(peer), isPrivateTunnelIPv4(iface), peer != iface else { return false }
+            return selected.connection.status == .disconnected || selected.connection.status == .disconnecting
+        } catch { return false }
+    }
+
+    private func configuredManager() async throws -> NETunnelProviderManager {
+        try validateInstalledAuthorization()
+        guard let providerID else { throw OperationError.invalidVPN(reason: "Tunnel extension missing.") }
         let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
         let selected = configurations.first {
             ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == providerID
         } ?? NETunnelProviderManager()
         manager = selected
-        if selected.connection.status == .connected { return selected }
+        if selected.connection.status == .connected {
+            // Restore the exact routed peer after relaunch or a network change.
+            // A connected provider does not imply that the host's settings cache survived.
+            guard let config = selected.protocolConfiguration as? NETunnelProviderProtocol,
+                  let peer = config.providerConfiguration?["peer"] as? String,
+                  isPrivateTunnelIPv4(peer) else {
+                throw OperationError.invalidVPN(reason: "The connected internal tunnel has no valid device endpoint. Reconfigure it in Connection Settings.")
+            }
+            ConnectionConfig.shared.overrideTunnelPeerIp = peer
+            return selected
+        }
         let config = NETunnelProviderProtocol()
         config.providerBundleIdentifier = providerID
         config.serverAddress = "zLoader local device tunnel"
+        let peer = UserDefaults.standard.string(forKey: "zLoader.internalPeer") ?? "10.7.0.1"
+        let iface = UserDefaults.standard.string(forKey: "zLoader.internalInterface") ?? "10.7.1.1"
+        guard isPrivateTunnelIPv4(peer), isPrivateTunnelIPv4(iface), peer != iface else {
+            throw OperationError.invalidParameters("Choose two different private IPv4 addresses for the local tunnel.")
+        }
+        config.providerConfiguration = ["peer": peer, "interface": iface]
+        ConnectionConfig.shared.overrideTunnelPeerIp = peer
         selected.protocolConfiguration = config
         selected.localizedDescription = "zLoader"
         selected.isEnabled = true
@@ -112,65 +154,13 @@ final class EmbeddedTunnel {
         }
     }
 }
-/// Shared by onboarding and connection settings; success means saved, not connected.
-struct EmbeddedTunnelSetupView: View {
-    @State private var configuring = false
-    @State private var configured = false
-    @State private var message: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("zLoader uses its embedded local VPN for device services. Allow the iOS VPN configuration prompt. The tunnel connects only while an operation needs it.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            SwiftUI.Button(configured ? "Configure zLoader VPN Again" : "Configure zLoader VPN") {
-                configuring = true
-                message = nil
-                Task { @MainActor in
-                    defer { configuring = false }
-                    do {
-                        try await EmbeddedTunnel.shared.configure()
-                        configured = true
-                        message = "zLoader VPN configuration saved. Pairing and refresh will start the tunnel when needed."
-                    } catch {
-                        configured = false
-                        let failure = error as NSError
-                        message = "\(error.localizedDescription) (\(failure.domain), \(failure.code))"
-                    }
-                }
-            }
-            .disabled(configuring)
-            if configuring { ProgressView() }
-            if let message { Text(message).font(.footnote).textSelection(.enabled) }
-        }
-    }
+/// Private virtual endpoints only; routing public destinations is outside this provider's scope.
+func isPrivateTunnelIPv4(_ value: String) -> Bool {
+    let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+    guard parts.count == 4, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }),
+          parts.compactMap({ UInt8($0) }).count == 4 else { return false }
+    let bytes = parts.compactMap { UInt8($0) }
+    return bytes[0] == 10 || (bytes[0] == 172 && (16...31).contains(bytes[1])) ||
+        (bytes[0] == 192 && bytes[1] == 168)
 }
 #endif
-
-enum ZLoaderTransport {
-    static let leases = TransportLeaseCoordinator(start: {
-        #if os(iOS) && !targetEnvironment(simulator)
-        syncMinimuxerBackendFromUserDefaults()
-        guard await getDeviceConnectionMode() == .localVPN else { return }
-        try await EmbeddedTunnel.shared.start()
-        await minimuxer.network.refreshEndpoint()
-        #endif
-    }, stop: {
-        #if os(iOS) && !targetEnvironment(simulator)
-        await EmbeddedTunnel.shared.stop()
-        #endif
-    })
-
-    static func withLease<T>(_ operation: () async throws -> T) async throws -> T {
-        let id = try await leases.acquire()
-        do {
-            try Task.checkCancellation()
-            let result = try await operation()
-            await leases.release(id)
-            return result
-        } catch {
-            await leases.release(id)
-            throw error
-        }
-    }
-}

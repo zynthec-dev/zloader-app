@@ -17,6 +17,8 @@ struct AppIDDetailView: View {
     @State private var selectedGroupIDs: Set<String> = []
     @State private var hasModifiedGroups = false
     @State private var isSavingGroups = false
+    @State private var editedFeatures: [Feature: String] = [:]
+    @State private var hasModifiedFeatures = false
 
     init(appID: ALTAppID, viewModel: DeveloperServicesViewModel, presentingViewController: UIViewController? = nil) {
         self.appID = appID
@@ -37,9 +39,27 @@ struct AppIDDetailView: View {
                 if let expiration = currentAppID.expirationDate {
                     InfoRow(label: "Expiration Date", value: formatDate(expiration), valueColor: expiration < Date() ? .red : .primary)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             Section(header: Text("Capabilities & Features (\(currentAppID.features.count))")) {
+                ForEach(Array(viewModel.team?.type.allowedFeatures ?? []).sorted { $0.rawValue < $1.rawValue }, id: \.rawValue) { feature in
+                    Toggle(displayName(for: feature), isOn: Binding(
+                        get: { (editedFeatures[feature] ?? currentAppID.features[feature]) == "true" },
+                        set: { editedFeatures[feature] = $0 ? "true" : "false"; hasModifiedFeatures = true }
+                    ))
+                    .disabled(viewModel.isActionLoading)
+                }
+                if hasModifiedFeatures {
+                    SwiftUI.Button("Save Capabilities") {
+                        Task {
+                            if await viewModel.updateCapabilities(for: currentAppID, features: editedFeatures) {
+                                editedFeatures = [:]
+                                hasModifiedFeatures = false
+                            }
+                        }
+                    }
+                    .disabled(viewModel.isActionLoading)
+                }
                 if currentAppID.features.isEmpty {
                     Text("No special features enabled for this App ID.")
                         .font(.subheadline)
@@ -62,9 +82,9 @@ struct AppIDDetailView: View {
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
-            Section(header: Text("Associated App Groups"), footer: Text("Select the App Groups to associate with this App ID, then tap Save.")) {
+            Section(header: Text("Associated App Groups"), footer: Text("The portal API does not return the current group assignments. No groups are preselected. Select the complete desired set before saving; this replaces the associations.")) {
                 if viewModel.appGroups.isEmpty {
                     Text("No App Groups available on this team. Create an App Group first.")
                         .font(.subheadline)
@@ -120,7 +140,7 @@ struct AppIDDetailView: View {
                                     ProgressView()
                                         .padding(.trailing, 8)
                                 }
-                                Text("Save Group Associations")
+                                SettingsEntryLabel(title: "Save Group Associations")
                                     .fontWeight(.semibold)
                                 Spacer()
                             }
@@ -128,7 +148,7 @@ struct AppIDDetailView: View {
                         .disabled(isSavingGroups)
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             Section(header: Text("Actions")) {
                 SwiftUI.Button {
@@ -141,7 +161,7 @@ struct AppIDDetailView: View {
                         Text("Download Provisioning Profile")
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -149,6 +169,7 @@ struct AppIDDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle(currentAppID.name.isEmpty ? "App ID Details" : currentAppID.name)
+        .labelStyle(.titleOnly)
         .onAppear {
             initializeSelectedGroups()
         }
@@ -161,13 +182,9 @@ struct AppIDDetailView: View {
     }
 
     private func initializeSelectedGroups() {
-        var initial = Set<String>()
-        let appGroupFeatureKey = Feature.appGroups.rawValue
-        if currentAppID.features.keys.contains(where: { $0.rawValue == appGroupFeatureKey }) {
-            for group in viewModel.appGroups {
-                initial.insert(group.identifier)
-            }
-        }
+        let initial = Set<String>()
+        // The portal's feature flag does not identify associated groups. Never
+        // preselect every group in the team from a single enabled capability.
         self.selectedGroupIDs = initial
     }
 

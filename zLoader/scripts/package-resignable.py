@@ -1,7 +1,7 @@
 """Preserve capability requests for iLoader / SideStore re-signing.
 
 Ad-hoc signatures describe required entitlements; they do not grant iOS App
-Groups or Network Extension access. A real signer must provision and sign both
+Group access. A real signer must provision and sign both
 host and extensions with Apple's matching profiles before installation.
 """
 import hashlib
@@ -14,9 +14,11 @@ import subprocess
 from pathlib import Path
 import zipfile
 import struct
+import runpy
 
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--internal', action='store_true', help='Include the installed provider; requires Network Extension provisioning')
 parser.add_argument('--signed-ipa', type=Path, help='Keep all entitlements and profiles from a private Apple-signed IPA')
 args = parser.parse_args()
 if args.signed_ipa:
@@ -32,6 +34,8 @@ if staging.exists():
     shutil.rmtree(staging)
 app = staging / 'Payload/zLoader.app'
 shutil.copytree(source, app, symlinks=True)
+if not args.internal:
+    runpy.run_path(str(root / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](app, root)
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
 # Installer-neutral input: no Apple profiles tied to a previous team/identity.
@@ -47,14 +51,13 @@ def requested_entitlements(relative_path):
     return result
 
 expected = {
-    app: requested_entitlements('zLoader/Host.entitlements'),
+    app: requested_entitlements('zLoader/Host.entitlements' if args.internal else 'zLoader/HostExternal.entitlements'),
     app / 'PlugIns/zLoaderWidget.appex': requested_entitlements('zLoader/Widget/zLoaderWidget.entitlements'),
-    app / 'PlugIns/zLoaderTunnel.appex': requested_entitlements('zLoader/Tunnel/zLoaderTunnel.entitlements'),
 }
+if args.internal:
+    expected[app / 'PlugIns/zLoaderTunnel.appex'] = requested_entitlements('zLoader/Tunnel/zLoaderTunnel.entitlements')
 assert expected[app][app_groups_key] == [group]
 assert expected[app / 'PlugIns/zLoaderWidget.appex'][app_groups_key] == [group]
-for bundle in [app, app / 'PlugIns/zLoaderTunnel.appex']:
-    assert expected[bundle][ne_key] == ['packet-tunnel-provider']
 
 def sign(path, entitlements=None):
     args = ['codesign', '--force', '--sign', '-', '--timestamp=none']
@@ -107,7 +110,7 @@ for path, requirements in expected.items():
         assert actual[key] == value, (path.name, key)
         assert imported[key] == value, (path.name, key, "SideSign XML import")
 
-ipa = out / 'zLoader-resignable.ipa'
+ipa = out / ('zLoader-internal-resignable.ipa' if args.internal else 'zLoader-resignable.ipa')
 subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(staging / 'Payload'), str(ipa)], check=True)
 with zipfile.ZipFile(ipa) as archive:
     assert archive.testzip() is None
@@ -119,17 +122,19 @@ manifest = {
     'appGroup': group,
     'capabilitiesByBundle': {str(path.relative_to(staging / 'Payload')): requirements for path, requirements in expected.items()},
     'signing': 'ad-hoc capability metadata only; not authorized or directly installable on iOS',
-    'required': 'Real Apple provisioning and signing for App Groups (host/widget) and Network Extension (host/tunnel)',
+    'internalProviderInstalled': args.internal, 'bootstrapPayloadIncluded': not args.internal,
+    'required': 'Apple profiles for every installed bundle; use LocalDevVPN for initial on-device provisioning',
 }
-(out / 'zLoader-resignable.json').write_text(json.dumps(manifest, indent=2) + '\n')
+ipa.with_suffix('.json').write_text(json.dumps(manifest, indent=2) + '\n')
 # No Apple signing identity is used. iLoader replaces these local metadata
 # signatures with signatures and entitlements from its downloaded profiles.
-iloader_ipa = out / 'zLoader-iLoader.ipa'
+iloader_ipa = out / ('zLoader-internal-iLoader.ipa' if args.internal else 'zLoader-iLoader.ipa')
 shutil.copy2(ipa, iloader_ipa)
 version = info['CFBundleShortVersionString']
-for name in [f'zLoader-{version}-iLoader.ipa', f'zLoader-{version}-resignable.ipa']:
+variant = '-internal' if args.internal else ''
+for name in [f'zLoader-{version}{variant}-iLoader.ipa', f'zLoader-{version}{variant}-resignable.ipa']:
     shutil.copy2(ipa, out / name)
 iloader_manifest = {**manifest, 'artifact': iloader_ipa.name}
-(out / 'zLoader-iLoader.json').write_text(json.dumps(iloader_manifest, indent=2) + '\n')
+iloader_ipa.with_suffix('.json').write_text(json.dumps(iloader_manifest, indent=2) + '\n')
 shutil.rmtree(staging)
 print(json.dumps(iloader_manifest, indent=2))

@@ -11,6 +11,7 @@ import SwiftUI
 import Combine
 import Network
 import Minimuxer
+import MinimuxerCommon
 
 enum SelectedEndpointOption: Equatable {
     case discovered(WirelessPairTarget)
@@ -30,13 +31,22 @@ struct WirelessPairTarget: Identifiable, Hashable {
     var port: UInt16
     
     var name: String {
-        if case .bonjour(let txt) = service.result.metadata,
-           let customName = txt.dictionary["name"], !customName.isEmpty {
-            return customName
+        var records = service.txtRecords
+        if case .bonjour(let txt) = service.result.metadata {
+            records += txt.dictionary.map { (key: $0.key, value: $0.value) }
+        }
+        // NetService results store TXT records separately from NWBrowser metadata.
+        // Prefer an advertised device name over a UUID-like service instance.
+        for key in ["name", "devicename", "device_name", "displayname"] {
+            if let record = records.first(where: {
+                $0.key.lowercased() == key && !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }) {
+                return record.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
         }
         return service.name
     }
-    
+
     var rawType: String { service.type }
     
     var model: String? {
@@ -73,8 +83,8 @@ final class WirelessPairViewModel: ObservableObject {
     @Published var confirmationMessage: String?
     @Published var isSavingLockdown = false
     // Server Advertising State
-    @Published var statusText = "Ready to pair"
-    @Published var subStatusText = "Tap Start to advertise this device on the local network."
+    @Published var statusText = NSLocalizedString("Ready to pair", comment: "")
+    @Published var subStatusText = NSLocalizedString("Tap Start to advertise this device on the local network.", comment: "")
     @Published var pinCode: String? = nil
     @Published var isAdvertising = false
     @Published var pairedDevice: MinimuxerPairedDevice? = nil
@@ -127,6 +137,19 @@ final class WirelessPairViewModel: ObservableObject {
         return (ip: ip, port: port)
     }
     
+    private(set) var isSelfPairing = false
+
+    func configurePurpose(selfPairing: Bool, onPairingFileReady: ((URL) throws -> Void)?) {
+        guard pairingTask == nil, !isAdvertising, !isSavingLockdown else { return }
+        if isSelfPairing != selfPairing {
+            pairedDevice = nil
+            confirmationMessage = nil
+            self.onPairingFileReady = nil
+        }
+        isSelfPairing = selfPairing
+        if let onPairingFileReady { self.onPairingFileReady = onPairingFileReady }
+    }
+
     var onPairingFileReady: ((URL) throws -> Void)?
 
     init(onPairingFileReady: ((URL) throws -> Void)? = nil) {
@@ -138,23 +161,27 @@ final class WirelessPairViewModel: ObservableObject {
         wirelessPairing.onReadyToPair = { [weak self] (serviceID: String, port: Int) in
             debugLog("[WirelessPairViewModel] onReadyToPair callback received: serviceID='\(serviceID)', port=\(port)")
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let self = self, self.isAdvertising else { return }
                 self.serviceID = serviceID
                 self.port = port
-                self.statusText = "Advertising server..."
-                self.subStatusText = "Open Settings → Developer → Remote Pairing on this device."
+                self.statusText = NSLocalizedString("Pairing Server Ready", comment: "")
+                self.subStatusText = self.isSelfPairing ? "Open Settings → Privacy & Security → Developer Mode on this device." : "Open the pairing settings on the other device and select zLoader."
                 PairingActivityController.shared.update(status: self.statusText, pin: nil)
+                if self.openSettingsWhenReady {
+                    self.openSettingsWhenReady = false
+                    self.openPairingSettings()
+                }
             }
         }
         
         wirelessPairing.onPinReceived = { [weak self] (pin: String) in
             debugLog("[WirelessPairViewModel] Pairing PIN received")
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let self = self, self.isAdvertising else { return }
                 self.pinCode = pin
-                PairingActivityController.shared.update(status: "Pairing-PIN eingeben", pin: pin)
-                self.statusText = "Device Connected"
-                self.subStatusText = "Enter the pairing code shown below on your other device settings screen."
+                PairingActivityController.shared.update(status: "Enter Pairing PIN", pin: pin)
+                self.statusText = NSLocalizedString("Device Connected", comment: "")
+                self.subStatusText = NSLocalizedString("Enter the pairing code shown below on your other device settings screen.", comment: "")
             }
         }
         
@@ -165,8 +192,8 @@ final class WirelessPairViewModel: ObservableObject {
                 self.pinPromptCallback = submitPin
                 self.enteredPin = ""
                 self.isPinPromptPresented = true
-                self.statusText = "Enter Pairing PIN"
-                self.subStatusText = "Enter the 6-digit code shown on your Apple TV / device screen."
+                self.statusText = NSLocalizedString("Enter Pairing PIN", comment: "")
+                self.subStatusText = NSLocalizedString("Enter the 6-digit code shown on your Apple TV / device screen.", comment: "")
             }
         }
     }
@@ -191,6 +218,7 @@ final class WirelessPairViewModel: ObservableObject {
     
     private var discoveryTask: Task<Void, Never>?
     private var pairingTask: Task<Void, Never>?
+    private var openSettingsWhenReady = false
     
     func refreshInterfaces() {
         debugLog("[WirelessPairViewModel] refreshInterfaces() scanning active interfaces...")
@@ -480,70 +508,89 @@ final class WirelessPairViewModel: ObservableObject {
         bonjour.stopInstanceSearch()
     }
     
-    func togglePairing() {
-        debugLog("[WirelessPairViewModel] togglePairing() invoked (currently isAdvertising=\(isAdvertising))")
-        if isAdvertising {
-            stopPairing()
-        } else {
-            // binds to all ie, 0.0.0.0
+    func startLocalPairingAndOpenSettings() {
+        guard !isSavingLockdown else { return }
+        Task {
+            await PairingActivityController.shared.requestNotificationPermission()
+            if isAdvertising, port != nil { openPairingSettings(); return }
+            openSettingsWhenReady = true
             startPairing()
         }
     }
-    
+
+    private func openPairingSettings() {
+        // Best-effort private Settings route, requested for local pairing.
+        // iOS may ignore the path while accepting the URL: `opened` confirms
+        // dispatch only, never that Developer Mode was actually displayed.
+        // Deliberately no fallback to zLoader's app-specific Settings page.
+        if let url = URL(string: "App-prefs:root=Privacy&path=DEVELOPER_MODE") {
+            UIApplication.shared.open(url) { [weak self] opened in
+                guard !opened else { return }
+                Task { @MainActor in
+                    self?.errorMessage = NSLocalizedString("Settings could not be opened. Open Settings → Privacy & Security → Developer Mode manually. The pairing server remains active.", comment: "")
+                }
+            }
+        }
+    }
+
     func startPairing() {
-        guard pairingTask == nil, !isSavingLockdown else { return }
+        guard pairingTask == nil, !isAdvertising, !isSavingLockdown else { return }
         let docsPath = FileManager.default.documentsDirectory.path
-        debugLog("[WirelessPairViewModel] startPairing() starting advertisement with base path: '\(docsPath)'")
         PairingActivityController.shared.start { [weak self] in
             self?.stopPairing()
-            self?.errorMessage = "iOS ended background pairing. Open zLoader and start Local Pairing again."
+            self?.errorMessage = NSLocalizedString("iOS ended the background session. Return to zLoader and start Self-Pairing again.", comment: "")
         }
         isAdvertising = true
+        pairedDevice = nil
+        confirmationMessage = nil
         pinCode = nil
         errorMessage = nil
         serviceID = nil
         port = nil
-        statusText = "Waiting for connection..."
-        subStatusText = "Open Remote Pairing on your Apple TV / Vision Pro / host device to discover this server."
-        
-        wirelessPairing.start(
-            outPath: docsPath,
-            resolveFileName: { name, model in
-                Self.pairingFileName(for: name, model: model)
-            }
-        ) { [weak self] (result: Result<MinimuxerPairedDevice, Swift.Error>) in
-            Task { @MainActor in
-                guard let self = self else { return }
-                debugLog("[WirelessPairViewModel] startPairing() completion received: result=\(result), wasAdvertising=\(self.isAdvertising)")
-                guard self.isAdvertising else { return }
-                self.isAdvertising = false
-                self.pinCode = nil
-                self.serviceID = nil
-                self.port = nil
-                
-                switch result {
-                case .success(let device):
-                    self.acceptPairedDevice(device)
-                case .failure(let error):
-                    debugLog("[WirelessPairViewModel] startPairing() FAILURE: error='\(error.localizedDescription)'")
-                    self.errorMessage = error.localizedDescription
-                    self.statusText = "Pairing Failed"
-                    self.subStatusText = "An error occurred during pairing."
-                    PairingActivityController.shared.finish(status: "Pairing fehlgeschlagen", success: false)
+        statusText = NSLocalizedString("Starting Pairing Server…", comment: "")
+        subStatusText = NSLocalizedString("When the server is ready, open Settings → Privacy & Security → Developer Mode.", comment: "")
+        pairingTask = Task { @MainActor in
+            do {
+                let operation = {
+                    try Task.checkCancellation()
+                    return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<MinimuxerPairedDevice, Error>) in
+                        wirelessPairing.start(outPath: docsPath, resolveFileName: { name, model in
+                            Self.pairingFileName(for: name, model: model)
+                        }, completion: { continuation.resume(with: $0) })
+                    }
                 }
+                let device = try await (isSelfPairing ? ZLoaderTransport.withLease(operation) : operation())
+                pairingTask = nil
+                guard !Task.isCancelled else { return }
+                isAdvertising = false
+                openSettingsWhenReady = false
+                pinCode = nil
+                serviceID = nil
+                port = nil
+                wirelessPairing.stop()
+                acceptPairedDevice(device)
+            } catch {
+                pairingTask = nil
+                guard !Task.isCancelled else { return }
+                isAdvertising = false
+                openSettingsWhenReady = false
+                errorMessage = error.localizedDescription
+                statusText = NSLocalizedString("Pairing Failed", comment: "")
+                PairingActivityController.shared.finish(status: "Pairing Failed", success: false)
             }
         }
     }
 
     func stopPairing() {
         debugLog("[WirelessPairViewModel] stopPairing() stopping advertisement and tearing down session")
+        openSettingsWhenReady = false
         pairingTask?.cancel()
         wirelessPairing.stop()
-        PairingActivityController.shared.finish(status: "Pairing beendet", success: false)
+        PairingActivityController.shared.finish(status: "Pairing Stopped", success: false)
         
         isAdvertising = false
-        statusText = "Ready to pair"
-        subStatusText = "Tap Start to advertise this device on the local network."
+        statusText = NSLocalizedString("Ready to pair", comment: "")
+        subStatusText = NSLocalizedString("Tap Start to advertise this device on the local network.", comment: "")
         pinCode = nil
         errorMessage = nil
         serviceID = nil
@@ -565,7 +612,7 @@ final class WirelessPairViewModel: ObservableObject {
         errorMessage = nil
         serviceID = nil
         port = nil
-        statusText = "Connecting to device..."
+        statusText = NSLocalizedString("Connecting to device...", comment: "")
         subStatusText = "Initiating pairing handshake on \(targetIp):\(targetPort)..."
         
         pairingTask = Task { @MainActor in
@@ -606,7 +653,7 @@ final class WirelessPairViewModel: ObservableObject {
                 acceptPairedDevice(device)
             case .failure(let error):
                 errorMessage = error.localizedDescription
-                statusText = "Pairing Failed"
+                statusText = NSLocalizedString("Pairing Failed", comment: "")
                 subStatusText = "An error occurred during pairing: \(error.localizedDescription)"
             }
             completion?(result)
@@ -616,60 +663,34 @@ final class WirelessPairViewModel: ObservableObject {
 
     private func acceptPairedDevice(_ device: MinimuxerPairedDevice) {
         let url = URL(fileURLWithPath: device.pairingFilePath)
+        guard isSelfPairing else {
+            pairedDevice = device
+            statusText = NSLocalizedString("Pairing Complete", comment: "")
+            subStatusText = NSLocalizedString("Export the pairing file for the paired device.", comment: "")
+            confirmationMessage = nil
+            PairingActivityController.shared.finish(status: "Pairing Complete", success: true)
+            return
+        }
         do {
             try PairingFileManager.shared.importPairingFile(from: url)
-            try onPairingFileReady?(url)
             pairedDevice = device
-            statusText = "Remote Pairing gespeichert"
-            subStatusText = "Die erzeugte Datei wurde direkt in zLoader übernommen."
-            confirmationMessage = "Remote Pairing wurde in zLoader gespeichert. Lockdown wird jetzt separat gekoppelt."
+            try onPairingFileReady?(url)
+            statusText = NSLocalizedString("Pairing Complete", comment: "")
+            subStatusText = NSLocalizedString("The generated file was imported directly into zLoader.", comment: "")
+            confirmationMessage = NSLocalizedString("Your remote pairing file is saved in zLoader. Lockdown files can be imported separately from your computer.", comment: "")
+            PairingActivityController.shared.finish(status: NSLocalizedString("Pairing Complete", comment: ""), success: true)
             Task {
                 do {
                     let (content, parsed) = try PairingFileManager.shared.inspectPairingFile(from: url)
                     try await minimuxerStart(content, preferred: parsed.mode)
-                    await pairLockdown()
                 } catch {
-                    confirmationMessage = "Pairing-Datei gespeichert, Aktivierung fehlgeschlagen: " + error.localizedDescription
-                    PairingActivityController.shared.finish(status: "Datei gespeichert · Verbindung prüfen", success: false)
+                    confirmationMessage = NSLocalizedString("Pairing File Saved, Activation Failed: ", comment: "") + error.localizedDescription
                 }
             }
         } catch {
             errorMessage = error.localizedDescription
-            statusText = "Pairing File Import Failed"
-            PairingActivityController.shared.finish(status: "Import fehlgeschlagen", success: false)
-        }
-    }
-
-    func pairLockdown() async {
-        guard !isSavingLockdown else { return }
-        isSavingLockdown = true
-        PairingActivityController.shared.update(status: "Lockdown koppeln · ggf. Vertrauen bestätigen", pin: nil)
-        defer { isSavingLockdown = false }
-        func identity(_ key: String) -> String {
-            if let saved = UserDefaults.standard.string(forKey: key) { return saved }
-            let value = UUID().uuidString
-            UserDefaults.standard.set(value, forKey: key)
-            return value
-        }
-        let hostID = identity("localPairingHostID"), buid = identity("localPairingSystemBUID")
-        let useLocal = ConnectionConfig.shared.useLocalVPN
-        let target = useLocal ? "10.7.0.1" : ConnectionConfig.shared.remoteServerIp
-        do {
-            let operation = {
-                try await minimuxer.gateway.createLockdownPairing(targetIP: target, hostName: "zLoader", hostID: hostID, systemBUID: buid)
-            }
-            let data = try await useLocal ? ZLoaderTransport.withLease(operation) : operation()
-            let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
-            let xml = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-            guard let content = String(data: xml, encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
-            _ = try PairingFileManager.shared.savePairingFile(contents: content, preferred: .lockdown)
-            let hasRemote = PairingFileManager.shared.hasPairingFile(for: .rppairing)
-            confirmationMessage = hasRemote ? "Remote- und Lockdown-Pairing wurden in zLoader gespeichert." : "Lockdown-Pairing wurde in zLoader gespeichert."
-            statusText = hasRemote ? "Beide Pairing-Verfahren gespeichert" : "Lockdown-Pairing gespeichert"
-            PairingActivityController.shared.finish(status: "Pairing gespeichert", success: true)
-        } catch {
-            confirmationMessage = "Remote Pairing bleibt gespeichert. Lockdown konnte nicht gekoppelt werden: " + error.localizedDescription + " Bestätige ggf. Vertrauen und versuche Lockdown erneut oder importiere den Lockdown-Datensatz aus iLoader."
-            PairingActivityController.shared.finish(status: "Remote gespeichert · Lockdown prüfen", success: false)
+            statusText = NSLocalizedString("Pairing File Import Failed", comment: "")
+            PairingActivityController.shared.finish(status: "Import Failed", success: false)
         }
     }
 

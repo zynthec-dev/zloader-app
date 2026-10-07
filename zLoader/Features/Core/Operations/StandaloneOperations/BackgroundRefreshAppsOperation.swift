@@ -64,9 +64,6 @@ final class BackgroundRefreshAppsOperation: BaseStandaloneOperation<OperationCon
             throw error
         }
 
-        if UserDefaults.standard.enableEMPforWireguard {
-            try await startEMProxy()
-        }
         
         defer {
             dbContext.perform {

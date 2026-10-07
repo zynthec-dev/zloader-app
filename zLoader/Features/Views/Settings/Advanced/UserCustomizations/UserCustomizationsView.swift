@@ -6,40 +6,41 @@
 //  Copyright © 2026 SideStore. All rights reserved.
 //
 
-import SwiftUI
 import Minimuxer
+import SwiftUI
 
-private extension Color {
-    static let settingsRowBackground = Color.primary.opacity(0.15)
-    static let settingsDivider = Color.primary.opacity(0.15)
+extension Color {
+    fileprivate static var settingsRowBackground: Color { Color(uiColor: .secondarySystemGroupedBackground) }
+    fileprivate static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct UserCustomizationsView: View {
     @State private var selectedBackend: GatewayBackend = selectedGatewayBackendCache
     @State private var isBackgroundServiceEnabled: Bool = UserDefaults.standard.isBackgroundServiceEnabled
-    @State private var selectedBackgroundServiceMode: BackgroundServiceMode = UserDefaults.standard.backgroundServiceMode
+    @State private var selectedBackgroundServiceMode: BackgroundServiceMode = UserDefaults.standard
+        .backgroundServiceMode
     @State private var useOnDeviceAnisette: Bool = UserDefaults.standard.useOnDeviceAnisette
     @State private var showAnisetteRestartConfirmation: Bool = false
     @State private var customizeInfoPlist: Bool = UserDefaults.standard.customizeInfoPlist
-    @State private var preferSheetForInfoPlistCustomization: Bool = UserDefaults.standard.preferSheetForInfoPlistCustomization
+    @State private var preferSheetForInfoPlistCustomization: Bool = UserDefaults.standard
+        .preferSheetForInfoPlistCustomization
     @State private var customizeEntitlements: Bool = UserDefaults.standard.customizeEntitlements
-    @State private var preferSheetForEntitlementsCustomization: Bool = UserDefaults.standard.preferSheetForEntitlementsCustomization
+    @State private var preferSheetForEntitlementsCustomization: Bool = UserDefaults.standard
+        .preferSheetForEntitlementsCustomization
     @State private var customizeAppId: Bool = UserDefaults.standard.customizeAppId
     @State private var customizeAppIcon: Bool = UserDefaults.standard.customizeAppIcon
     @State private var customizeProvisioningProfile: Bool = UserDefaults.standard.customizeProvisioningProfile
     @State private var customizeAppExtensions: AppExtensionCustomization = UserDefaults.standard.customizeAppExtensions
     @State private var appImportSourceMode: AppImportSourceMode = UserDefaults.standard.appImportSourceMode
     @State private var isInstallConfirmationEnabled: Bool = UserDefaults.standard.isInstallConfirmationEnabled
-    @State private var isClearCustomizationsOnUninstallEnabled: Bool = UserDefaults.standard.isClearCustomizationsOnUninstallEnabled
-    @State private var isAutoLaunchAppAfterInstallEnabled: Bool = UserDefaults.standard.isAutoLaunchAppAfterInstallEnabled
+    @State private var isClearCustomizationsOnUninstallEnabled: Bool = UserDefaults.standard
+        .isClearCustomizationsOnUninstallEnabled
+    @State private var isAutoLaunchAppAfterInstallEnabled: Bool = UserDefaults.standard
+        .isAutoLaunchAppAfterInstallEnabled
     @State private var autoFixAppGroupIDs: Bool = UserDefaults.standard.autoFixAppGroupIDs
     @State private var preferResignedIPA: Bool = UserDefaults.standard.preferResignedIPA
     @State private var pendingPreferIPAOngoing: Bool = false
     @State private var showPreferIPAToggleAlert: Bool = false
-    @State private var isExportResignedAppEnabled: Bool = UserDefaults.standard.isExportResignedAppEnabled
-    @State private var enableEMPforWireguard: Bool = UserDefaults.standard.enableEMPforWireguard
-    @State private var pendingEMPOption: Bool = false
-    @State private var showEMPRestartConfirmation: Bool = false
     @State private var pendingBackendOption: GatewayBackend? = nil
     @State private var showBackendRestartConfirmation: Bool = false
     @State private var skipNonCopyableFiles: Bool = UserDefaults.standard.skipNonCopyableBackupFiles
@@ -51,7 +52,6 @@ struct UserCustomizationsView: View {
     @State private var isFileSizeVerificationEnabled: Bool = UserDefaults.standard.isFileSizeVerificationEnabled
     @State private var permissionCheckingDisabled: Bool = UserDefaults.standard.permissionCheckingDisabled
     @State private var isCellularRefreshEnabled: Bool = UserDefaults.standard.isCellularRefreshEnabled
-    @State private var wireGuardExportURL: URL? = nil
 
     @State private var isFreeAccount: Bool = false
 
@@ -68,371 +68,265 @@ struct UserCustomizationsView: View {
     @State private var editingValueText: String = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Section 0: APPEARANCE & THEMES
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("APPEARANCE & THEMES")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    NavigationLink(destination: ThemePickerView()) {
+        Form {
+            // Section 0: APPEARANCE & THEMES
+            Section("Appearance") {
+
+                NavigationLink(destination: ThemePickerView()) {
+                    HStack {
+                        SettingsEntryLabel(title: "Appearance", systemImage: "paintpalette")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color(uiColor: ThemeManager.shared.primaryColor))
+                                .frame(width: 14, height: 14)
+                        }
+                    }
+
+                    .padding(.vertical, 14)
+                }
+
+            }.listRowBackground(ZLoaderGlassBackground())
+
+            // Section 1: ANISETTE
+            Section("Anisette") {
+
+                toggleRow(
+                    title: "On-Device Anisette",
+                    subtitle: "Run ADI emulation directly on device instead of remote servers",
+                    isOn: Binding(
+                        get: { useOnDeviceAnisette },
+                        set: { newValue in
+                            useOnDeviceAnisette = newValue
+                            showAnisetteRestartConfirmation = true
+                        }
+                    )
+                )
+
+                NavigationLink(destination: AnisetteDataView()) {
+                    HStack {
+                        SettingsEntryLabel(title: "Anisette Client Configuration")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+
+                    .frame(minHeight: 32)
+                }
+
+                SwiftUI.Button(role: .destructive) {
+                    presentResetAdiDialog()
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            SettingsEntryLabel(title: "Reset adi.pb")
+                                .font(.body)
+                                .foregroundColor(.red)
+                            Text("Clear local Anisette provisioning data from Keychain")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(Color.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "trash")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+
+                    .padding(.vertical, 10)
+                    .frame(minHeight: 50)
+                }
+
+            }.listRowBackground(ZLoaderGlassBackground())
+
+            // Section: SIDESIGN
+            Section("SideSign") {
+
+                NavigationLink(destination: SideSignConfigurationView()) {
+                    HStack {
+                        SettingsEntryLabel(title: "SideSign Client Configuration")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+
+                    .frame(minHeight: 32)
+                }
+
+            }.listRowBackground(ZLoaderGlassBackground())
+
+            // Section 2: GENERAL
+            generalSection
+
+            // Section 2: APP VERIFICATION
+            Section("App Verification") {
+
+                toggleRow(
+                    title: "Disable All Verifications",
+                    isOn: Binding(
+                        get: { appVerificationDisabled },
+                        set: { newValue in
+                            appVerificationDisabled = newValue
+                            UserDefaults.standard.appVerificationDisabled = newValue
+                        }
+                    ))
+
+                Group {
+                    toggleRow(
+                        title: "Bundle Identifier Check",
+                        isOn: Binding(
+                            get: { isBundleIDVerificationEnabled },
+                            set: { newValue in
+                                isBundleIDVerificationEnabled = newValue
+                                UserDefaults.standard.isBundleIDVerificationEnabled = newValue
+                            }
+                        ))
+
+                    toggleRow(
+                        title: "iOS Version Check",
+                        isOn: Binding(
+                            get: { isiOSVersionVerificationEnabled },
+                            set: { newValue in
+                                isiOSVersionVerificationEnabled = newValue
+                                UserDefaults.standard.isiOSVersionVerificationEnabled = newValue
+                            }
+                        ))
+
+                    toggleRow(
+                        title: "App Version Check",
+                        isOn: Binding(
+                            get: { isAppVersionVerificationEnabled },
+                            set: { newValue in
+                                isAppVersionVerificationEnabled = newValue
+                                UserDefaults.standard.isAppVersionVerificationEnabled = newValue
+                            }
+                        ))
+
+                    toggleRow(
+                        title: "Checksum (SHA-256) Check",
+                        isOn: Binding(
+                            get: { isChecksumVerificationEnabled },
+                            set: { newValue in
+                                isChecksumVerificationEnabled = newValue
+                                UserDefaults.standard.isChecksumVerificationEnabled = newValue
+                            }
+                        ))
+
+                    toggleRow(
+                        title: "App File Size Check",
+                        isOn: Binding(
+                            get: { isFileSizeVerificationEnabled },
+                            set: { newValue in
+                                isFileSizeVerificationEnabled = newValue
+                                UserDefaults.standard.isFileSizeVerificationEnabled = newValue
+                            }
+                        ))
+
+                    toggleRow(
+                        title: "Permission Checks",
+                        isOn: Binding(
+                            get: { !permissionCheckingDisabled },
+                            set: { newValue in
+                                permissionCheckingDisabled = !newValue
+                                UserDefaults.standard.permissionCheckingDisabled = !newValue
+                            }
+                        ))
+                }
+                .disabled(appVerificationDisabled)
+                .opacity(appVerificationDisabled ? 0.5 : 1.0)
+
+            }.listRowBackground(ZLoaderGlassBackground())
+
+            // Section 4: CELLULAR REFRESH
+            cellularRefreshShortcutsSection
+
+            // Section 5: MINIMUXER BACKEND
+            Section("Minimuxer Backend") {
+
+                ForEach(GatewayBackend.allCases, id: \.self) { backend in
+                    SwiftUI.Button(action: {
+                        if selectedBackend != backend {
+                            if UserDefaults.standard.isMinimuxerBackendHotswapEnabled {
+                                applyBackendChange(backend, restartRequired: false)
+                            } else {
+                                pendingBackendOption = backend
+                                showBackendRestartConfirmation = true
+                            }
+                        }
+                    }) {
                         HStack {
-                            Text("Theme Manager")
-                                .font(.system(size: 17, weight: .bold))
+                            Text(backend.rawValue)
+                                .font(.body)
                                 .foregroundColor(.primary)
                             Spacer()
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(Color(uiColor: ThemeManager.shared.primaryColor))
-                                    .frame(width: 14, height: 14)
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.primary.opacity(0.4))
+                            if selectedBackend == backend {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(Color(uiColor: ThemeManager.shared.primaryColor))
                             }
                         }
-                        .padding(.horizontal, 16)
+
                         .padding(.vertical, 14)
                     }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
+                    if backend != GatewayBackend.allCases.last {
 
-                // Section 1: ANISETTE
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ANISETTE")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        toggleRow(
-                            title: "On-Device Anisette",
-                            subtitle: "Run ADI emulation directly on device instead of remote servers",
-                            isOn: Binding(
-                                get: { useOnDeviceAnisette },
-                                set: { newValue in
-                                    useOnDeviceAnisette = newValue
-                                    showAnisetteRestartConfirmation = true
-                                }
-                            )
-                        )
-                        
-                        divider
-                        
-                        NavigationLink(destination: AnisetteDataView()) {
-                            HStack {
-                                Text("Anisette Client Configuration")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.primary.opacity(0.4))
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(role: .destructive) {
-                            presentResetAdiDialog()
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Reset adi.pb")
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(.red)
-                                    Text("Clear local Anisette provisioning data from Keychain")
-                                        .font(.system(size: 12, weight: .regular))
-                                        .foregroundColor(Color.primary.opacity(0.6))
-                                }
-                                Spacer()
-                                Image(systemName: "trash")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.red)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .frame(minHeight: 50)
-                        }
                     }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
                 }
 
-                // Section: SIDESIGN
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("SIDESIGN")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        NavigationLink(destination: SideSignConfigurationView()) {
-                            HStack {
-                                Text("SideSign Client Configuration")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.primary.opacity(0.4))
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
+            }.listRowBackground(ZLoaderGlassBackground())
+
+            // Section 6: BACKGROUND SERVICE
+            Section("Background Service") {
+
+                toggleRow(
+                    title: "Enable Background Keepalive",
+                    isOn: Binding(
+                        get: { isBackgroundServiceEnabled },
+                        set: { newValue in
+                            isBackgroundServiceEnabled = newValue
+                            BackgroundServiceManager.setEnabled(newValue)
                         }
-                    }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
+                    ))
 
-                // Section 2: GENERAL
-                generalSection
-
-                // Section 2: APP VERIFICATION
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("APP VERIFICATION")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        toggleRow(title: "Disable All Verifications", isOn: Binding(
-                            get: { appVerificationDisabled },
-                            set: { newValue in
-                                appVerificationDisabled = newValue
-                                UserDefaults.standard.appVerificationDisabled = newValue
-                            }
-                        ))
-                        
-                        divider
-                        
-                        Group {
-                            toggleRow(title: "Bundle Identifier Check", isOn: Binding(
-                                get: { isBundleIDVerificationEnabled },
-                                set: { newValue in
-                                    isBundleIDVerificationEnabled = newValue
-                                    UserDefaults.standard.isBundleIDVerificationEnabled = newValue
-                                }
-                            ))
-                            
-                            divider
-                            
-                            toggleRow(title: "iOS Version Check", isOn: Binding(
-                                get: { isiOSVersionVerificationEnabled },
-                                set: { newValue in
-                                    isiOSVersionVerificationEnabled = newValue
-                                    UserDefaults.standard.isiOSVersionVerificationEnabled = newValue
-                                }
-                            ))
-                            
-                            divider
-                            
-                            toggleRow(title: "App Version Check", isOn: Binding(
-                                get: { isAppVersionVerificationEnabled },
-                                set: { newValue in
-                                    isAppVersionVerificationEnabled = newValue
-                                    UserDefaults.standard.isAppVersionVerificationEnabled = newValue
-                                }
-                            ))
-                            
-                            divider
-                            
-                            toggleRow(title: "Checksum (SHA-256) Check", isOn: Binding(
-                                get: { isChecksumVerificationEnabled },
-                                set: { newValue in
-                                    isChecksumVerificationEnabled = newValue
-                                    UserDefaults.standard.isChecksumVerificationEnabled = newValue
-                                }
-                            ))
-                            
-                            divider
-                            
-                            toggleRow(title: "App File Size Check", isOn: Binding(
-                                get: { isFileSizeVerificationEnabled },
-                                set: { newValue in
-                                    isFileSizeVerificationEnabled = newValue
-                                    UserDefaults.standard.isFileSizeVerificationEnabled = newValue
-                                }
-                            ))
-                            
-                            divider
-                            
-                            toggleRow(title: "Permission Checks", isOn: Binding(
-                                get: { !permissionCheckingDisabled },
-                                set: { newValue in
-                                    permissionCheckingDisabled = !newValue
-                                    UserDefaults.standard.permissionCheckingDisabled = !newValue
-                                }
-                            ))
-                        }
-                        .disabled(appVerificationDisabled)
-                        .opacity(appVerificationDisabled ? 0.5 : 1.0)
-                    }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
-
-                // Section 3: EMPROXY & WIREGUARD
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("EMPROXY & WIREGUARD")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
+                ForEach(BackgroundServiceMode.allCases, id: \.self) { mode in
+                    SwiftUI.Button(action: {
+                        selectedBackgroundServiceMode = mode
+                        BackgroundServiceManager.switchTo(mode: mode)
+                    }) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Export WireGuard Config")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text("Exports zLoader.conf to import into WireGuard VPN app")
-                                    .font(.system(size: 12, weight: .regular))
-                                    .foregroundColor(Color.primary.opacity(0.6))
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(mode.displayName)
+                                    .font(.body)
+                                    .foregroundColor(isBackgroundServiceEnabled ? .primary : Color.primary.opacity(0.4))
+                                Text(mode.subtitle)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Color.primary.opacity(isBackgroundServiceEnabled ? 0.6 : 0.3))
                             }
                             Spacer()
-                            SwiftUI.Button(action: { exportWireGuardConfig() }) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 22, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .frame(width: 55, alignment: .center)
+                            if selectedBackgroundServiceMode == mode {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(
+                                        isBackgroundServiceEnabled
+                                            ? Color(uiColor: ThemeManager.shared.primaryColor)
+                                            : Color.primary.opacity(0.3))
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(minHeight: 50)
-                        
-                        divider
-                        
-                        toggleRow(
-                            title: "EMProxy (WireGuard) Server",
-                            subtitle: "Restart required to apply changes",
-                            isOn: Binding(
-                                get: { enableEMPforWireguard },
-                                set: { newValue in
-                                    pendingEMPOption = newValue
-                                    showEMPRestartConfirmation = true
-                                }
-                            )
-                        )
+
+                        .padding(.vertical, 12)
                     }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
+                    .disabled(!isBackgroundServiceEnabled)
                 }
 
-                // Section 4: CELLULAR REFRESH
-                cellularRefreshShortcutsSection
+            }.listRowBackground(ZLoaderGlassBackground())
 
-                // Section 5: MINIMUXER BACKEND
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("MINIMUXER BACKEND")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        ForEach(GatewayBackend.allCases, id: \.self) { backend in
-                            SwiftUI.Button(action: {
-                                if selectedBackend != backend {
-                                    if UserDefaults.standard.isMinimuxerBackendHotswapEnabled {
-                                        applyBackendChange(backend, restartRequired: false)
-                                    } else {
-                                        pendingBackendOption = backend
-                                        showBackendRestartConfirmation = true
-                                    }
-                                }
-                            }) {
-                                HStack {
-                                    Text(backend.rawValue)
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    if selectedBackend == backend {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 16, weight: .bold))
-                                            .foregroundColor(Color(uiColor: ThemeManager.shared.primaryColor))
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                            }
-                            if backend != GatewayBackend.allCases.last {
-                                divider
-                            }
-                        }
-                    }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
-
-                // Section 6: BACKGROUND SERVICE
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("BACKGROUND SERVICE")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        toggleRow(title: "Enable Background Keepalive", isOn: Binding(
-                            get: { isBackgroundServiceEnabled },
-                            set: { newValue in
-                                isBackgroundServiceEnabled = newValue
-                                BackgroundServiceManager.setEnabled(newValue)
-                            }
-                        ))
-                        
-                        divider
-                        
-                        ForEach(BackgroundServiceMode.allCases, id: \.self) { mode in
-                            SwiftUI.Button(action: {
-                                selectedBackgroundServiceMode = mode
-                                BackgroundServiceManager.switchTo(mode: mode)
-                            }) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(mode.displayName)
-                                            .font(.system(size: 17, weight: .bold))
-                                            .foregroundColor(isBackgroundServiceEnabled ? .primary : Color.primary.opacity(0.4))
-                                        Text(mode.subtitle)
-                                            .font(.system(size: 13))
-                                            .foregroundColor(Color.primary.opacity(isBackgroundServiceEnabled ? 0.6 : 0.3))
-                                    }
-                                    Spacer()
-                                    if selectedBackgroundServiceMode == mode {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 16, weight: .bold))
-                                            .foregroundColor(isBackgroundServiceEnabled ? Color(uiColor: ThemeManager.shared.primaryColor) : Color.primary.opacity(0.3))
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                            }
-                            .disabled(!isBackgroundServiceEnabled)
-                            
-                            if mode != BackgroundServiceMode.allCases.last {
-                                divider
-                            }
-                        }
-                    }
-                    .background(Color.settingsRowBackground)
-                    .cornerRadius(14)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("User Customizations")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
-        .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.large)
         #endif
         .alert("Restart Required", isPresented: $showAnisetteRestartConfirmation) {
             SwiftUI.Button("Restart Now", role: .destructive) {
@@ -446,17 +340,9 @@ struct UserCustomizationsView: View {
                 useOnDeviceAnisette = UserDefaults.standard.useOnDeviceAnisette
             }
         } message: {
-            Text("Changing Anisette config will invalidate your current provisioned Anisette data and you will be signed out.\n\nThis action will require a restart, do you want to proceed?")
-        }
-        .alert("Restart Required", isPresented: $showEMPRestartConfirmation) {
-            SwiftUI.Button("Restart Now", role: .destructive) {
-                enableEMPforWireguard = pendingEMPOption
-                UserDefaults.standard.enableEMPforWireguard = pendingEMPOption
-                exit(0)
-            }
-            SwiftUI.Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Changing the EMProxy setting requires restarting zLoader. If canceled, changes will not be saved.")
+            Text(
+                "Changing Anisette config will invalidate your current provisioned Anisette data and you will be signed out.\n\nThis action will require a restart, do you want to proceed?"
+            )
         }
         .alert("Restart Required", isPresented: $showBackendRestartConfirmation) {
             SwiftUI.Button("Restart Now", role: .destructive) {
@@ -470,7 +356,10 @@ struct UserCustomizationsView: View {
         } message: {
             Text("Changing the Minimuxer backend requires restarting zLoader. If canceled, changes will not be saved.")
         }
-        .alert(pendingPreferIPAOngoing ? "Prefer Resigned IPA" : "Prefer App Bundle", isPresented: $showPreferIPAToggleAlert) {
+        .alert(
+            pendingPreferIPAOngoing ? "Prefer Resigned IPA" : "Prefer App Bundle",
+            isPresented: $showPreferIPAToggleAlert
+        ) {
             SwiftUI.Button("Switch") {
                 preferResignedIPA = pendingPreferIPAOngoing
                 UserDefaults.standard.preferResignedIPA = pendingPreferIPAOngoing
@@ -480,19 +369,16 @@ struct UserCustomizationsView: View {
             }
         } message: {
             if pendingPreferIPAOngoing {
-                Text("Switching to Resigned IPA prioritizes install speed (~40% faster) by packaging an uncompressed IPA for fast transfer, but temporarily uses additional disk space during packaging.")
+                Text(
+                    "Switching to Resigned IPA prioritizes install speed (~40% faster) by packaging an uncompressed IPA for fast transfer, but temporarily uses additional disk space during packaging."
+                )
             } else {
-                Text("Switching to App Bundle prioritizes storage efficiency by transferring the app bundle directly without packaging a temporary IPA, but transfer speeds will be noticeably slower.")
+                Text(
+                    "Switching to App Bundle prioritizes storage efficiency by transferring the app bundle directly without packaging a temporary IPA, but transfer speeds will be noticeably slower."
+                )
             }
         }
-        .sheet(isPresented: Binding<Bool>(
-            get: { wireGuardExportURL != nil },
-            set: { if !$0 { wireGuardExportURL = nil } }
-        )) {
-            if let url = wireGuardExportURL {
-                ActivityViewController(activityItems: [url])
-            }
-        }
+
         .alert(
             editDialog?.title ?? "",
             isPresented: Binding<Bool>(
@@ -502,7 +388,7 @@ struct UserCustomizationsView: View {
         ) {
             TextField(editDialog?.placeholder ?? "", text: $editingValueText)
                 #if !os(tvOS)
-                .keyboardType(editDialog?.keyboardType ?? .default)
+                    .keyboardType(editDialog?.keyboardType ?? .default)
                 #endif
             SwiftUI.Button("OK") {
                 if let dialog = editDialog {
@@ -522,27 +408,15 @@ struct UserCustomizationsView: View {
     }
 
     private func toggleRow(title: String, subtitle: String? = nil, isOn: Binding<Bool>) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let subtitle = subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(Color.primary.opacity(0.6))
-                        .fixedSize(horizontal: false, vertical: true)
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 4) {
+                SettingsEntryLabel(title: title)
+                if let subtitle {
+                    Text(LocalizedStringKey(subtitle)).font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .tint(.green)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .frame(minHeight: 50)
+        .tint(Color(uiColor: .altPrimary))
     }
 
     private func textFieldRow(
@@ -556,14 +430,14 @@ struct UserCustomizationsView: View {
         SwiftUI.Button(action: onTap) {
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .bold))
+                    SettingsEntryLabel(title: title)
+                        .font(.body)
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                     if let subtitle = subtitle {
-                        Text(subtitle)
+                        Text(LocalizedStringKey(subtitle))
                             .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(Color.primary.opacity(0.6))
+                            .foregroundColor(Color.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -571,7 +445,7 @@ struct UserCustomizationsView: View {
                 HStack {
                     Text(value.isEmpty ? placeholder : (unit != nil ? "\(value) \(unit!)" : value))
                         .font(.system(size: 15))
-                        .foregroundColor(value.isEmpty ? Color.primary.opacity(0.3) : .white)
+                        .foregroundColor(value.isEmpty ? Color.primary.opacity(0.3) : .primary)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -579,22 +453,30 @@ struct UserCustomizationsView: View {
                 .background(Color.primary.opacity(0.08))
                 .cornerRadius(8)
             }
-            .padding(.horizontal, 16)
+
             .padding(.vertical, 10)
         }
     }
 
     private var cellularRefreshShortcutsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            toggleRow(title: "Cellular Refresh", subtitle: "Use cellular Internet while the embedded local tunnel handles device operations", isOn: Binding(
-                get: { isCellularRefreshEnabled },
-                set: { isCellularRefreshEnabled = $0; CellularRefreshManager.shared.setEnabled($0) }
-            ))
-            Text("No cellular toggle shortcuts are needed. Requires correctly provisioned Network Extension entitlements. Cellular-only device connectivity is experimental and must be verified on your iPhone.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 16)
-        }
+        Section("Cellular Refresh") {
+            toggleRow(
+                title: "Cellular Refresh",
+                subtitle: "Use cellular Internet while the embedded local tunnel handles device operations",
+                isOn: Binding(
+                    get: { isCellularRefreshEnabled },
+                    set: {
+                        isCellularRefreshEnabled = $0
+                        CellularRefreshManager.shared.setEnabled($0)
+                    }
+                ))
+            Text(
+                "No cellular toggle shortcuts are needed. Requires correctly provisioned Network Extension entitlements. Cellular-only device connectivity is experimental and must be verified on your iPhone."
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+
+        }.listRowBackground(ZLoaderGlassBackground())
     }
 
     private var customizeAppExtensionsBinding: Binding<AppExtensionCustomization> {
@@ -619,278 +501,230 @@ struct UserCustomizationsView: View {
 
     @ViewBuilder
     private var generalSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("GENERAL")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color.primary.opacity(0.6))
-                .padding(.horizontal, 16)
-            
-            VStack(spacing: 0) {
-                toggleRow(title: "Customize Info.plist", isOn: Binding(
+        Section("General") {
+
+            toggleRow(
+                title: "Customize Info.plist",
+                isOn: Binding(
                     get: { customizeInfoPlist },
                     set: { newValue in
                         customizeInfoPlist = newValue
                         UserDefaults.standard.customizeInfoPlist = newValue
                     }
                 ))
-                
-                divider
-                
-                toggleRow(title: "Customize AppID", isOn: Binding(
+
+            toggleRow(
+                title: "Customize AppID",
+                isOn: Binding(
                     get: { customizeInfoPlist ? true : customizeAppId },
                     set: { newValue in
                         customizeAppId = newValue
                         UserDefaults.standard.customizeAppId = newValue
                     }
-                ))
-                .disabled(customizeInfoPlist)
-                .opacity(customizeInfoPlist ? 0.4 : 1.0)
-                
-                divider
-                
-                HStack {
-                    Text("Customize Extensions")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Picker("", selection: customizeAppExtensionsBinding) {
-                        ForEach(AppExtensionCustomization.allCases) { (option: AppExtensionCustomization) in
-                            Text(option.displayName).tag(option)
-                        }
+                )
+            )
+            .disabled(customizeInfoPlist)
+            .opacity(customizeInfoPlist ? 0.4 : 1.0)
+
+            HStack {
+                SettingsEntryLabel(title: "Customize Extensions")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                Spacer()
+                Picker("", selection: customizeAppExtensionsBinding) {
+                    ForEach(AppExtensionCustomization.allCases) { (option: AppExtensionCustomization) in
+                        Text(option.displayName).tag(option)
                     }
-                    .pickerStyle(.menu)
-                    .tint(Color.primary.opacity(0.7))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(minHeight: 50)
-                
-                divider
-                
-                HStack {
-                    Text("Default Import Mode")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Picker("", selection: appImportSourceModeBinding) {
-                        ForEach(AppImportSourceMode.allCases) { (option: AppImportSourceMode) in
-                            Text(option.displayName).tag(option)
-                        }
+                .pickerStyle(.menu)
+                .tint(Color.primary.opacity(0.7))
+            }
+
+            .padding(.vertical, 10)
+            .frame(minHeight: 50)
+
+            HStack {
+                SettingsEntryLabel(title: "Default Import Mode")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                Spacer()
+                Picker("", selection: appImportSourceModeBinding) {
+                    ForEach(AppImportSourceMode.allCases) { (option: AppImportSourceMode) in
+                        Text(option.displayName).tag(option)
                     }
-                    .pickerStyle(.menu)
-                    .tint(Color.primary.opacity(0.7))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(minHeight: 50)
-                
-                divider
+                .pickerStyle(.menu)
+                .tint(Color.primary.opacity(0.7))
+            }
 
-                toggleRow(
-                    title: "Confirm App Installation",
-                    subtitle: "Prompt for confirmation before installing or importing an app",
-                    isOn: Binding(
-                        get: { isInstallConfirmationEnabled },
-                        set: { newValue in
-                            isInstallConfirmationEnabled = newValue
-                            UserDefaults.standard.isInstallConfirmationEnabled = newValue
-                        }
-                    )
-                )
-                
-                divider
+            .padding(.vertical, 10)
+            .frame(minHeight: 50)
 
-                toggleRow(
-                    title: "Clear Customizations on Uninstall",
-                    subtitle: "Reset assigned profiles, custom certificates, and metadata when an app is deleted",
-                    isOn: Binding(
-                        get: { isClearCustomizationsOnUninstallEnabled },
-                        set: { newValue in
-                            isClearCustomizationsOnUninstallEnabled = newValue
-                            UserDefaults.standard.isClearCustomizationsOnUninstallEnabled = newValue
-                        }
-                    )
+            toggleRow(
+                title: "Confirm App Installation",
+                subtitle: "Prompt for confirmation before installing or importing an app",
+                isOn: Binding(
+                    get: { isInstallConfirmationEnabled },
+                    set: { newValue in
+                        isInstallConfirmationEnabled = newValue
+                        UserDefaults.standard.isInstallConfirmationEnabled = newValue
+                    }
                 )
-                
-                divider
+            )
 
-                toggleRow(
-                    title: "Auto-Launch App After Install",
-                    subtitle: "Automatically open apps after installation completes",
-                    isOn: Binding(
-                        get: { isAutoLaunchAppAfterInstallEnabled },
-                        set: { newValue in
-                            isAutoLaunchAppAfterInstallEnabled = newValue
-                            UserDefaults.standard.isAutoLaunchAppAfterInstallEnabled = newValue
-                        }
-                    )
+            toggleRow(
+                title: "Clear Customizations on Uninstall",
+                subtitle: "Reset assigned profiles, custom certificates, and metadata when an app is deleted",
+                isOn: Binding(
+                    get: { isClearCustomizationsOnUninstallEnabled },
+                    set: { newValue in
+                        isClearCustomizationsOnUninstallEnabled = newValue
+                        UserDefaults.standard.isClearCustomizationsOnUninstallEnabled = newValue
+                    }
                 )
-                
-                divider
-                
-                toggleRow(title: "Customize Entitlements", isOn: Binding(
+            )
+
+            toggleRow(
+                title: "Auto-Launch App After Install",
+                subtitle: "Automatically open apps after installation completes",
+                isOn: Binding(
+                    get: { isAutoLaunchAppAfterInstallEnabled },
+                    set: { newValue in
+                        isAutoLaunchAppAfterInstallEnabled = newValue
+                        UserDefaults.standard.isAutoLaunchAppAfterInstallEnabled = newValue
+                    }
+                )
+            )
+
+            toggleRow(
+                title: "Customize Entitlements",
+                isOn: Binding(
                     get: { customizeEntitlements },
                     set: { newValue in
                         customizeEntitlements = newValue
                         UserDefaults.standard.customizeEntitlements = newValue
                     }
                 ))
-                
-                divider
-                
-                toggleRow(
-                    title: "Auto-Fix AppGroup IDs",
-                    subtitle: isFreeAccount ? "Required for free developer accounts" : "Automatically fix App Group casing mismatches",
-                    isOn: Binding(
-                        get: { isFreeAccount ? true : autoFixAppGroupIDs },
-                        set: { newValue in
-                            guard !isFreeAccount else { return }
-                            autoFixAppGroupIDs = newValue
-                            UserDefaults.standard.autoFixAppGroupIDs = newValue
-                        }
-                    )
-                )
-                .disabled(isFreeAccount)
 
-                divider
-
-                toggleRow(
-                    title: "Customize App Icon",
-                    subtitle: "Prompt to choose a custom icon before installing",
-                    isOn: Binding(
-                        get: { customizeAppIcon },
-                        set: { newValue in
-                            customizeAppIcon = newValue
-                            UserDefaults.standard.customizeAppIcon = newValue
-                        }
-                    )
-                )
-
-                divider
-
-                toggleRow(
-                    title: "Customize Provisioning Profile",
-                    subtitle: "Prompt to select a provisioning profile before installing",
-                    isOn: Binding(
-                        get: { customizeProvisioningProfile },
-                        set: { newValue in
-                            customizeProvisioningProfile = newValue
-                            UserDefaults.standard.customizeProvisioningProfile = newValue
-                        }
-                    )
-                )
-                
-                divider
-                
-                toggleRow(
-                    title: "Prefer Resigned IPA",
-                    subtitle: "Prefer IPA (speed) vs App (storage) efficiency",
-                    isOn: Binding(
-                        get: { preferResignedIPA },
-                        set: { newValue in
-                            pendingPreferIPAOngoing = newValue
-                            showPreferIPAToggleAlert = true
-                        }
-                    )
-                )
-                
-                divider
-                
-                toggleRow(title: "Export Resigned IPAs", isOn: Binding(
-                    get: { isExportResignedAppEnabled },
+            toggleRow(
+                title: "Auto-Fix AppGroup IDs",
+                subtitle: isFreeAccount
+                    ? "Required for free developer accounts" : "Automatically fix App Group casing mismatches",
+                isOn: Binding(
+                    get: { isFreeAccount ? true : autoFixAppGroupIDs },
                     set: { newValue in
-                        isExportResignedAppEnabled = newValue
-                        UserDefaults.standard.isExportResignedAppEnabled = newValue
+                        guard !isFreeAccount else { return }
+                        autoFixAppGroupIDs = newValue
+                        UserDefaults.standard.autoFixAppGroupIDs = newValue
                     }
-                ))
-                
-                divider
-                
-                toggleRow(title: "Skip Uncopyable Backup Files", isOn: Binding(
+                )
+            )
+            .disabled(isFreeAccount)
+
+            toggleRow(
+                title: "Customize App Icon",
+                subtitle: "Prompt to choose a custom icon before installing",
+                isOn: Binding(
+                    get: { customizeAppIcon },
+                    set: { newValue in
+                        customizeAppIcon = newValue
+                        UserDefaults.standard.customizeAppIcon = newValue
+                    }
+                )
+            )
+
+            toggleRow(
+                title: "Customize Provisioning Profile",
+                subtitle: "Prompt to select a provisioning profile before installing",
+                isOn: Binding(
+                    get: { customizeProvisioningProfile },
+                    set: { newValue in
+                        customizeProvisioningProfile = newValue
+                        UserDefaults.standard.customizeProvisioningProfile = newValue
+                    }
+                )
+            )
+
+            toggleRow(
+                title: "Prefer Resigned IPA",
+                subtitle: "Prefer IPA (speed) vs App (storage) efficiency",
+                isOn: Binding(
+                    get: { preferResignedIPA },
+                    set: { newValue in
+                        pendingPreferIPAOngoing = newValue
+                        showPreferIPAToggleAlert = true
+                    }
+                )
+            )
+
+            toggleRow(
+                title: "Skip Uncopyable Backup Files",
+                isOn: Binding(
                     get: { skipNonCopyableFiles },
                     set: { newValue in
                         skipNonCopyableFiles = newValue
                         UserDefaults.standard.skipNonCopyableBackupFiles = newValue
                     }
                 ))
-                
-                divider
-                
-                toggleRow(
-                    title: "Prefer Sheet for Info.plist",
-                    subtitle: "Use sheet instead of dialog",
-                    isOn: Binding(
-                        get: { preferSheetForInfoPlistCustomization },
-                        set: { newValue in
-                            preferSheetForInfoPlistCustomization = newValue
-                            UserDefaults.standard.preferSheetForInfoPlistCustomization = newValue
-                        }
-                    )
+
+            toggleRow(
+                title: "Prefer Sheet for Info.plist",
+                subtitle: "Use sheet instead of dialog",
+                isOn: Binding(
+                    get: { preferSheetForInfoPlistCustomization },
+                    set: { newValue in
+                        preferSheetForInfoPlistCustomization = newValue
+                        UserDefaults.standard.preferSheetForInfoPlistCustomization = newValue
+                    }
                 )
-                .disabled(!customizeInfoPlist)
-                .opacity(!customizeInfoPlist ? 0.4 : 1.0)
-                
-                divider
-                
-                toggleRow(
-                    title: "Prefer Sheet for Entitlements",
-                    subtitle: "Use sheet instead of dialog",
-                    isOn: Binding(
-                        get: { preferSheetForEntitlementsCustomization },
-                        set: { newValue in
-                            preferSheetForEntitlementsCustomization = newValue
-                            UserDefaults.standard.preferSheetForEntitlementsCustomization = newValue
-                        }
-                    )
+            )
+            .disabled(!customizeInfoPlist)
+            .opacity(!customizeInfoPlist ? 0.4 : 1.0)
+
+            toggleRow(
+                title: "Prefer Sheet for Entitlements",
+                subtitle: "Use sheet instead of dialog",
+                isOn: Binding(
+                    get: { preferSheetForEntitlementsCustomization },
+                    set: { newValue in
+                        preferSheetForEntitlementsCustomization = newValue
+                        UserDefaults.standard.preferSheetForEntitlementsCustomization = newValue
+                    }
                 )
-                .disabled(!customizeEntitlements)
-                .opacity(!customizeEntitlements ? 0.4 : 1.0)
-            }
-            .background(Color.settingsRowBackground)
-            .cornerRadius(14)
-        }
-    }
+            )
+            .disabled(!customizeEntitlements)
+            .opacity(!customizeEntitlements ? 0.4 : 1.0)
 
-
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.settingsDivider)
-            .frame(height: 0.5)
-            .padding(.horizontal, 16)
-    }
-
-    private func exportWireGuardConfig() {
-        guard let url = Bundle.main.url(forResource: "zLoader", withExtension: "conf") else {
-            if let top = UIApplication.shared.topViewController() {
-                let toastView = ToastView(text: NSLocalizedString("zLoader.conf missing!", comment: ""), detailText: "Unable to locate zLoader.conf in bundle resources.")
-                toastView.show(in: top)
-            }
-            return
-        }
-        wireGuardExportURL = url
+        }.listRowBackground(ZLoaderGlassBackground())
     }
 
     private func presentResetAdiDialog() {
         guard let top = UIApplication.shared.topViewController() else { return }
         let alertController = UIAlertController(
             title: NSLocalizedString("Reset adi.pb", comment: ""),
-            message: NSLocalizedString("This will sign you out of Apple ID in zLoader and clear the provisioned adi.pb data from your Keychain. Your active signing certificate will be preserved.", comment: ""),
+            message: NSLocalizedString(
+                "This will sign you out of Apple ID in zLoader and clear the provisioned adi.pb data from your Keychain. Your active signing certificate will be preserved.",
+                comment: ""),
             preferredStyle: .alert
         )
         let contentVC = ResetAdiAlertViewController()
         alertController.setValue(contentVC, forKey: "contentViewController")
-        
+
         let cancelAction = UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel, handler: nil)
-        let resetAction = UIAlertAction(title: NSLocalizedString("Reset & Sign Out", comment: ""), style: .destructive) { _ in
+        let resetAction = UIAlertAction(title: NSLocalizedString("Reset & Sign Out", comment: ""), style: .destructive)
+        { _ in
             let keepHeaders = contentVC.isKeepHeadersChecked
             Task {
-                await AuthManager.shared.signOut(keepCertificate: true, keepAnisetteData: false, keepAnisetteHeaders: keepHeaders)
+                await AuthManager.shared.signOut(
+                    keepCertificate: true, keepAnisetteData: false, keepAnisetteHeaders: keepHeaders)
                 debugLog("Reset adi.pb (keepAnisetteHeaders: \(keepHeaders)) and signed out")
                 if let topVC = UIApplication.shared.topViewController() {
-                    let detail = keepHeaders
-                        ? NSLocalizedString("Signed out of Apple ID. You can now sign back in with fresh provisioning.", comment: "")
-                        : NSLocalizedString("Signed out of Apple ID. Reset adi.pb and header configs to defaults.", comment: "")
+                    let detail =
+                        keepHeaders
+                        ? NSLocalizedString(
+                            "Signed out of Apple ID. You can now sign back in with fresh provisioning.", comment: "")
+                        : NSLocalizedString(
+                            "Signed out of Apple ID. Reset adi.pb and header configs to defaults.", comment: "")
                     ToastView(
                         text: NSLocalizedString("Cleared adi.pb!", comment: ""),
                         detailText: detail
@@ -898,7 +732,7 @@ struct UserCustomizationsView: View {
                 }
             }
         }
-        
+
         alertController.addAction(cancelAction)
         alertController.addAction(resetAction)
         top.present(alertController, animated: true, completion: nil)

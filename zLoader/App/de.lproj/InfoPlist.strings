@@ -1,0 +1,8 @@
+// Text-only localization. Original layouts and legal notices are preserved.
+"CFBundleDisplayName" = "zLoader";
+"CFBundleName" = "zLoader";
+"Mobile Device Pairing" = "Geräte-Pairing";
+"NSLocalNetworkUsageDescription" = "zLoader kann Bonjour-Dienste (mDNS) im lokalen Netzwerk finden. Für die Grundfunktionen ist dies nicht erforderlich.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "zLoader verwendet Standortaktualisierungen, um Hintergrundvorgänge aktiv zu halten.";
+"NSLocationWhenInUseUsageDescription" = "zLoader verwendet Standortaktualisierungen, um Hintergrundvorgänge aktiv zu halten.";
+"iOS App" = "iOS-App";

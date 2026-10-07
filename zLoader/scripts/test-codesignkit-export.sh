@@ -5,6 +5,7 @@ cd "$(dirname "$0")/../.."
 root=$(pwd)
 package="$root/.build/CertificateCompatibility"
 mkdir -p "$package/Sources/CodeSignKit" "$package/Sources/Compatibility"
+chmod -R u+w "$package/Sources"
 cp .build/SourcePackages/checkouts/CodeSignKit/Sources/*.swift "$package/Sources/CodeSignKit/"
 cp zLoader/Features/Core/Certificates/PortablePKCS12.swift zLoader/Tests/CodeSignKitExportTests.swift "$package/Sources/Compatibility/"
 python3 - "$package" "$root" <<'PY'

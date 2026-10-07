@@ -170,7 +170,7 @@ func bindConnectionConfig() async {
         setTunnelIfaceSubnetMask: { value in Task { @MainActor in config.tunnelIfaceSubnetMask = value } },
         getRemoteServerIp: { config.remoteServerIp },
         setRemoteReachable: { value in Task { @MainActor in config.remoteReachable = value } },
-        getOverrideTunnelPeerIp: { config.useLocalVPN ? "10.7.0.1" : config.overrideTunnelPeerIp },
+        getOverrideTunnelPeerIp: { config.effectiveTunnelPeerIP },
         setOverrideTunnelPeerReachable: { value in Task { @MainActor in config.overrideTunnelPeerReachable = value } },
         getConnectionMode: { config.useLocalVPN ? .localVPN : .remoteServer },
         resolveServicePort: { failed in
@@ -200,8 +200,9 @@ func getDeviceConnectionMode() async -> DeviceConnectionMode {
 }
 
 public func isMinimuxerReady() async -> Result<Bool, MinimuxerError> {
-    let isEnabled = CellularRefreshManager.shared.isEnabled
-    return await minimuxer.core.isReady(withNetworkCheck: !isEnabled)
+    // The external local tunnel and service-port probe determine readiness.
+    // A Wi-Fi-only path check rejects valid cellular and offline local paths.
+    return await minimuxer.core.isReady(withNetworkCheck: false)
 }
 
 public func ensureMinimuxerReady() async throws {
@@ -210,7 +211,7 @@ public func ensureMinimuxerReady() async throws {
         try await withRemotePairingRetry {
             switch await isMinimuxerReady() {
             case .success(true): return
-            case .success(false): throw OperationError.noConnection(reason: "Device transport is not ready.")
+            case .success(false): throw OperationError.noConnection(reason: "Device transport is not ready. Activate External Local VPN Tunnel and check pairing and Connection Configuration.")
             case .failure(let error): throw error.asOperationError
             }
         }
@@ -404,8 +405,10 @@ func debugApp(_ appId: String) async throws {
 }
 
 func safeDebugApp(_ appId: String) async throws {
-    try await ensureMinimuxerReady()
-    try await debugApp(appId)
+    try await ZLoaderTransport.withLease {
+        try await ensureMinimuxerReady()
+        try await debugApp(appId)
+    }
 }
 
 func attachDebugger(_ pid: UInt32) async throws {
@@ -439,8 +442,10 @@ func dumpProfiles(_ docsPath: String, mode: ProfileDumpMode = .zip) async throws
 }
 
 func safeDumpProfiles(_ docsPath: String, mode: ProfileDumpMode = .zip) async throws -> String {
-    try await ensureMinimuxerReady()
-    return try await dumpProfiles(docsPath, mode: mode)
+    try await ZLoaderTransport.withLease {
+        try await ensureMinimuxerReady()
+        return try await dumpProfiles(docsPath, mode: mode)
+    }
 }
 
 func minimuxerSetLogging(_ enabled: Bool) {

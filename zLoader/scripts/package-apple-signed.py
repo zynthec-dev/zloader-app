@@ -64,20 +64,25 @@ def sign_bundle(bundle, identity, entitlements, temporary, require_apple=True):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--internal', action='store_true')
     parser.add_argument('--reference-app', type=Path)
     args = parser.parse_args()
     candidates = [args.reference_app] if args.reference_app else list(
-        (Path.home() / 'Library/Developer/Xcode/DerivedData').glob('zLoader-*/Build/Products/Debug-iphoneos/zLoader.app')
+        (Path.home() / 'Library/Developer/Xcode/DerivedData').glob('zLoader-*/Build/Products/Release-iphoneos/zLoader.app')
     )
     require(len(candidates) == 1, 'Provide one unambiguous --reference-app with valid Xcode profiles')
     reference = candidates[0]
     backup_reference = reference.parent / 'zLoaderBackup.app'
-    references = [reference, *reference.glob('PlugIns/*.appex'), backup_reference]
-    require({p.name for p in references} >= {'zLoader.app', 'zLoaderWidget.appex', 'zLoaderTunnel.appex', 'zLoaderBackup.app'},
-            'Host, all extensions and backup profiles are required')
+    references = [reference, reference / 'PlugIns/zLoaderWidget.appex', backup_reference]
+    require({p.name for p in references} >= {'zLoader.app', 'zLoaderWidget.appex', 'zLoaderBackup.app'},
+            'Host, widget and backup profiles are required')
     subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic', str(reference)],
                    capture_output=True, check=True)
+    if args.internal:
+        references.append(reference / 'PlugIns/zLoaderTunnel.appex')
     declared = {p.name: read_entitlements(p) for p in references}
+    if not args.internal:
+        declared[reference.name].pop("com.apple.developer.networking.networkextension", None)
     teams = {checks['check_profile'](p, declared[p.name]) for p in references}
     require(len(teams) == 1, 'Profiles must belong to the same team')
     decoded = {p.name: profile(p) for p in references}
@@ -110,6 +115,8 @@ def main():
         payload = temporary / 'Payload'
         app = payload / 'zLoader.app'
         shutil.copytree(products / 'zLoader.app', app, symlinks=True)
+        if not args.internal:
+            runpy.run_path(str(ROOT / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](app, ROOT)
         backup_payload = temporary / 'backup/Payload'
         backup = backup_payload / 'zLoaderBackup.app'
         shutil.copytree(products / 'zLoaderBackup.app', backup, symlinks=True)
@@ -130,7 +137,7 @@ def main():
             require(read_entitlements(target) == declared[target.name], 'Signed entitlements changed')
             checks['check_profile'](target, declared[target.name])
         version = info(app)['CFBundleShortVersionString']
-        destination = ROOT / 'outputs' / f'zLoader-{version}-Apple-signed.ipa'
+        destination = ROOT / 'outputs' / f'zLoader-{version}{"-internal" if args.internal else ""}-Apple-signed.ipa'
         destination.parent.mkdir(exist_ok=True)
         pack(payload, destination)
         checks['verify'](destination)

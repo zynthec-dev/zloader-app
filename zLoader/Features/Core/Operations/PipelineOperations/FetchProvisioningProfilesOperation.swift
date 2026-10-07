@@ -48,38 +48,32 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         let effectiveBundleId = self.context.targetBundleIdentifier
 
         let appExtensions = targetAppBundle.appExtensions
+        guard !context.useMainProfile || appExtensions.isEmpty else {
+            throw OperationError.invalidParameters("Each extension requires a separate app ID and provisioning profile.")
+        }
 
         if let overrideProfile = self.context.overrideProvisioningProfile {
             self.debugLog("[FetchProvisioningProfiles] Using override provisioning profile '\(overrideProfile.name)' (\(overrideProfile.uuid)) for \(effectiveBundleId)")
             var profiles = [effectiveBundleId: overrideProfile]
-            if requiresTunnel {
-                let team = try await AuthManager.shared.getAuthenticatedTeam()
-                guard overrideProfile.bundleIdentifier == effectiveBundleId,
-                      let validated = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: nil,
-                                                                  bundleID: effectiveBundleId, team: team),
-                      validated.uuid == overrideProfile.uuid else {
-                    throw OperationError.invalidParameters("The selected zLoader profile must match the app identifier, signing certificate, team, device and required capabilities. Import matching profiles for the host and each extension separately.")
-                }
-                for appExtension in appExtensions {
-                    guard let identifier = PacketTunnelProvisioning.extensionBundleIdentifier(
-                        appExtension.bundleIdentifier, parent: targetAppBundle.bundleIdentifier, resolvedParent: effectiveBundleId
-                    ), let profile = await reusableEmbeddedProfile(for: appExtension, parentAppBundle: targetAppBundle,
-                                                                  bundleID: identifier, team: team) else {
-                        throw OperationError.invalidParameters("No compatible profile for extension \(appExtension.bundleIdentifier). A host profile cannot be used for its extensions. Import that extension's profile and the matching signing certificate with private key.")
-                    }
-                    profiles[identifier] = profile
-                }
-                self.setProgress(100)
-                return profiles
+            guard !context.useMainProfile || appExtensions.isEmpty else {
+                throw OperationError.invalidParameters("Each extension requires its own profile and app ID. A host profile cannot authorize an extension.")
             }
-            if !self.context.useMainProfile, !appExtensions.isEmpty {
-                for appExtension in appExtensions {
-                    let updatedExtensionBundleId = appExtension.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: effectiveBundleId)
-                    profiles[updatedExtensionBundleId] = overrideProfile
+            let team = try await AuthManager.shared.getAuthenticatedTeam()
+            guard overrideProfile.bundleIdentifier == effectiveBundleId,
+                  let validated = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: nil,
+                                                               bundleID: effectiveBundleId, team: team), validated.uuid == overrideProfile.uuid else {
+                throw OperationError.invalidParameters("The selected profile must authorize this app, certificate, team, device and every required entitlement.")
+            }
+            for appExtension in appExtensions {
+                guard let identifier = PacketTunnelProvisioning.extensionBundleIdentifier(
+                    appExtension.bundleIdentifier, parent: targetAppBundle.bundleIdentifier, resolvedParent: effectiveBundleId
+                ), let profile = await reusableEmbeddedProfile(for: appExtension, parentAppBundle: targetAppBundle,
+                                                              bundleID: identifier, team: team) else {
+                    throw OperationError.invalidParameters("Import a compatible profile for extension " + appExtension.bundleIdentifier + ". The host profile cannot be reused for an extension.")
                 }
+                profiles[identifier] = profile
             }
             self.setProgress(100)
-            self.debugLog("[FetchProvisioningProfiles] Total override profiles prepared: \(profiles.count) -> keys: \(Array(profiles.keys))")
             return profiles
         }
 
@@ -243,10 +237,8 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         
         verboseLog(targetAppBundle.dumpMachOInfo())
         self.debugLog("[FetchProvisioningProfiles] Fetching provisioning profile from Apple for App ID \(groupAppID.bundleIdentifier)...")
-        let isEmbeddedTunnelApp = requiresPacketTunnelCapability(for: targetAppBundle) ||
-            parentAppBundle.map { requiresPacketTunnelCapability(for: $0) } == true
         let profile: ALTProvisioningProfile
-        if isEmbeddedTunnelApp {
+        if team.type.isPaid {
             profile = try await createCertificateBoundProfile(for: groupAppID, app: targetAppBundle, requiredGroups: requiredGroups, team: team)
         } else {
             profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
@@ -303,7 +295,7 @@ private extension FetchProvisioningProfilesOperation{
     func createCertificateBoundProfile(for appID: ALTAppID, app: ALTApplication, requiredGroups: [String],
                                        team: ALTTeam) async throws -> ALTProvisioningProfile {
         guard team.type != .free, let signing = context.targetSigningCertificate else {
-            throw OperationError.invalidParameters("Embedded Network Extensions require a paid team and an active signing certificate with its private key.")
+            throw OperationError.invalidParameters("Managed provisioning requires a paid team and an active signing certificate with its private key.")
         }
         let certificates = try await DeveloperPortalProxy.shared.fetchCertificates(team: team)
         guard let certificate = certificates.first(where: { $0.rawDER == signing.certificate.rawDER }),
@@ -323,12 +315,30 @@ private extension FetchProvisioningProfilesOperation{
             }
             return try await DeveloperPortalProxy.shared.registerDevice(name: "zLoader device", identifier: udid, team: team)
         }
-        guard let deviceID = device.deviceID, !deviceID.isEmpty else {
+        guard device.deviceID?.isEmpty == false else {
             throw OperationError.invalidParameters("Apple did not return a registered device ID for this iPhone. Device registration must complete before provisioning.")
         }
         if let status = device.status, status.lowercased().contains("disabled") || status.lowercased().contains("ineligible") {
             throw OperationError.invalidParameters("This device is not eligible for provisioning in the selected Apple team (\(status)). Check its registration in Certificates, Identifiers & Profiles.")
         }
+        var authorizedDevices = [device]
+        let includesSharingDevices = context.includeAllRegisteredDevices ||
+            (context.targetAppBundle?.isZLoaderApp == true && UserDefaults.standard.isExportResignedAppEnabled)
+        if includesSharingDevices {
+            let registered = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
+            authorizedDevices += registered.filter { other in
+                let status = other.status?.lowercased() ?? "enabled"
+                #if os(tvOS)
+                let matchesPlatform = other.type.contains(.appleTV)
+                #else
+                let matchesPlatform = other.type.contains(.iPhone) || other.type.contains(.iPad)
+                #endif
+                return matchesPlatform && !status.contains("disabled") && !status.contains("ineligible") &&
+                    other.deviceID != nil && other.identifier != device.identifier
+            }
+        }
+        let registeredIDs = Array(Set(authorizedDevices.compactMap(\.deviceID))).sorted()
+        let registeredUDIDs = Set(authorizedDevices.map { $0.identifier.lowercased() })
         let isDistribution = certificate.name.lowercased().contains("distribution") ||
             certificate.certificateType?.lowercased().contains("distribution") == true
         #if os(tvOS)
@@ -336,19 +346,45 @@ private extension FetchProvisioningProfilesOperation{
         #else
         let profileType: ALTProfileType = isDistribution ? .adHoc : .iOS
         #endif
-        let profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
-            name: "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8)),
-            appID: appID, certificateIDs: [certificateID], deviceIDs: [deviceID], type: profileType, team: team
-        )
-        var required = PacketTunnelProvisioning.requestedEntitlements([:], required: requiresPacketTunnelCapability(for: app))
+        var required = requestedEntitlements(for: app, team: team)
         if !requiredGroups.isEmpty { required["com.apple.security.application-groups"] = requiredGroups }
         let target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
                                               certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
+        let managedName = "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8))
+        let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
+        var incompatibleManagedIDs: [String] = []
+        for item in existing where item.bundleIdentifier == appID.bundleIdentifier || item.name == managedName {
+            guard let identifier = item.identifier else { continue }
+            // Download before changing anything. A failed download must not cause deletion.
+            let candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
+            let snapshot = EmbeddedProfileSnapshot(
+                bundleID: candidate.bundleIdentifier, teamID: candidate.teamIdentifier, expiresAt: candidate.expirationDate,
+                certificates: candidate.certificates.map { $0.rawDER }, devices: candidate.deviceIDs, entitlements: candidate.entitlements
+            )
+            if item.profileType == profileType && EmbeddedProfileReuse.accepts(snapshot, for: target) &&
+                registeredUDIDs.isSubset(of: Set(candidate.deviceIDs.map { $0.lowercased() })) {
+                _ = try ProfileManager.shared.importProfile(data: candidate.data)
+                return candidate
+            }
+            // Replace only the profile owned by this signing flow; preserve unrelated Xcode profiles.
+            if item.name == managedName { incompatibleManagedIDs.append(identifier) }
+        }
+        for identifier in incompatibleManagedIDs {
+            guard try await DeveloperPortalProxy.shared.deleteProvisioningProfile(profileID: identifier, team: team) else {
+                throw OperationError.invalidParameters("Apple did not remove the incompatible zLoader profile. Retry after checking this profile in the Developer Account.")
+            }
+        }
+        let profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
+            name: managedName, appID: appID, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
+        )
         let snapshot = EmbeddedProfileSnapshot(
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
         )
-        let failures = EmbeddedProfileReuse.incompatibilities(snapshot, for: target)
+        var failures = EmbeddedProfileReuse.incompatibilities(snapshot, for: target)
+        if !registeredUDIDs.isSubset(of: Set(profile.deviceIDs.map { $0.lowercased() })) {
+            failures.append(NSLocalizedString("The profile does not authorize all selected registered devices.", comment: ""))
+        }
         guard failures.isEmpty else {
             throw OperationError.invalidParameters("Apple's newly issued profile for " + appID.bundleIdentifier +
                 " was rejected: " + failures.joined(separator: "; ") + ". No signing permissions were bypassed.")
@@ -364,8 +400,9 @@ private extension FetchProvisioningProfilesOperation{
 
     func reusableEmbeddedProfile(for app: ALTApplication, parentAppBundle: ALTApplication?,
                                  bundleID: String, team: ALTTeam) async -> ALTProvisioningProfile? {
-        guard app.isZLoaderApp || parentAppBundle?.isZLoaderApp == true,
-              let certificate = context.targetSigningCertificate,
+        if context.includeAllRegisteredDevices ||
+            (context.targetAppBundle?.isZLoaderApp == true && UserDefaults.standard.isExportResignedAppEnabled) { return nil }
+        guard let certificate = context.targetSigningCertificate,
               let validUntil = certificate.certificate.notAfter, validUntil > Date() else { return nil }
 
         var candidates = [app.provisioningProfile].compactMap { $0 }
@@ -378,7 +415,8 @@ private extension FetchProvisioningProfilesOperation{
             candidates.append(contentsOf: ProfileManager.shared.getAllLocalProfiles())
         }
         // An unsigned update may omit profiles; the running installation can supply its own.
-        if let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
+        if context.targetAppBundle?.isZLoaderApp == true,
+           let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
             let current = ([running] + running.appExtensions).first { $0.bundleIdentifier == bundleID }
             if let profile = current?.provisioningProfile { candidates.append(profile) }
         }
@@ -388,16 +426,19 @@ private extension FetchProvisioningProfilesOperation{
             $0.certificates.contains { $0.rawDER == certificate.certificate.rawDER }
         }
         guard !matching.isEmpty, let deviceID = try? await safeFetchUDID() else { return nil }
-        var required = context.customEntitlementsByBundleID[app.bundleIdentifier] ?? app.entitlements
-        if parentAppBundle == nil {
-            for (key, value) in context.additionalEntitlements { required[key] = value }
-        }
-        required = PacketTunnelProvisioning.requestedEntitlements(required, required: requiresPacketTunnelCapability(for: app))
-        let target = ProfileReuseRequirements(bundleID: bundleID, teamID: team.identifier,
-                                              certificate: certificate.certificate.rawDER,
-                                              deviceID: deviceID, entitlements: required)
+        let required = requestedEntitlements(for: app, team: team)
         return matching.first { profile in
-            EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
+            var candidateRequirements = required
+            if let groups = required["com.apple.security.application-groups"] as? [String],
+               let granted = profile.entitlements["com.apple.security.application-groups"] as? [String] {
+                candidateRequirements["com.apple.security.application-groups"] = groups.map {
+                    granted.contains($0) ? $0 : $0 + "." + team.identifier
+                }
+            }
+            let target = ProfileReuseRequirements(bundleID: bundleID, teamID: team.identifier,
+                                                  certificate: certificate.certificate.rawDER,
+                                                  deviceID: deviceID, entitlements: candidateRequirements)
+            return EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
                 bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
                 expiresAt: profile.expirationDate, certificates: profile.certificates.map { $0.rawDER },
                 devices: profile.deviceIDs, entitlements: profile.entitlements
@@ -409,6 +450,17 @@ private extension FetchProvisioningProfilesOperation{
         PacketTunnelProvisioning.requiresCapability(
             infoPlist: app.infoPlist, extensions: app.appExtensions.map { $0.infoPlist }
         )
+    }
+
+    func requestedEntitlements(for app: ALTApplication, team: ALTTeam) -> [String: Any] {
+        var entitlements = context.customEntitlementsByBundleID[app.bundleIdentifier] ?? app.entitlements
+        // Host customization must not add host-only capabilities to extensions.
+        if app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier {
+            for (key, value) in context.additionalEntitlements { entitlements[key] = value }
+        }
+        let groups = runningOwnAppGroups(for: app, team: team)
+        if !groups.isEmpty { entitlements[ALTEntitlement.appGroups.rawValue] = groups }
+        return PacketTunnelProvisioning.requestedEntitlements(entitlements, required: requiresPacketTunnelCapability(for: app))
     }
 
     /// Unsigned self-update IPAs cannot declare their installed shared container.
@@ -423,20 +475,7 @@ private extension FetchProvisioningProfilesOperation{
     }
 
     func updateFeatures(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> ALTAppID {
-        let bundleID = targetAppBundle.bundleIdentifier
-        var entitlements = self.context.customEntitlementsByBundleID[bundleID]
-            ?? targetAppBundle.entitlements
-        for (key, value) in context.additionalEntitlements {
-            entitlements[key] = value
-        }
-        
-        let installedGroups = runningOwnAppGroups(for: targetAppBundle, team: team)
-        if !installedGroups.isEmpty { entitlements[ALTEntitlement.appGroups.rawValue] = installedGroups }
-
-        // Cached/custom entitlements cannot remove a requirement of an embedded provider.
-        entitlements = PacketTunnelProvisioning.requestedEntitlements(
-            entitlements, required: requiresPacketTunnelCapability(for: targetAppBundle)
-        )
+        let entitlements = requestedEntitlements(for: targetAppBundle, team: team)
 
         guard let allowedFeatures = team.type.allowedFeatures else {
             throw OperationError.invalidParameters("Cannot update features for unknown team type.")
@@ -450,7 +489,8 @@ private extension FetchProvisioningProfilesOperation{
             guard let feature = ALTFeature(entitlement: ALTEntitlement(rawValue: key)) else { 
                 continue 
             }
-            let isEnabled = (value as? [Any])?.isEmpty == false || (value as? Bool) ?? true
+            let isEnabled = (value as? [Any]).map { !$0.isEmpty } ?? (value as? Bool) ?? true
+            guard isEnabled else { continue }
             
             if allowedFeatures.contains(feature) {
                 targetFeatures[feature] = isEnabled ? "true" : "false"
@@ -470,7 +510,7 @@ private extension FetchProvisioningProfilesOperation{
         
         if !droppedFeatures.isEmpty {
             let bulleted = droppedFeatures.map { "  • \($0.rawValue)" }.joined(separator: "\n")
-            self.debugLog("[FetchProvisioningProfiles] Dropped non-applicable features for team type \(team.type):\n\(bulleted)")
+            throw OperationError.invalidParameters("The selected Apple team cannot authorize the IPA's requested capabilities:\n" + bulleted + "\nSelect an eligible team. Required capabilities will not be silently removed.")
         }
         
         // check if we really need to make a update on portal
@@ -500,12 +540,7 @@ private extension FetchProvisioningProfilesOperation{
     }
     
     func updateAppGroups(for appID: ALTAppID, targetAppBundle: ALTApplication, team: ALTTeam) async throws -> (ALTAppID, [String]) {
-        let bundleID = targetAppBundle.bundleIdentifier
-        var entitlements = self.context.customEntitlementsByBundleID[bundleID]
-            ?? targetAppBundle.entitlements
-        for (key, value) in self.context.additionalEntitlements {
-            entitlements[key] = value
-        }
+        var entitlements = requestedEntitlements(for: targetAppBundle, team: team)
                 
         let installedGroups = runningOwnAppGroups(for: targetAppBundle, team: team)
         let preservesRunningGroups = !installedGroups.isEmpty

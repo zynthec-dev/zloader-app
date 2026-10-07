@@ -69,7 +69,7 @@ final class AppContentViewController: UITableViewController
             self.versionDateLabel.text = Date().relativeDateString(since: version.date)
             self.sizeLabel.text = ByteCountFormatter.string(fromByteCount: version.size, countStyle: .file)
         } else {
-            self.versionDescriptionTextView.text = "nil"
+            self.versionDescriptionTextView.text = NSLocalizedString("nil", comment: "")
             self.versionLabel.text = nil
             self.versionDateLabel.text = nil
             self.sizeLabel.text = ByteCountFormatter.string(fromByteCount: 0, countStyle: .file)

@@ -73,11 +73,11 @@ struct PrivateKeyTextInputView: View {
                         }
                         #endif
                     } label: {
-                        Label("Import from File", systemImage: "doc.badge.plus")
+                        SettingsEntryLabel(title: "Import from File", systemImage: "doc.badge.plus")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(ZLoaderGlassButtonStyle())
                     
                     SwiftUI.Button {
                         if let keyData = text.data(using: .utf8) {
@@ -92,17 +92,19 @@ struct PrivateKeyTextInputView: View {
                             }
                         }
                     } label: {
-                        Text("Add PEM Key")
+                        SettingsEntryLabel(title: "Add PEM Key")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ZLoaderGlassButtonStyle(prominent: true))
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(.horizontal)
                 .padding(.bottom)
             }
             .navigationTitle("Add Private Key")
+        .labelStyle(.titleAndIcon)
+        .environment(\.settingsEntryIconsVisible, true)
             #if !os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

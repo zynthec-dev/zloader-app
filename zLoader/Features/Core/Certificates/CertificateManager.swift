@@ -98,6 +98,7 @@ public final class CertificateManager: @unchecked Sendable {
                 saveCertificate(cert)
                 let active = ActiveSigningCertificate(certificate: cert, p12Data: p12Data, password: password)
                 self.activeCertificate = active
+                UserDefaults.standard.set(false, forKey: "zLoader.installationCertificateAutoActivationDisabled")
                 debugLog("[CertificateManager] setActiveCertificate: Successfully stored certificate (serial: \(cert.serialNumber)).")
             } catch {
                 debugLog("[CertificateManager] setActiveCertificate failed to export/encrypt certificate: \(error)")
@@ -115,6 +116,7 @@ public final class CertificateManager: @unchecked Sendable {
         debugLog("[CertificateManager] clearActiveCertificate: Clearing active certificate.")
         self.activeCertificate = nil
         Keychain.shared.clearCertificates()
+        UserDefaults.standard.set(true, forKey: "zLoader.installationCertificateAutoActivationDisabled")
     }
     
     // MARK: - Certificate Encoding Helpers
@@ -128,6 +130,8 @@ public final class CertificateManager: @unchecked Sendable {
     }
 
     public func saveCertificate(_ cert: ALTCertificate) {
+        let deleted = UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? []
+        UserDefaults.standard.set(deleted.filter { $0 != cert.serialNumber.lowercased() }, forKey: "zLoader.deletedInstallationCertificates")
         debugLog("[CertificateManager] saveCertificate started for serial: \(cert.serialNumber)")
         defer { debugLog("[CertificateManager] saveCertificate completed for serial: \(cert.serialNumber)") }
         
@@ -158,6 +162,8 @@ public final class CertificateManager: @unchecked Sendable {
     }
 
     public func saveX509Certificate(_ x509: ALTX509Certificate) {
+        let deleted = UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? []
+        UserDefaults.standard.set(deleted.filter { $0 != x509.serialNumber.lowercased() }, forKey: "zLoader.deletedInstallationCertificates")
         debugLog("[CertificateManager] saveX509Certificate started for serial: \(x509.serialNumber)")
         defer { debugLog("[CertificateManager] saveX509Certificate completed for serial: \(x509.serialNumber)") }
         
@@ -247,6 +253,9 @@ public final class CertificateManager: @unchecked Sendable {
     }
     
     public func deleteCertificate(serialNumber: String) {
+        var deleted = Set(UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? [])
+        deleted.insert(serialNumber.lowercased())
+        UserDefaults.standard.set(Array(deleted), forKey: "zLoader.deletedInstallationCertificates")
         debugLog("[CertificateManager] deleteCertificate: \(serialNumber)")
         if self.activeCertificate?.serialNumber == serialNumber {
             clearActiveCertificate()
@@ -259,6 +268,8 @@ public final class CertificateManager: @unchecked Sendable {
     }
 
     public func getSignableCertificate(for serialNumber: String = "", fallbackPassword: String? = nil) -> ALTCertificate? {
+        let deleted = UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? []
+        guard !deleted.contains(serialNumber.lowercased()) else { return nil }
         if let cert = getLocalCertificate(serialNumber: serialNumber) {
             return cert
         }
@@ -286,28 +297,42 @@ public final class CertificateManager: @unchecked Sendable {
                 ("nil", nil)
             ]
 
-            var signableCert: ALTCertificate?
-            for (pwdName, password) in possiblePasswords {
-                verboseLog("[CertificateManager] getSignableCertificate: Attempting decryption with password source '\(pwdName)'...")
-                if let cert = try? ALTCertificate(p12Data: data, password: password) {
-                    signableCert = cert
-                    if cert.serialNumber.lowercased() == serialNumber.lowercased() {
-                        debugLog("[CertificateManager] getSignableCertificate: Decrypted embedded p12 using '\(pwdName)' with matching serial '\(cert.serialNumber)'.")
-                        break
-                    } else {
-                        verboseLog("[CertificateManager] getSignableCertificate: Decrypted embedded p12 using '\(pwdName)', but serial mismatch (certSerial: \(cert.serialNumber), targetSerial: \(serialNumber)).")
-                    }
-                } else {
-                    verboseLog("[CertificateManager] getSignableCertificate: Failed to decrypt embedded p12 using password source '\(pwdName)'.")
-                }
-            }
-
-            if signableCert != nil || serialNumber.isEmpty {
-                debugLog("[CertificateManager] getSignableCertificate: Returning certificate (serial: '\(signableCert?.serialNumber ?? "nil")', targetSerial: '\(serialNumber)').")
-                return signableCert
+            for (_, password) in possiblePasswords {
+                guard let cert = try? ALTCertificate(p12Data: data, password: password),
+                      serialNumber.isEmpty || cert.serialNumber.caseInsensitiveCompare(serialNumber) == .orderedSame else { continue }
+                let deleted = UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? []
+                guard !deleted.contains(cert.serialNumber.lowercased()) else { continue }
+                return cert
             }
         }
         return nil
+    }
+
+    /// Recover only the actual running app's leaf identity, never a profile's
+    /// arbitrary certificate list or stale installer-supplied serial metadata.
+    @discardableResult
+    public func synchronizeInstallationCertificate() -> ALTX509Certificate? {
+        guard let installed = getSigningCertificate(at: Bundle.Info.activeBundleURL) else { return nil }
+        let deleted = UserDefaults.standard.stringArray(forKey: "zLoader.deletedInstallationCertificates") ?? []
+        guard !deleted.contains(installed.serialNumber.lowercased()) else { return nil }
+        if getLocalX509Certificate(serialNumber: installed.serialNumber) == nil {
+            saveX509Certificate(installed)
+        }
+        guard activeCertificate == nil,
+              !UserDefaults.standard.bool(forKey: "zLoader.installationCertificateAutoActivationDisabled"),
+              installed.expiryDate > Date() else { return installed }
+        var identity = getSignableCertificate(for: installed.serialNumber)
+        if identity == nil, let data = installed.data,
+           let key = try? LocalKeyMaterialStore.matchingPrivateKey(certificate: data) {
+            identity = ALTCertificate(x509: installed, privateKey: key)
+        }
+        if let identity, let data = installed.data,
+           identity.serialNumber.caseInsensitiveCompare(installed.serialNumber) == .orderedSame,
+           (try? PortablePKCS12.validate(certificate: data, key: identity.privateKey)) != nil {
+            do { try setActiveCertificate(identity) }
+            catch { debugLog("[CertificateManager] Installation identity activation failed: \(error.localizedDescription)") }
+        }
+        return installed
     }
 
     // Reads the Mach-O binary contents of an app bundle to extract its leaf signing certificate.

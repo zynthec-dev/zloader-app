@@ -86,14 +86,14 @@ struct AppGroupsListView: View {
                                 groupToDelete = group
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
 
                             SwiftUI.Button {
                                 editGroupName = group.name
                                 groupToEdit = group
                             } label: {
-                                Label("Edit", systemImage: "pencil")
+                                SettingsEntryLabel(title: "Edit", systemImage: "pencil")
                             }
                             .tint(.blue)
                         }
@@ -103,25 +103,25 @@ struct AppGroupsListView: View {
                                 editGroupName = group.name
                                 groupToEdit = group
                             } label: {
-                                Label("Edit Name", systemImage: "pencil")
+                                SettingsEntryLabel(title: "Edit Name", systemImage: "pencil")
                             }
                             #if !os(tvOS)
                             SwiftUI.Button {
                                 UIPasteboard.general.string = group.groupIdentifier
                             } label: {
-                                Label("Copy Identifier", systemImage: "doc.on.doc")
+                                SettingsEntryLabel(title: "Copy Identifier", systemImage: "doc.on.doc")
                             }
                             #endif
                             SwiftUI.Button(role: .destructive) {
                                 groupToDelete = group
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -129,7 +129,15 @@ struct AppGroupsListView: View {
         #else
         .listStyle(GroupedListStyle())
         #endif
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: PortalSelectionView(viewModel: viewModel, kind: .appGroups)) {
+                    Label("Select", systemImage: "checklist")
+                }
+            }
+        }
         .navigationTitle("App Groups")
+        .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -152,9 +160,10 @@ struct AppGroupsListView: View {
                         TextField("Group Identifier", text: $newGroupIdentifier)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Create App Group")
+        .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         showCreateSheet = false
@@ -182,12 +191,12 @@ struct AppGroupsListView: View {
                 Form {
                     Section(header: Text("Description"), footer: Text("You cannot use special characters such as @, &, *, ', \", -, .")) {
                         TextField("Description", text: $editGroupName)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section(header: Text("Identifier")) {
                         Text(group.groupIdentifier)
                             .foregroundColor(.secondary)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     Section {
                         SwiftUI.Button(role: .destructive) {
@@ -201,9 +210,10 @@ struct AppGroupsListView: View {
                                 Spacer()
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Edit Identifier Configuration")
+        .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         groupToEdit = nil

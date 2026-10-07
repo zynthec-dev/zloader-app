@@ -37,7 +37,7 @@ public enum AppConstants {
     
     public enum Sources {
         public static let fetchTimeout: TimeInterval  = 3.0
-        public static let defaultSourcesURL           = URL(string: "https://altsource.zynthec.com/recommended-sources.json")!
+        public static let defaultSourcesURL           = URL(string: "https://sidestore.io/default-sources/")!
         public static let zLoaderCommunitySourceURL = URL(string: "https://altsource.zynthec.com")!
         public static let zLoaderFallbackIconURL    = URL(string: "https://altsource.zynthec.com/assets/apps/com.zynthec.zLoader.png")!
         public static let zLoaderWebsite            = URL(string: "https://altsource.zynthec.com")!

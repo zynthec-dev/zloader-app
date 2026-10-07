@@ -89,7 +89,7 @@ struct AppIDsListView: View {
                                 appIDToDelete = appID
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
                         #endif
@@ -98,12 +98,12 @@ struct AppIDsListView: View {
                                 appIDToDelete = appID
                                 showDeleteConfirmation = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())
@@ -111,7 +111,15 @@ struct AppIDsListView: View {
         #else
         .listStyle(GroupedListStyle())
         #endif
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: PortalSelectionView(viewModel: viewModel, kind: .appIDs)) {
+                    Label("Select", systemImage: "checklist")
+                }
+            }
+        }
         .navigationTitle("App IDs")
+        .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -132,9 +140,10 @@ struct AppIDsListView: View {
                         TextField("Bundle Identifier", text: $newAppIDBundleID)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Register App ID")
+        .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         newAppIDName = ""

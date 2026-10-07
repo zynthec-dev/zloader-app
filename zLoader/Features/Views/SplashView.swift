@@ -24,7 +24,7 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             #if !os(tvOS)
-                Color(.systemBackground)
+                Color(uiColor: .settingsBackground)
                     .ignoresSafeArea()
             #else
                 Color.black

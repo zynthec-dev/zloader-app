@@ -77,7 +77,7 @@ struct CodeResourcesViewer: View {
                     InfoRow(label: "Signing Rules", value: "\(rules.count)")
                     let hasV2 = rawPlist?["files2"] != nil
                     InfoRow(label: "Format Version", value: hasV2 ? "Version 2 (SHA-256)" : "Version 1 (SHA-1)")
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 Section {
                     Picker("Display Mode", selection: $filterMode) {
@@ -86,7 +86,7 @@ struct CodeResourcesViewer: View {
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 if filterMode == .rules {
                     Section(header: Text("Signing Rules (\(filteredRules.count))")) {
@@ -129,7 +129,7 @@ struct CodeResourcesViewer: View {
                                 .padding(.vertical, 2)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 } else {
                     Section(header: Text("Sealed Files (\(filteredEntries.count))")) {
                         if filteredEntries.isEmpty {
@@ -182,7 +182,7 @@ struct CodeResourcesViewer: View {
                                 }
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 if let plist = rawPlist {
@@ -206,7 +206,7 @@ struct CodeResourcesViewer: View {
                                 }
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
             } else if let err = parseError {
                 VStack(spacing: 12) {

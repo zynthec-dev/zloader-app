@@ -11,8 +11,8 @@ import UniformTypeIdentifiers
 import SideSign
 
 private extension Color {
-    static let settingsRowBackground = Color.white.opacity(0.15)
-    static let settingsDivider = Color.white.opacity(0.15)
+    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 @MainActor
@@ -229,7 +229,7 @@ struct SideSignConfigurationView: View {
                                 isMultiline: true
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
 
@@ -256,7 +256,7 @@ struct SideSignConfigurationView: View {
                                 isMultiline: true
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
 
@@ -299,7 +299,7 @@ struct SideSignConfigurationView: View {
                                 placeholder: Constants.DeveloperServices.userAgent
                             )
                         }
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
 
@@ -311,9 +311,9 @@ struct SideSignConfigurationView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Label("Save Overrides", systemImage: "checkmark.circle.fill")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(.white)
+                            SettingsEntryLabel(title: "Save Overrides", systemImage: "checkmark.circle.fill")
+                                .font(.body)
+                                .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                             Spacer()
                         }
                         .frame(height: 50)
@@ -328,7 +328,7 @@ struct SideSignConfigurationView: View {
                         VStack(spacing: 12) {
                             TextEditor(text: $viewModel.rawEditableJSON)
                                 .font(.system(size: 12, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .frame(minHeight: 320)
                                 .padding(8)
                                 .background(Color.white.opacity(0.06))
@@ -341,9 +341,9 @@ struct SideSignConfigurationView: View {
                             } label: {
                                 HStack {
                                     Spacer()
-                                    Label("Save Raw JSON", systemImage: "square.and.arrow.down.fill")
+                                    SettingsEntryLabel(title: "Save Raw JSON", systemImage: "square.and.arrow.down.fill")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                                     Spacer()
                                 }
                                 .frame(height: 48)
@@ -353,7 +353,7 @@ struct SideSignConfigurationView: View {
                             .disabled(viewModel.rawEditableJSON.isEmpty)
                         }
                         .padding(16)
-                        .background(Color.settingsRowBackground)
+                        .zLoaderGlassSurface()
                         .cornerRadius(14)
                     }
                 }
@@ -382,13 +382,13 @@ struct SideSignConfigurationView: View {
                             #endif
                         } label: {
                             HStack {
-                                Label("Import Config JSON", systemImage: "square.and.arrow.down")
+                                SettingsEntryLabel(title: "Import Config JSON", systemImage: "square.and.arrow.down")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
@@ -404,13 +404,13 @@ struct SideSignConfigurationView: View {
                             }
                         } label: {
                             HStack {
-                                Label("Export Config JSON", systemImage: "square.and.arrow.up")
+                                SettingsEntryLabel(title: "Export Config JSON", systemImage: "square.and.arrow.up")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.white.opacity(0.4))
+                                    .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 50)
@@ -422,7 +422,7 @@ struct SideSignConfigurationView: View {
                             showingResetAlert = true
                         } label: {
                             HStack {
-                                Label("Reset to Defaults", systemImage: "arrow.circlepath")
+                                SettingsEntryLabel(title: "Reset to Defaults", systemImage: "arrow.circlepath")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.red)
                                 Spacer()
@@ -441,7 +441,7 @@ struct SideSignConfigurationView: View {
                             Text("This will restore the SideSign headers to their default recommended values.")
                         }
                     }
-                    .background(Color.settingsRowBackground)
+                    .zLoaderGlassSurface()
                     .cornerRadius(14)
                 }
             }
@@ -449,8 +449,9 @@ struct SideSignConfigurationView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
-        .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
+        .background(ZLoaderAppBackground())
         .navigationTitle("SideSign Config")
+        .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -493,9 +494,9 @@ struct SideSignConfigurationView: View {
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.system(size: 13, weight: .semibold))
-            .foregroundColor(Color.white.opacity(0.6))
+            .foregroundColor(Color.secondary)
             .padding(.horizontal, 16)
     }
 
@@ -508,20 +509,20 @@ struct SideSignConfigurationView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
                 Text(headerKey)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(Color.white.opacity(0.45))
+                    .foregroundColor(Color.primary.opacity(0.45))
             }
 
             if isMultiline {
                 #if !os(tvOS)
                 TextEditor(text: text)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(minHeight: 64)
                     .padding(6)
                     .background(Color.white.opacity(0.06))
@@ -529,7 +530,7 @@ struct SideSignConfigurationView: View {
                 #else
                 TextField(placeholder, text: text)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .padding(8)
                     .background(Color.white.opacity(0.06))
                     .cornerRadius(8)
@@ -537,7 +538,7 @@ struct SideSignConfigurationView: View {
             } else {
                 TextField(placeholder, text: text)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                     .padding(8)

@@ -8,7 +8,7 @@ struct PairingLiveActivity: Widget {
             HStack {
                 Image(systemName: context.state.complete ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right")
                 VStack(alignment: .leading) {
-                    Text("zLoader · Lokales Pairing").font(.headline)
+                    Text("zLoader · Local Pairing").font(.headline)
                     Text(context.state.status).font(.caption)
                 }
                 Spacer()

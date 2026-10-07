@@ -7,7 +7,7 @@ root = Path(__file__).resolve().parents[2]
 controller = (root / 'zLoader/App/Settings/SettingsViewController.swift').read_text()
 outlets = set(re.findall(r'@IBOutlet\s+(?:private\s+)?(?:weak\s+)?var\s+(\w+)', controller))
 actions = set(re.findall(r'(?:@IBAction|@objc)\s+(?:private\s+)?func\s+(\w+)', controller))
-for relative in ['zLoader/App/Settings/Settings.storyboard', 'zLoader/App/Settings/tvOS/Settings.storyboard']:
+for relative in ['zLoader/Localization/Settings/Base.lproj/Settings.storyboard', 'zLoader/Localization/Settings/tvOS/Base.lproj/Settings.storyboard']:
     tree = ET.parse(root / relative)
     ids = {node.get('id') for node in tree.iter() if node.get('id')}
     settings = next(node for node in tree.iter('tableViewController')

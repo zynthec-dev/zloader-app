@@ -55,15 +55,15 @@ struct ProfileRowItemView: View {
 
             HStack(spacing: 8) {
                 if isExpired {
-                    Label("Expired", systemImage: "xmark.octagon.fill")
+                    SettingsEntryLabel(title: "Expired", systemImage: "xmark.octagon.fill")
                         .font(.caption2)
                         .foregroundColor(.red)
                 } else if matchingCert != nil {
-                    Label("Ready to Sign", systemImage: "checkmark.seal.fill")
+                    SettingsEntryLabel(title: "Ready to Sign", systemImage: "checkmark.seal.fill")
                         .font(.caption2)
                         .foregroundColor(.green)
                 } else {
-                    Label("Missing .p12", systemImage: "exclamationmark.triangle.fill")
+                    SettingsEntryLabel(title: "Missing .p12", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2)
                         .foregroundColor(.orange)
                 }

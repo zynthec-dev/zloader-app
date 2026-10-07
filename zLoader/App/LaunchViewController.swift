@@ -28,7 +28,7 @@ final class LaunchViewController: UIViewController {
 
         #if !os(tvOS)
             if !UserDefaults.standard.hasCompletedOnboarding {
-                let hostingController = UIHostingController(rootView: OnboardingView { [weak self] in
+                let hostingController = ZLoaderHostingController(rootView: OnboardingView { [weak self] in
                     Task { @MainActor in
                         self?.transitionToMainInterface()
                     }
@@ -38,7 +38,7 @@ final class LaunchViewController: UIViewController {
             }
         #endif
 
-        let splashHosting = UIHostingController(rootView: SplashView(viewModel: splashViewModel))
+        let splashHosting = ZLoaderHostingController(rootView: SplashView(viewModel: splashViewModel))
         embed(child: splashHosting)
     }
 

@@ -8,46 +8,50 @@ enum ZLoaderBrand {
 
 struct ZLoaderAboutView: View {
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                identity
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Maintained by \(ZLoaderBrand.maintainer)").font(.headline)
-                    Link("zLoader Repository", destination: ZLoaderBrand.repositoryURL)
-                    Link("Based on SideStore", destination: ZLoaderBrand.upstreamURL)
-                    Text("Original design credits: Fabian (thdev) and Chris (LitRitt). SideStore and AltStore authors retain their original credits and copyrights. zLoader includes Minimuxer, SideSign and their dependencies.")
-                        .foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Local device transport").font(.headline)
-                    Text("The embedded packet tunnel uses the StosVPN / LocalDevVPN loopback design. Original authors: Stossy11, the SideStore Team and jkcoxson.")
-                        .foregroundStyle(.secondary)
-                    Link("LocalDevVPN source", destination: URL(string: "https://github.com/jkcoxson/LocalDevVPN")!)
-                    Text("Requires eligible Network Extension provisioning for the app and extension. Cellular-only installation and refresh require physical-device verification.")
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("zLoader").font(.title.bold())
+                    Text(Bundle.Info.activeBundleVersion).foregroundStyle(.secondary)
+                    Text("Independently maintained by " + ZLoaderBrand.maintainer)
                         .font(.footnote).foregroundStyle(.secondary)
+                }.padding(.vertical, 8)
+                Link(destination: URL(string: "https://github.com/zynthec-dev")!) {
+                    SettingsEntryLabel(title: "About zynthec-dev")
                 }
-                ForEach(["SideStore-License", "LocalDevVPN-License", "LocalDevVPN-License-old"], id: \.self) { name in
-                    DisclosureGroup(name) {
+                Link(destination: ZLoaderBrand.repositoryURL) {
+                    SettingsEntryLabel(title: "Main Repository")
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section("Local Device Transport") {
+                Text("Use a compatible external local VPN tunnel, or enable the optional integrated tunnel with an eligible paid Apple developer team. No specific external VPN app is required.")
+                Text("The integrated tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section("Original Authors & Licenses") {
+                Text("SideStore and AltStore authors retain their original credits and copyrights. Original design: Fabian (thdev) and Chris (LitRitt). Local transport work: Stossy11, the SideStore Team and jkcoxson. zLoader includes Minimuxer, SideSign and their dependencies.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Link(destination: URL(string: "https://github.com/jkcoxson/LocalDevVPN")!) {
+                    SettingsEntryLabel(title: "Original Local Tunnel Source")
+                }
+                ForEach([("SideStore-License", "SideStore License"),
+                         ("LocalDevVPN-License", "Original Local Tunnel License"),
+                         ("LocalDevVPN-License-old", "Original Local Tunnel License (Earlier Version)")], id: \.0) { name, title in
+                    DisclosureGroup {
                         Text(license(name)).font(.caption).textSelection(.enabled)
+                    } label: {
+                        SettingsEntryLabel(title: title)
                     }
                 }
-            }
-            .padding(24)
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section {
+                Link(destination: ZLoaderBrand.upstreamURL) {
+                    SettingsEntryLabel(title: "Based on SideStore")
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
-        .background(Color(uiColor: .altBackground))
-        .navigationTitle("About zLoader")
-    }
-
-    @ViewBuilder private var identity: some View {
-        let content = VStack(alignment: .leading, spacing: 8) {
-            Text("zLoader").font(.largeTitle.bold())
-            Text(Bundle.Info.activeBundleVersion).font(.subheadline).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
-        if #available(iOS 26, tvOS 26, *) {
-            content.glassEffect(.regular.tint(Color(uiColor: .altPrimary).opacity(0.15)), in: .rect(cornerRadius: 24))
-        } else {
-            content.background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24))
-        }
+        .navigationTitle("About zynthec-dev")
+        .labelStyle(.titleOnly)
     }
 
     private func license(_ name: String) -> String {

@@ -43,7 +43,7 @@ struct SignableCertificateRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(cert.machineName ?? cert.name)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 
                 let certName = cert.name
                 if cert.machineName != nil {

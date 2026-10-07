@@ -22,6 +22,17 @@ public struct ShortcutsProvider: AppShortcutsProvider
                     shortTitle: "Refresh All Apps",
                     systemImageName: "arrow.triangle.2.circlepath")
 
+        AppShortcut(intent: InstallIPAWithOutcomeIntent(),
+                    phrases: ["Install an IPA using \(.applicationName)"],
+                    shortTitle: "Install IPA with Result", systemImageName: "square.and.arrow.down")
+        AppShortcut(intent: RefreshAllWithOutcomeIntent(),
+                    phrases: ["Refresh all apps using \(.applicationName)"],
+                    shortTitle: "Refresh with Result", systemImageName: "arrow.triangle.2.circlepath")
+
+        AppShortcut(intent: EnableJITIntent(),
+                    phrases: ["Enable JIT with \(.applicationName)"],
+                    shortTitle: "Enable JIT", systemImageName: "bolt")
+
         AppShortcut(intent: InstallIPAIntent(),
                     phrases: [
                         "Install IPA with \(.applicationName)",

@@ -10,8 +10,7 @@ struct PacketTunnelProvisioningTests {
         print("PASS idempotent team suffix and existing installed identities retained")
         for (missing, expired, expected) in [(true, false, "no embedded"), (false, true, "expired"), (false, false, "does not authorize")] {
             let message = PacketTunnelProvisioning.installedProfileFailure(for: "example.app", missing: missing, expired: expired)
-            precondition(message.contains(expected) && message.contains("in-app refresh cannot repair"))
-            precondition(!message.contains("LocalDevVPN"))
+            precondition(message.contains(expected) && message.contains("External Local VPN Tunnel"))
         }
         print("PASS installed profile failures distinguish missing, expired and unauthorized profiles")
         let tunnel: [String: Any] = ["NSExtension": ["NSExtensionPointIdentifier": PacketTunnelProvisioning.extensionPoint]]

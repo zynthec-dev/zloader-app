@@ -59,7 +59,7 @@ struct MachOResourceViewer: View {
                     if !cdHashes.isEmpty {
                         InfoRow(label: "CDHash", value: cdHashes.joined(separator: "\n"))
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 let x509Certs = parser.x509Certificates()
                 if !x509Certs.isEmpty {
@@ -80,7 +80,7 @@ struct MachOResourceViewer: View {
                             }
                             .padding(.vertical, 2)
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 if let ent = try? parser.entitlements(), !ent.isEmpty {
@@ -97,7 +97,7 @@ struct MachOResourceViewer: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 let libs = parser.linkedLibraries()
@@ -115,7 +115,7 @@ struct MachOResourceViewer: View {
                             }
                             .padding(.vertical, 2)
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 let segs = parser.segments()
@@ -132,7 +132,7 @@ struct MachOResourceViewer: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                 }
 
                 Section(header: Text("Raw Dump")) {
@@ -144,7 +144,7 @@ struct MachOResourceViewer: View {
                                 .font(.subheadline)
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             } else if isLoaded {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")

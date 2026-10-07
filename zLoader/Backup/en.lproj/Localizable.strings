@@ -1,0 +1,17 @@
+// Text-only localization. Original layouts and legal notices are preserved.
+"%@ could not be backed up." = "%@ could not be backed up.";
+"%@ could not be restored." = "%@ could not be restored.";
+"%@ is inactive." = "%@ is inactive.";
+"A random error occurred." = "A random error occurred.";
+"App" = "App";
+"Backup Error" = "Backup Error";
+"Resign (or) Active %@ in ZLoader to continue using it." = "Resign (or) Active %@ in ZLoader to continue using it.";
+"The ZLoader app group could not be found." = "The ZLoader app group could not be found.";
+"The app group “%@” could not be found." = "The app group “%@” could not be found.";
+"The bundle identifier is invalid." = "The bundle identifier is invalid.";
+"Unable to access backup." = "Unable to access backup.";
+"Unable to create app group backup directory." = "Unable to create app group backup directory.";
+"Unable to create backup directory." = "Unable to create backup directory.";
+"Unable to read app group backup." = "Unable to read app group backup.";
+"ZLoaderBackup could not start" = "ZLoaderBackup could not start";
+"this app" = "this app";

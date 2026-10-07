@@ -1,6 +1,6 @@
 # zLoader provenance and release ownership
 
-zLoader is an independent private clone at `zynthec-dev/zLoader-ios`, maintained
+zLoader is an independently maintained private SideStore fork at `zynthec-dev/zLoader-ios`, maintained
 by zynthec-dev. It retains the SideStore Git history and original copyright and
 license notices. It is not in GitHub's fork network and does not submit these
 changes to SideStore.

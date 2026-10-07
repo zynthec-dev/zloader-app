@@ -34,10 +34,6 @@ public final class AppBootManager {
         debugLog("[AppBootManager] startMinimuxer() entered")
         defer { debugLog("[AppBootManager] startMinimuxer() exited") }
         
-        if UserDefaults.standard.enableEMPforWireguard {
-            debugLog("[AppBootManager] Starting EMProxy before minimuxer...")
-            try await startEMProxy()
-        }
 
         let preferred = try PairingFileManager.shared.parse(content: pairingFile).mode
         try await minimuxerStart(pairingFile, preferred: preferred)
@@ -108,6 +104,9 @@ public final class AppBootManager {
         debugLog("[AppBootManager] performBootSequence() entered")
         defer { debugLog("[AppBootManager] performBootSequence() exited") }
         
+        await MainActor.run {
+            _ = CertificateManager.shared.synchronizeInstallationCertificate()
+        }
         async let jitCheck: Void = {
             debugLog("[AppBootManager] performBootSequence(): JIT check starting")
             defer { debugLog("[AppBootManager] performBootSequence(): JIT check completed") }

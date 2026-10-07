@@ -47,17 +47,14 @@ enum PacketTunnelProvisioning {
             expired ? "has an expired provisioning profile" :
             "has a provisioning profile that does not authorize packet-tunnel-provider"
         return "The installed bundle \(bundleID) \(problem). " +
-            "The embedded VPN cannot start, so an in-app refresh cannot repair this installation. " +
-            "Install an Apple-signed build for this exact app ID and App Group, with Network Extensions authorized " +
-            "in both the host and tunnel profiles. Keep all extensions and do not delete the app. " +
-            "A paid Apple ID or a different certificate alone does not add this permission to an installed profile."
+            "Use External Local VPN Tunnel for device access, then sign zLoader again with an eligible Apple team. " +
+            "zLoader requests Network Extensions for the host and tunnel and validates Apple's returned profiles. " +
+            "Keep the same app identity and App Group; do not delete the app."
     }
 
     static func failureMessage(for bundleID: String) -> String {
         "Apple's provisioning profile for \(bundleID) does not authorize packet-tunnel-provider. " +
-        "The profile used for an Xcode installation is separate from the profile requested by zLoader. " +
-        "Use the same eligible paid developer team, enable Network Extensions for the host and tunnel App IDs " +
-        "at developer.apple.com/account/resources/identifiers/list, then regenerate their development profiles and retry. " +
-        "If Apple's returned profile still omits this capability, zLoader cannot self-sign or refresh its embedded tunnel."
+        "zLoader requested the capability, but Apple did not return the required authorization. " +
+        "Check the selected paid team and its permissions. External Local VPN Tunnel remains available; no required entitlement was removed."
     }
 }

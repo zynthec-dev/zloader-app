@@ -191,3 +191,59 @@ private extension RefreshAllAppsIntent
         }
     }
 }
+
+enum ShortcutOperationOutcome: String, AppEnum {
+    case succeeded, failed, cancelled
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Operation Outcome"
+    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .succeeded: "Succeeded", .failed: "Failed", .cancelled: "Cancelled"
+    ]
+    static func forError(_ error: Error) -> Self {
+        if error is CancellationError { return .cancelled }
+        return .failed
+    }
+}
+
+/// Returns the operation outcome instead of throwing a routine operation error,
+/// allowing a following Shortcuts VPN-disconnect action to run on failure too.
+struct InstallIPAWithOutcomeIntent: AppIntent, ProgressReportingIntent {
+    static var title: LocalizedStringResource = "Install IPA with Outcome"
+    static var description = IntentDescription("Signs and installs an IPA, waits for completion and returns Succeeded, Failed or Cancelled. Connect your VPN before this action and disconnect it afterwards.")
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
+    @Parameter(title: "IPA File") var ipaFile: IntentFile
+    static var parameterSummary: some ParameterSummary { Summary("Install \(\.$ipaFile) with outcome") }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<ShortcutOperationOutcome> & ProvidesDialog {
+        do {
+            try await DatabaseManager.shared.start()
+            let folder = FileManager.default.uniqueTemporaryURL()
+            defer { try? FileManager.default.removeItem(at: folder) }
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let url = folder.appendingPathComponent("App.ipa")
+            try ipaFile.data.write(to: url)
+            progress.totalUnitCount = 1
+            let intentProgress = progress
+            _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<InstalledApp, Error>) in
+                let group = AppManager.shared.install(.url(url)) { continuation.resume(with: $0) }
+                intentProgress.addChild(group.progress, withPendingUnitCount: 1)
+            }
+            return .result(value: ShortcutOperationOutcome.succeeded, dialog: "Installation complete.")
+        } catch {
+            return .result(value: ShortcutOperationOutcome.forError(error), dialog: "Installation ended: \(error.localizedDescription)")
+        }
+    }
+}
+
+struct RefreshAllWithOutcomeIntent: AppIntent {
+    static var title: LocalizedStringResource = "Refresh All Apps with Outcome"
+    static var description = IntentDescription("Waits for all refresh operations and returns Succeeded, Failed or Cancelled. Connect your VPN before this action and disconnect it afterwards.")
+    static var supportedModes: IntentModes { [.foreground(.immediate)] }
+    func perform() async throws -> some IntentResult & ReturnsValue<ShortcutOperationOutcome> & ProvidesDialog {
+        do {
+            try await RefreshAllAppsIntent(presentsNotifications: false).refreshAllApps()
+            return .result(value: ShortcutOperationOutcome.succeeded, dialog: "Refresh complete.")
+        } catch {
+            return .result(value: ShortcutOperationOutcome.forError(error), dialog: "Refresh ended: \(error.localizedDescription)")
+        }
+    }
+}

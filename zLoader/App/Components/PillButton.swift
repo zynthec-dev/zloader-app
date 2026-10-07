@@ -353,7 +353,16 @@ private extension PillButton
         {
         case .custom: break // Don't update insets in case client has updated them.
         case .pill:
-            var config = self.configuration ?? UIButton.Configuration.plain()
+            var config: UIButton.Configuration
+            if #available(iOS 26.0, tvOS 26.0, *) {
+                config = UIButton.Configuration.prominentGlass()
+                config.title = self.currentTitle
+                config.image = self.currentImage
+                config.baseBackgroundColor = self.tintColor
+                self.backgroundColor = .clear
+            } else {
+                config = self.configuration ?? UIButton.Configuration.plain()
+            }
             config.cornerStyle = .capsule
             config.titleLineBreakMode = .byClipping
             config.contentInsets = NSDirectionalEdgeInsets(

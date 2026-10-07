@@ -103,8 +103,24 @@ final class PipelineRunner: Sendable
                  handler: PipelineExecutionHandler,
                  group: RefreshGroup) async throws -> RefreshGroup
     {
-        return try await ZLoaderTransport.withLease {
-            try await self.performWithTransport(operations, handler: handler, group: group)
+        let apps = operations.compactMap { operation -> String? in
+            switch operation {
+            case .install, .update, .reinstall, .refresh, .resign: return operation.bundleIdentifier
+            default: return nil
+            }
+        }
+        let hook = try await OperationShortcutHooks.shared.begin(apps: apps)
+        do {
+            let result = try await ZLoaderTransport.withLease {
+                try await self.performWithTransport(operations, handler: handler, group: group)
+            }
+            let failed = result.results.values.contains { if case .failure = $0 { return true }; return false }
+            await OperationShortcutHooks.shared.end(hook, outcome: failed ? "failed" : "succeeded")
+            return result
+        } catch {
+            // Cleanup is best effort; it cannot be guaranteed after process death.
+            await OperationShortcutHooks.shared.end(hook, outcome: error is CancellationError ? "cancelled" : "failed")
+            throw error
         }
     }
 
@@ -313,6 +329,16 @@ final class PipelineRunner: Sendable
     
     private func performPipeline(for operation: AppOperation, handler: PipelineExecutionHandler, group: RefreshGroup, operationsCount: Int = 1) async throws -> InstalledApp
     {
+        switch operation {
+        case .refresh, .resign, .update, .reinstall:
+            let isStore = operation.bundleIdentifier == StoreApp.zloaderAppID || operation.bundleIdentifier == Bundle.main.bundleIdentifier
+            if isStore {
+                let dbContext = group.dbContext
+                let authorized = await dbContext.perform { SelfRefreshPolicy.canRefresh(in: dbContext) }
+                guard authorized else { throw OperationError.invalidParameters(SelfRefreshPolicy.protectedMessage) }
+            }
+        default: break
+        }
         let pipelineSteps = PipelineStepDefinition.steps(for: operation)
         let context = InstallAppOperationContext(
             pipelineSteps: pipelineSteps,
@@ -344,6 +370,12 @@ final class PipelineRunner: Sendable
             context.useMainProfile = app.useMainProfile
             context.customBundleIdentifier = app.customBundleIdentifier
             context.targetAppBundle = ALTApplication(fileURL: app.fileURL)
+            if app.resignedBundleIdentifier == Bundle.main.bundleIdentifier {
+                // Self-sign the currently installed app, not a stale cached
+                // pre-upgrade IPA. Preserve the installer's exact host identity.
+                context.customBundleIdentifier = app.resignedBundleIdentifier
+                context.targetAppBundle = ALTApplication(fileURL: Bundle.Info.activeBundleURL)
+            }
         }
         
         context.beginInstallationHandler = { (installedApp) in

@@ -76,15 +76,15 @@ def verify(ipa):
         require(len(hosts) == 1, 'Expected exactly one host app')
         host = hosts[0]
         widget = host / 'PlugIns/zLoaderWidget.appex'
+        require(widget.is_dir(), 'Widget was removed during signing')
         tunnel = host / 'PlugIns/zLoaderTunnel.appex'
-        require(widget.is_dir() and tunnel.is_dir(), 'Widget or tunnel was removed during signing')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic', str(host)], check=True)
         declared = {bundle: entitlements(bundle) for bundle in [host, *host.glob('PlugIns/*.appex')]}
         require(bool(set(declared[host].get(GROUPS, [])) & set(declared[widget].get(GROUPS, []))),
                 'Host and widget need the same signed App Group')
-        for bundle in [host, tunnel]:
-            require('packet-tunnel-provider' in declared[bundle].get(NETWORK, []),
-                    f'{bundle.name}: packet-tunnel-provider was omitted by the signer')
+        require((NETWORK in declared[host]) == tunnel.exists(), 'Provider and host Network Extension requirements differ')
+        if tunnel.exists():
+            require('packet-tunnel-provider' in declared[tunnel].get(NETWORK, []), 'Provider lacks required entitlement')
         teams = {check_profile(bundle, requested) for bundle, requested in declared.items()}
         backup_ipa = host / 'zLoaderBackup.ipa'
         require(backup_ipa.is_file(), 'Embedded Backup IPA was removed')
@@ -101,11 +101,11 @@ def verify(ipa):
         require(set(declared[host].get(GROUPS, [])) == set(backup_entitlements.get(GROUPS, [])),
                 'Host and Backup must retain the same signed App Group')
         host_id = plistlib.loads((host / 'Info.plist').read_bytes())['CFBundleIdentifier']
-        for child, suffix in [(widget, '.Widget'), (tunnel, '.Tunnel'), (backup, '.Backup')]:
+        for child, suffix in [(widget, '.Widget'), (backup, '.Backup')] + ([(tunnel, '.Tunnel')] if tunnel.exists() else []):
             child_id = plistlib.loads((child / 'Info.plist').read_bytes())['CFBundleIdentifier']
             require(child_id == host_id + suffix, f'{child.name}: identity is not derived from host')
         require(len(teams) == 1, 'Host, extensions and Backup are signed by different teams')
-        print('PASS Apple-signed integrity, all extensions and embedded Backup, authorized certificates, current profiles, shared App Group and tunnel capability')
+        print('PASS Apple-signed integrity, all extensions and embedded Backup, authorized certificates, current profiles, shared App Group and consistent provider authorization')
         print('Registered-device eligibility and physical launch still require device validation.')
 
 

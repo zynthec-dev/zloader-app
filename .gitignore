@@ -113,3 +113,10 @@ outputs/
 !zLoader/**/*.md
 
 !zLoader/scripts/*.sh
+
+!docs/zloader/AUDIT-0.7.15.md
+!docs/zloader/LOCALDEVVPN-0.7.16.md
+
+!docs/zloader/ON-DEVICE-SETUP-0.7.17.md
+
+!docs/zloader/CERTIFICATES-SIGNED-IPAS-0.7.18.md

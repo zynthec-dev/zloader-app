@@ -451,7 +451,7 @@ struct FullAppBundleView: View {
                     }
                 }
                 .padding(.vertical, 8)
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             // General Info — all from Info.plist
             Section(header: Text("General Info")) {
@@ -487,7 +487,7 @@ struct FullAppBundleView: View {
                         InfoRow(label: "Executable", value: exec)
                     }
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
 
             // Provisioning Profile — from embedded.mobileprovision
             if let profile = provisioningProfile {
@@ -504,7 +504,7 @@ struct FullAppBundleView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // Info.plist
@@ -514,7 +514,7 @@ struct FullAppBundleView: View {
                         Text("View Info.plist (\(plist.count) keys)")
                             .font(.subheadline)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // App Extensions
@@ -536,7 +536,7 @@ struct FullAppBundleView: View {
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
 
             // Resources — recursive browser
@@ -545,7 +545,7 @@ struct FullAppBundleView: View {
                     Text("Browse Bundle Contents")
                         .font(.subheadline)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())

@@ -57,7 +57,8 @@ public class DeveloperPortalProxy {
     public func revokeCertificate(_ certificate: ALTX509Certificate, team: ALTTeam? = nil) async throws -> Bool {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.revokeCertificate(certificate, for: team, session: session)
+        guard try await ALTAppleAPI.shared.revokeCertificate(certificate, for: team, session: session) else { throw PortalMutationError.rejected }
+        return true
     }
     
     public func fetchDevices(for team: ALTTeam? = nil, types: ALTDeviceType = .all) async throws -> [ALTDevice] {
@@ -91,7 +92,10 @@ public class DeveloperPortalProxy {
     public func deleteDevice(_ device: ALTDevice, team: ALTTeam? = nil) async throws -> Bool {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.deleteDevice(device, team: team, session: session)
+        guard try await ALTAppleAPI.shared.deleteDevice(device, team: team, session: session) else { throw PortalMutationError.rejected }
+        let remaining = try await ALTAppleAPI.shared.fetchDevices(for: team, types: .all, session: session)
+        guard !remaining.contains(where: { $0.identifier == device.identifier }) else { throw PortalMutationError.notConfirmed }
+        return true
     }
 
     public func fetchAppIDs(team: ALTTeam? = nil) async throws -> [ALTAppID] {
@@ -122,7 +126,10 @@ public class DeveloperPortalProxy {
     public func deleteAppID(_ appID: ALTAppID, team: ALTTeam? = nil) async throws -> Bool {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.deleteAppID(appID, for: team, session: session)
+        guard try await ALTAppleAPI.shared.deleteAppID(appID, for: team, session: session) else { throw PortalMutationError.rejected }
+        let remaining = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
+        guard !remaining.contains(where: { $0.identifier == appID.identifier }) else { throw PortalMutationError.notConfirmed }
+        return true
     }
 
     @discardableResult
@@ -170,7 +177,10 @@ public class DeveloperPortalProxy {
     public func deleteAppGroup(_ group: ALTAppGroup, team: ALTTeam? = nil) async throws -> Bool {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.deleteAppGroup(group, team: team, session: session)
+        guard try await ALTAppleAPI.shared.deleteAppGroup(group, team: team, session: session) else { throw PortalMutationError.rejected }
+        let remaining = try await ALTAppleAPI.shared.fetchAppGroups(for: team, session: session)
+        guard !remaining.contains(where: { $0.identifier == group.identifier || $0.groupID == group.groupID }) else { throw PortalMutationError.notConfirmed }
+        return true
     }
 
     public func listProvisioningProfiles(includeTeamProfiles: Bool = true, team: ALTTeam? = nil) async throws -> [ALTListedProvisioningProfile] {
@@ -235,7 +245,10 @@ public class DeveloperPortalProxy {
     public func deleteProvisioningProfile(profileID: String, team: ALTTeam? = nil) async throws -> Bool {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
-        return try await ALTAppleAPI.shared.deleteProvisioningProfile(profileID: profileID, team: team, session: session)
+        guard try await ALTAppleAPI.shared.deleteProvisioningProfile(profileID: profileID, team: team, session: session) else { throw PortalMutationError.rejected }
+        let remaining = try await ALTAppleAPI.shared.listProvisioningProfiles(includeTeamProfiles: true, for: team, session: session)
+        guard !remaining.contains(where: { $0.identifier == profileID }) else { throw PortalMutationError.notConfirmed }
+        return true
     }
 }
 
@@ -266,5 +279,17 @@ class DeveloperPortalProxyWithAuth: DeveloperPortalProxy {
             verificationHandler: verificationHandler
         )
         return (authSession.account, authSession.session)
+    }
+}
+
+/// A mutation is successful only after Apple accepts it and fresh remote state
+/// confirms it. Local lists must remain unchanged on rejection/uncertainty.
+enum PortalMutationError: LocalizedError {
+    case rejected, notConfirmed
+    var errorDescription: String? {
+        switch self {
+        case .rejected: return NSLocalizedString("Apple rejected the portal change. No local item was removed.", comment: "")
+        case .notConfirmed: return NSLocalizedString("Apple still lists this item after the request. The change could not be confirmed; refresh the portal and try again. The local item was preserved.", comment: "")
+        }
     }
 }

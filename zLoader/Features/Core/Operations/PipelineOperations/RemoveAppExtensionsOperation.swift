@@ -68,6 +68,13 @@ final class RemoveAppExtensionsOperation: BasePipelineOperation<InstallAppOperat
             throw OperationError.invalidParameters("RemoveAppExtensionsOperation: context.appBundle is nil")
         }
         
+        // Self-signing must preserve every bundled extension and its separate profile.
+        if targetAppBundle.isZLoaderApp {
+            context.useMainProfile = false
+            self.setProgress(100)
+            return targetAppBundle
+        }
+
         // target App Bundle doesn't contain extensions so don't bother
         guard !targetAppBundle.appExtensions.isEmpty else {
             self.setProgress(100)

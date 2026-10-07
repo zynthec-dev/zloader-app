@@ -1,4 +1,6 @@
-# Project audit — zLoader 0.7.12
+# Historical project audit — zLoader 0.7.12
+
+Current working-tree status: [0.7.15 audit](AUDIT-0.7.15.md).
 
 2026-10-06, Xcode 27.0, Apple Silicon. This is an independent private clone.
 Original authors, licenses and the corresponding-source obligation remain intact.

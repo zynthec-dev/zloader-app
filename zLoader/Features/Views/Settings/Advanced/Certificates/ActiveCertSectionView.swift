@@ -79,7 +79,7 @@ struct ActiveCertSectionView: View {
                     }
                     #if !os(tvOS)
                     SwiftUI.Button { UIPasteboard.general.string = activeSerial } label: {
-                        Label("Copy S/N", systemImage: "doc.on.doc")
+                        SettingsEntryLabel(title: "Copy S/N", systemImage: "doc.on.doc")
                     }
                     #endif
                 }
@@ -87,9 +87,17 @@ struct ActiveCertSectionView: View {
                 HStack {
                     Image(systemName: "checkmark.seal.fill").font(.title2).opacity(0)
                     SwiftUI.Button(role: .destructive) { onDeactivate() } label: {
-                        Text("Deactivate Locally").fontWeight(.medium)
+                        SettingsEntryLabel(title: "Deactivate Locally").fontWeight(.medium)
                     }
                 }
+            } else if let installed = viewModel.installationCertificate {
+                SettingsEntryLabel(title: "Installed zLoader Certificate", systemImage: "app.badge.checkmark")
+                    .font(.headline)
+                Text(installed.name)
+                Text(installed.expiryDate <= Date()
+                     ? "The installed signing certificate has expired and cannot be activated automatically."
+                     : "Installed signing identity detected. Its matching private key is missing. Import the corresponding .p12 from your installer or Mac; this certificate will then activate automatically.")
+                    .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 Text(viewModel.team == nil
                      ? "No active local certificate found.Import a .p12 file to sign your apps."
@@ -97,6 +105,6 @@ struct ActiveCertSectionView: View {
                     .foregroundColor(.secondary)
                     .font(.subheadline)
             }
-        }
+        }.listRowBackground(ZLoaderGlassBackground())
     }
 }

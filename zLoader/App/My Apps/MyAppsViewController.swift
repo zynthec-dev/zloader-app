@@ -9,6 +9,7 @@
 @preconcurrency import UIKit
 @preconcurrency import Intents
 import SideSign
+import Minimuxer
 import SwiftUI
 import MobileCoreServices
 import Combine
@@ -59,6 +60,7 @@ class MyAppsViewController: UICollectionViewController
     private var didChangeActiveApps = false
     private var previousInactiveAppsCount = 0
     private var statusDotView: UIView?
+    private var hasKnownPairingFailure = false
     
     private var _imagePickerInstalledApp: InstalledApp?
     private var _viewDidAppear = false
@@ -89,6 +91,15 @@ class MyAppsViewController: UICollectionViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+
+        let add = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(sideloadApp(_:)))
+        add.accessibilityLabel = NSLocalizedString("Install App", comment: "")
+        let sign = UIBarButtonItem(image: UIImage(systemName: "signature"), style: .plain, target: self, action: #selector(openSigning(_:)))
+        sign.accessibilityLabel = NSLocalizedString("Sign IPA", comment: "")
+        navigationItem.leftBarButtonItems = [add, sign]
+        let library = UIBarButtonItem(image: UIImage(systemName: "books.vertical"), style: .plain, target: self, action: #selector(openIPALibrary(_:)))
+        library.accessibilityLabel = NSLocalizedString("IPA Library", comment: "")
+        navigationItem.rightBarButtonItem = library
         
         // Allows us to intercept delegate callbacks.
         self.updatesDataSource.fetchedResultsController.delegate = self
@@ -143,11 +154,11 @@ class MyAppsViewController: UICollectionViewController
         if minimuxerStatusCheckTask == nil {
             minimuxerStatusCheckTask = Task {
                 let status = await isMinimuxerReady()
-                updateStatusDot(isReady: status.isSuccess)
+                await updateTransportStatus(status.mapError { $0 as Error })
                 // Listen to subsequent updates reactively
                 for await result in minimuxerStatusPublisher.values {
                     guard !Task.isCancelled else { break }
-                    updateStatusDot(isReady: result.isSuccess)
+                    await updateTransportStatus(result)
                 }
             }
         }
@@ -190,6 +201,10 @@ class MyAppsViewController: UICollectionViewController
         super.viewDidAppear(animated)
         
         _viewDidAppear = true
+        Task {
+            let status = await isMinimuxerReady()
+            await updateTransportStatus(status.mapError { $0 as Error })
+        }
 
         if let pendingURL = self.pendingImportURL {
             self.pendingImportURL = nil
@@ -212,6 +227,30 @@ class MyAppsViewController: UICollectionViewController
             }
         }
         return nil
+    }
+
+    private func updateTransportStatus(_ result: Result<Bool, Error>) async {
+        var ready = (try? result.get()) == true
+        if ready { hasKnownPairingFailure = false }
+        #if os(iOS)
+        if case .failure(let error) = result, let failure = error as? MinimuxerError {
+            switch failure {
+            case .invalidPairing, .fetchUDID, .createLockdown, .xpcHandshake:
+                hasKnownPairingFailure = true
+            default: break
+            }
+            switch failure {
+            case .noVPN, .noDevice, .invalidVPN, .notReachable:
+                if UserDefaults.standard.bool(forKey: "zLoader.useInternalVPN"),
+                   !hasKnownPairingFailure, PairingFileManager.shared.hasPairingFile(),
+                   minimuxerPairingProtocol() != .unknown {
+                    ready = await EmbeddedTunnel.shared.isConfiguredAndIdle()
+                }
+            default: break
+            }
+        }
+        #endif
+        updateStatusDot(isReady: ready)
     }
 
     private func updateStatusDot(isReady: Bool)
@@ -345,19 +384,36 @@ private extension MyAppsViewController
             
             cell.blurView.layer.cornerRadius = 20
             cell.blurView.layer.masksToBounds = true
+            #if !os(tvOS)
+            if #available(iOS 26.0, *) {
+                cell.blurView.effect = UIGlassEffect(style: .regular)
+                cell.blurView.backgroundColor = .clear
+            } else {
+                cell.blurView.backgroundColor = .settingsHighlighted
+            }
+            #else
             cell.blurView.backgroundColor = .settingsHighlighted
+            #endif
             cell.textLabel.textColor = .label
             
             cell.button.addTarget(self, action: #selector(MyAppsViewController.showHiddenUpdatesAlert(_:)), for: .primaryActionTriggered)
             
             if !self.unsupportedUpdates.isEmpty
             {
+                cell.completeImage.isHidden = true
+                cell.completeLabel.isHidden = true
+                cell.textLabel.isHidden = false
+                cell.isAccessibilityElement = false
                 cell.textLabel.text = NSLocalizedString("Unsupported Updates Available", comment: "")
                 cell.button.isHidden = false
             }
             else
             {
-                cell.textLabel.text = NSLocalizedString("No Updates Available", comment: "")
+                cell.completeImage.isHidden = false
+                cell.completeLabel.isHidden = false
+                cell.textLabel.isHidden = true
+                cell.isAccessibilityElement = true
+                cell.accessibilityLabel = NSLocalizedString("All Apps Up to Date", comment: "")
                 cell.button.isHidden = true
             }
         }
@@ -944,6 +1000,7 @@ private extension MyAppsViewController
         InstallAppDialog.presentSourceSelection(
             from: self,
             barButtonItem: sender,
+            mode: .prompt,
             onChooseFiles: { [weak self] in
                 #if !os(tvOS)
                 self?.presentDocumentPicker()
@@ -953,10 +1010,31 @@ private extension MyAppsViewController
             },
             onConfirm: { [weak self] url in
                 self?.sideloadApp(at: url) { _ in }
-            }
+            },
+            onChooseLibrary: { [weak self] in self?.showIPALibrary() }
         )
     }
     
+    @objc private func openSigning(_ sender: UIBarButtonItem) {
+        navigationController?.pushViewController(ZLoaderHostingController(rootView: SignIPAView(onInstall: { [weak self] url in self?.installFromLibrary(url) })), animated: true)
+    }
+
+    @objc private func openIPALibrary(_ sender: UIBarButtonItem) { showIPALibrary() }
+
+    private func showIPALibrary() {
+        let library = CacheManagementView(signedIPAsOnly: true, onInstall: { [weak self] url in self?.installFromLibrary(url) })
+        navigationController?.pushViewController(ZLoaderHostingController(rootView: library), animated: true)
+    }
+
+    private func installFromLibrary(_ url: URL) {
+        navigationController?.popToViewController(self, animated: true)
+        if let coordinator = navigationController?.transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in self?.presentImportDialog(for: url) }
+        } else {
+            presentImportDialog(for: url)
+        }
+    }
+
     #if !os(tvOS)
     private func presentDocumentPicker()
     {
@@ -1135,8 +1213,12 @@ private extension MyAppsViewController
     func open(_ installedApp: InstalledApp)
     {
         UIApplication.shared.open(installedApp.openAppURL) { success in
-            guard !success else { return }
-            
+            if success {
+                if UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) {
+                    self.enableJIT(for: installedApp)
+                }
+                return
+            }
             ToastView(error: OperationError.openAppFailed(name: installedApp.name), opensLog: true).show(in: self)
         }
     }
@@ -1691,7 +1773,7 @@ private extension MyAppsViewController
     func showAppInfo(_ installedApp: InstalledApp)
     {
         let appInfoView = AppInfoView(installedApp: installedApp)
-        let hostingController = UIHostingController(rootView: appInfoView)
+        let hostingController = ZLoaderHostingController(rootView: appInfoView)
         self.present(hostingController, animated: true, completion: nil)
     }
     
@@ -1752,8 +1834,19 @@ private extension MyAppsViewController
     }
     
     func enableJIT(for installedApp: InstalledApp) {
+        var backgroundTask = UIBackgroundTaskIdentifier.invalid
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "zLoader.EnableJIT") {
+            if backgroundTask != .invalid {
+                UIApplication.shared.endBackgroundTask(backgroundTask)
+                backgroundTask = .invalid
+            }
+        }
         AppManager.shared.enableJIT(for: installedApp) { result in
             DispatchQueue.main.async {
+                if backgroundTask != .invalid {
+                    UIApplication.shared.endBackgroundTask(backgroundTask)
+                    backgroundTask = .invalid
+                }
                 switch result {
                 case .success:
                     break
@@ -2110,10 +2203,19 @@ extension MyAppsViewController
             self.remove(installedApp)
         }
         
-        let jitAction = UIAction(title: NSLocalizedString("Enable JIT", comment: ""), image: UIImage(systemName: "bolt")) { (action) in
-            self.enableJIT(for: installedApp)
+        let jitAction = UIAction(title: NSLocalizedString("Enable JIT Automatically", comment: ""), image: UIImage(systemName: "bolt"),
+            state: UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) ? .on : .off) { _ in
+            let enabled = !UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier)
+            UserDefaults.standard.setAutomaticJIT(enabled, for: installedApp.bundleIdentifier)
+            if enabled { self.open(installedApp) }
         }
         
+        if (installedApp.bundleIdentifier == StoreApp.zloaderAppID || installedApp.resignedBundleIdentifier == Bundle.main.bundleIdentifier),
+           !SelfRefreshPolicy.canRefresh(in: DatabaseManager.shared.viewContext) {
+            refreshAction.attributes.insert(.disabled)
+            resignAction.attributes.insert(.disabled)
+        }
+
         let backupAction = UIAction(title: NSLocalizedString("Create Backup", comment: ""), image: UIImage(systemName: "doc.on.doc")) { (action) in
             self.backup(installedApp)
         }
@@ -2422,7 +2524,7 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
         switch section
         {
         case .noUpdates:
-            let size = CGSize(width: collectionView.bounds.width, height: 44)
+            let size = CGSize(width: collectionView.bounds.width, height: max(80, 60 + UIFont.preferredFont(forTextStyle: .footnote).lineHeight))
             return size
             
         case .updates:

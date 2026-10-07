@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreData
 import SideSign
 import UniformTypeIdentifiers
 
@@ -32,9 +33,16 @@ struct ProfileManagementView: View {
     @State private var pendingImport: PendingProfileImport? = nil
     @State private var profileToEditOnPortal: ALTListedProvisioningProfile? = nil
     @State private var showAddOptions = false
+    @State private var exportTargets: [ProfileExportTarget] = []
+
+    private struct ProfileExportTarget: Identifiable {
+        let id: String
+        let name: String
+        let directory: URL
+    }
 
     private var allowedImportTypes: [UTType] {
-        [UTType(filenameExtension: "mobileprovision")].compactMap { $0 }
+        [UTType(filenameExtension: "mobileprovision"), .data].compactMap { $0 }
     }
 
     private var filteredProfiles: [ALTProvisioningProfile] {
@@ -52,6 +60,18 @@ struct ProfileManagementView: View {
     var body: some View {
         ZStack {
             List {
+                Section(header: Text("App Profile Packages"), footer: Text("Exports the host and all cached extension profiles together, preserving each Apple signature. Profiles still require the matching private key, team, device and capabilities when reused.")) {
+                    SwiftUI.Button("Export zLoader with Extensions and Backup") {
+                        do { profileToShareURL = try ProfileManager.shared.exportOwnPackage() }
+                        catch { viewModel.showToast(error.localizedDescription) }
+                    }
+                    ForEach(exportTargets) { target in
+                        SwiftUI.Button("Export " + target.name + " with Extensions") {
+                            do { profileToShareURL = try ProfileManager.shared.exportPackage(profileDirectory: target.directory) }
+                            catch { viewModel.showToast(error.localizedDescription) }
+                        }
+                    }
+                }.listRowBackground(ZLoaderGlassBackground())
                 Section(header: Text("Overview")) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -94,7 +114,7 @@ struct ProfileManagementView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 Section(
                     header: Text("Provisioning Profiles (\(filteredProfiles.count))"),
@@ -123,7 +143,7 @@ struct ProfileManagementView: View {
                                 SwiftUI.Button(role: .destructive) {
                                     promptDelete(profile)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    SettingsEntryLabel(title: "Delete", systemImage: "trash")
                                 }
                                 if viewModel.canEditProfileOnPortal(profile) {
                                     SwiftUI.Button {
@@ -131,7 +151,7 @@ struct ProfileManagementView: View {
                                             profileToEditOnPortal = listed
                                         }
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        SettingsEntryLabel(title: "Edit", systemImage: "pencil")
                                     }
                                     .tint(.purple)
                                 }
@@ -140,7 +160,7 @@ struct ProfileManagementView: View {
                                 SwiftUI.Button {
                                     shareProfile(profile)
                                 } label: {
-                                    Label("Share", systemImage: "square.and.arrow.up")
+                                    SettingsEntryLabel(title: "Share", systemImage: "square.and.arrow.up")
                                 }
                                 .tint(.blue)
                             }
@@ -152,23 +172,23 @@ struct ProfileManagementView: View {
                                             profileToEditOnPortal = listed
                                         }
                                     } label: {
-                                        Label("Edit on Developer Portal", systemImage: "pencil")
+                                        SettingsEntryLabel(title: "Edit on Developer Portal", systemImage: "pencil")
                                     }
                                 }
                                 SwiftUI.Button {
                                     shareProfile(profile)
                                 } label: {
-                                    Label("Share Profile", systemImage: "square.and.arrow.up")
+                                    SettingsEntryLabel(title: "Share Profile", systemImage: "square.and.arrow.up")
                                 }
                                 SwiftUI.Button(role: .destructive) {
                                     promptDelete(profile)
                                 } label: {
-                                    Label("Delete Profile", systemImage: "trash")
+                                    SettingsEntryLabel(title: "Delete Profile", systemImage: "trash")
                                 }
                             }
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             #if !os(tvOS)
             .listStyle(InsetGroupedListStyle())
@@ -195,6 +215,7 @@ struct ProfileManagementView: View {
             }
         }
         .navigationTitle("Profile Management")
+        .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -207,6 +228,16 @@ struct ProfileManagementView: View {
         }
         .onAppear {
             viewModel.loadProfiles(isPullToRefresh: false)
+            let context = DatabaseManager.shared.persistentContainer.viewContext
+            context.perform {
+                let request = NSFetchRequest<InstalledApp>(entityName: "InstalledApp")
+                if let apps = try? context.fetch(request) {
+                    exportTargets = apps.filter { !$0.resignedBundleIdentifier.isZLoaderAppID }.map {
+                        ProfileExportTarget(id: $0.resignedBundleIdentifier, name: $0.name,
+                                            directory: $0.directoryURL.appendingPathComponent("ProvisioningProfiles"))
+                    }
+                }
+            }
         }
         .refreshable {
             viewModel.loadProfiles(isPullToRefresh: true)
@@ -337,6 +368,12 @@ struct ProfileManagementView: View {
     private func handleFileSelected(at url: URL) {
         do {
             let data = try Data(contentsOf: url)
+            if url.pathExtension.lowercased() == "zloaderprofiles" {
+                let count = try ProfileManager.shared.importPackage(data: data)
+                viewModel.loadProfiles(isPullToRefresh: false)
+                viewModel.showToast("Imported \(count) signed profiles. Matching certificates with private keys are still required.")
+                return
+            }
             let profile = try ALTProvisioningProfile(data: data)
             let analysis = ProfileManager.shared.analyzeCertificates(for: profile)
             self.pendingImport = PendingProfileImport(profile: profile, analysis: analysis)

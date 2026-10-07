@@ -9,6 +9,8 @@
 import SwiftUI
 
 struct CacheManagementView: View {
+    var signedIPAsOnly: Bool = false
+    var onInstall: ((URL) -> Void)? = nil
     @StateObject private var viewModel = CacheViewModel()
     @Environment(\.colorScheme) var colorScheme
     
@@ -19,6 +21,7 @@ struct CacheManagementView: View {
                     .scaleEffect(1.1)
             } else {
                 List {
+                    if !signedIPAsOnly {
                     Section(header: Text("Internal App Cache"), footer: Text("Cached unzipped app bundles stored in zLoader's private container. These are used during automatic background refreshes and resigns.")) {
                         if viewModel.internalApps.isEmpty {
                             Text("No cached internal apps.")
@@ -40,17 +43,18 @@ struct CacheManagementView: View {
                                 }
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
                     
-                    Section(header: Text("Exported Resigned Apps"), footer: Text("Copies of signed app bundles exported to your Documents folder. These can be shared or retrieved via the Files app.")) {
+                    }
+                    Section(header: Text("Signed IPAs"), footer: Text("Saved signed IPA files. Tap a file to share it or save it to Files.")) {
                         if viewModel.resignedApps.isEmpty {
-                            Text("No exported resigned apps.")
+                            Text("No signed IPAs saved yet.")
                                 .foregroundColor(.secondary)
                                 .italic()
                                 .padding(.vertical, 4)
                         } else {
                             ForEach(viewModel.resignedApps) { item in
-                                CacheItemRow(item: item, onExport: {
+                                CacheItemRow(item: item, tapToExport: true, onInstall: onInstall.map { install in { install(item.url) } }, onExport: {
                                     viewModel.activeExportURL = item.url
                                 }, onDelete: {
                                     viewModel.deleteItem(item)
@@ -63,9 +67,12 @@ struct CacheManagementView: View {
                             }
                         }
                     }
+                    .listRowBackground(ZLoaderGlassBackground())
                 }
                 #if !os(tvOS)
                 .listStyle(InsetGroupedListStyle())
+                .scrollContentBackground(.hidden)
+                .background(ZLoaderAppBackground())
                 #else
                 .listStyle(GroupedListStyle())
                 #endif
@@ -85,7 +92,10 @@ struct CacheManagementView: View {
                     .shadow(radius: 10)
             }
         }
-        .navigationTitle("Cache Management")
+        .navigationTitle(signedIPAsOnly
+                         ? NSLocalizedString("IPA Library", comment: "Signed IPA file library")
+                         : NSLocalizedString("Cache Management", comment: ""))
+        .refreshable { viewModel.loadCacheItems() }
         .onAppear {
             viewModel.loadCacheItems()
         }
@@ -124,6 +134,8 @@ struct CacheManagementView: View {
 
 struct CacheItemRow: View {
     let item: CacheItem
+    var tapToExport: Bool = false
+    var onInstall: (() -> Void)? = nil
     let onExport: () -> Void
     let onDelete: () -> Void
     
@@ -171,12 +183,19 @@ struct CacheItemRow: View {
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { if tapToExport { onExport() } }
         .contextMenu {
+            if let onInstall {
+                SwiftUI.Button(action: onInstall) {
+                    Label("Install IPA", systemImage: "square.and.arrow.down")
+                }
+            }
             SwiftUI.Button(action: onExport) {
-                Label("Export/Share", systemImage: "square.and.arrow.up")
+                Label(tapToExport ? NSLocalizedString("Share IPA", comment: "") : NSLocalizedString("Export/Share", comment: ""), systemImage: "square.and.arrow.up")
             }
             SwiftUI.Button(role: .destructive, action: onDelete) {
-                Label("Delete Cache", systemImage: "trash")
+                Label(tapToExport ? NSLocalizedString("Delete IPA", comment: "") : NSLocalizedString("Delete Cache", comment: ""), systemImage: "trash")
             }
         }
     }

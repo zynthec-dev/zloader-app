@@ -244,7 +244,7 @@ struct PlistNodeRow: View {
                 ForEach(children) { child in
                     PlistNodeRow(node: child)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         } else {
             leafRow
         }
@@ -329,7 +329,7 @@ struct InfoPlistRawXMLView: View {
                         Label(isWrapped ? "Wrap: On" : "Wrap: Off", systemImage: isWrapped ? "text.alignleft" : "text.chevron.right")
                             .font(.footnote)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(ZLoaderGlassButtonStyle())
                     
                     #if !os(tvOS)
                     SwiftUI.Button {
@@ -346,7 +346,7 @@ struct InfoPlistRawXMLView: View {
                         Label(isCopied ? "Copied!" : "Copy XML", systemImage: isCopied ? "checkmark" : "doc.on.doc")
                             .font(.footnote)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ZLoaderGlassButtonStyle(prominent: true))
                     .tint(isCopied ? .green : .accentColor)
                     #endif
                 }
@@ -420,7 +420,7 @@ struct InfoPlistRawView: View {
                         Label(isWrapped ? "Wrap: On" : "Wrap: Off", systemImage: isWrapped ? "text.alignleft" : "text.chevron.right")
                             .font(.footnote)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(ZLoaderGlassButtonStyle())
                     
                     #if !os(tvOS)
                     SwiftUI.Button {
@@ -437,7 +437,7 @@ struct InfoPlistRawView: View {
                         Label(isCopied ? "Copied!" : "Copy JSON", systemImage: isCopied ? "checkmark" : "doc.on.doc")
                             .font(.footnote)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ZLoaderGlassButtonStyle(prominent: true))
                     .tint(isCopied ? .green : .accentColor)
                     #endif
                 }
@@ -594,7 +594,7 @@ struct InfoPlistSemanticView: View {
                     SemanticValueRow(label: "Bundle Identifier", value: bundleID)
                     SemanticValueRow(label: "Version", value: version)
                     SemanticValueRow(label: "Minimum OS", value: minOS)
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Privacy Permissions Card
@@ -603,7 +603,7 @@ struct InfoPlistSemanticView: View {
                     ForEach(privacyPermissions.keys.sorted(), id: \.self) { key in
                         LocalCopyableDescriptionRow(key: key, value: privacyPermissions[key] ?? "")
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Custom URL Schemes Card
@@ -612,7 +612,7 @@ struct InfoPlistSemanticView: View {
                     ForEach(customURLSchemes, id: \.self) { scheme in
                         LocalCopyableValueOnlyRow(value: scheme)
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Background Modes Card
@@ -628,7 +628,7 @@ struct InfoPlistSemanticView: View {
                             Spacer()
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Queried URL Schemes Card
@@ -641,7 +641,7 @@ struct InfoPlistSemanticView: View {
                             Spacer()
                         }
                     }
-                }
+                }.listRowBackground(ZLoaderGlassBackground())
             }
             
             // Other Custom/Advanced Keys
@@ -655,7 +655,7 @@ struct InfoPlistSemanticView: View {
                     let val = customKeys[key] ?? ""
                     CopyableValueRow(key: key, value: val)
                 }
-            }
+            }.listRowBackground(ZLoaderGlassBackground())
         }
         #if !os(tvOS)
         .listStyle(InsetGroupedListStyle())

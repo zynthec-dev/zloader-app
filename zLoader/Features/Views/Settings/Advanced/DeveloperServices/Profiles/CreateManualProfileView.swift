@@ -102,8 +102,8 @@ struct CreateManualProfileView: View {
 
                     TextField("Profile Name", text: $profileName)
 
-                    Toggle("Manual Configuration", isOn: $isManualConfiguration.animation())
-                }
+                    Toggle(isOn: $isManualConfiguration.animation()) { SettingsEntryLabel(title: "Manual Configuration") }
+                }.listRowBackground(ZLoaderGlassBackground())
 
                 if isManualConfiguration {
                     Section(header: HStack {
@@ -172,7 +172,7 @@ struct CreateManualProfileView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                    }
+                    }.listRowBackground(ZLoaderGlassBackground())
 
                     if selectedProfileType.acceptedDeviceTypes != .none {
                         Section(header: HStack {
@@ -229,11 +229,12 @@ struct CreateManualProfileView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                        }
+                        }.listRowBackground(ZLoaderGlassBackground())
                     }
                 }
             }
             .navigationTitle("New Profile")
+        .labelStyle(.titleOnly)
             .navigationBarItems(
                 leading: SwiftUI.Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
@@ -262,7 +263,7 @@ struct CreateManualProfileView: View {
                     if viewModel.isActionLoading {
                         ProgressView()
                     } else {
-                        Text("Generate")
+                        SettingsEntryLabel(title: "Generate")
                             .bold()
                     }
                 }

@@ -68,6 +68,8 @@ final class NoUpdatesCollectionViewCell: UICollectionViewCell
     @IBOutlet var blurView: UIVisualEffectView!
     @IBOutlet var textLabel: UILabel!
     @IBOutlet var button: UIButton!
+    let completeLabel = UILabel()
+    let completeImage = UIImageView(image: UIImage(systemName: "checkmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)))
     
     override func awakeFromNib()
     {
@@ -75,6 +77,27 @@ final class NoUpdatesCollectionViewCell: UICollectionViewCell
         
         self.contentView.preservesSuperviewLayoutMargins = true
         
+        completeImage.tintColor = .systemGreen
+        completeImage.contentMode = .scaleAspectFit
+        completeImage.translatesAutoresizingMaskIntoConstraints = false
+        blurView.contentView.addSubview(completeImage)
+        completeLabel.text = NSLocalizedString("All Apps Up to Date", comment: "")
+        completeLabel.font = .preferredFont(forTextStyle: .footnote)
+        completeLabel.adjustsFontForContentSizeCategory = true
+        completeLabel.textColor = .label
+        completeLabel.textAlignment = .center
+        completeLabel.translatesAutoresizingMaskIntoConstraints = false
+        blurView.contentView.addSubview(completeLabel)
+        NSLayoutConstraint.activate([
+            completeLabel.topAnchor.constraint(equalTo: completeImage.bottomAnchor, constant: 5),
+            completeLabel.centerXAnchor.constraint(equalTo: blurView.contentView.centerXAnchor),
+            completeLabel.leadingAnchor.constraint(greaterThanOrEqualTo: blurView.contentView.leadingAnchor, constant: 12),
+            completeLabel.trailingAnchor.constraint(lessThanOrEqualTo: blurView.contentView.trailingAnchor, constant: -12),
+            completeImage.centerXAnchor.constraint(equalTo: blurView.contentView.centerXAnchor),
+            completeImage.centerYAnchor.constraint(equalTo: blurView.contentView.centerYAnchor, constant: -10),
+            completeImage.widthAnchor.constraint(equalToConstant: 28),
+            completeImage.heightAnchor.constraint(equalToConstant: 28)
+        ])
         let font = self.textLabel.font ?? UIFont.systemFont(ofSize: 17)
         let configuration = UIImage.SymbolConfiguration(font: font)
         let image = UIImage(systemName: "ellipsis.circle", withConfiguration: configuration)
