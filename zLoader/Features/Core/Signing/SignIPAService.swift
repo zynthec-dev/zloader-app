@@ -12,6 +12,8 @@ enum SignIPAService {
         defer { try? fm.removeItem(at: temporary) }
         let appURL = try fm.unzipAppBundle(at: source, to: temporary)
         guard let app = ALTApplication(fileURL: appURL) else { throw OperationError.invalidApp(reason: NSLocalizedString("The IPA does not contain a readable app bundle.", comment: "")) }
+        var managedContext: InstallAppOperationContext?
+        defer { if let managedContext { try? fm.removeItem(at: managedContext.temporaryDirectory) } }
         let certificate: ALTCertificate
         let profiles: [ALTProvisioningProfile]
         let team: ALTTeam
@@ -40,16 +42,31 @@ enum SignIPAService {
                 dbBackgroundContext: DatabaseManager.shared.persistentContainer.newBackgroundContext(),
                 sharedContext: SharedPipelineContext(), handler: PipelineHandler(), activeSigningCertificate: certificate)
             context.targetAppBundle = app
-            context.appendTeamID = false
+            context.appendTeamID = true
+            context.embedSigningCertificate = false
             context.includeAllRegisteredDevices = true
-            profiles = try await ZLoaderTransport.withLease {
-                Array(try await FetchProvisioningProfilesOperation(context: context).execute(parentProgress: nil).values)
+            let issued = try await ZLoaderTransport.withLease {
+                try await FetchProvisioningProfilesOperation(context: context).execute(parentProgress: nil)
             }
+            context.provisioningProfiles = issued
+            managedContext = context
+            profiles = Array(issued.values)
         }
         guard certificate.expiryDate > Date(), let certificateData = certificate.data else {
             throw OperationError.invalidParameters(NSLocalizedString("The signing certificate is expired or unreadable.", comment: ""))
         }
         try PortablePKCS12.validate(certificate: certificateData, key: certificate.privateKey)
+        // The installation resign step resolves the original app/extension IDs to
+        // their issued profile IDs and updates plist references and entitlements.
+        // Applying profiles directly to the original IDs would reject team-suffixed IDs.
+        for component in [app] + app.appExtensions {
+            let archive = component.fileURL.appendingPathComponent("ALTCertificate.p12")
+            if fm.fileExists(atPath: archive.path) { try fm.removeItem(at: archive) }
+        }
+        if let managedContext {
+            let signed = try await ResignAppOperation(context: managedContext).execute(parentProgress: nil)
+            return try saveToLibrary(signed.fileURL)
+        }
         var chosen: [ALTProvisioningProfile] = []
         for component in [app] + app.appExtensions {
             let candidates = profiles.filter {
@@ -70,15 +87,15 @@ enum SignIPAService {
             }
             chosen.append(matched)
         }
-        // Old zLoader archives may contain an embedded signing-key export.
-        // Strip it before signing so the resource seal matches the safe output.
-        for component in [app] + app.appExtensions {
-            let keyArchive = component.fileURL.appendingPathComponent("ALTCertificate.p12")
-            if fm.fileExists(atPath: keyArchive.path) { try fm.removeItem(at: keyArchive) }
-        }
         try Task.checkCancellation()
         try await AppBundleSigner(team: team, keyStore: certificate).signApp(at: appURL, provisioningProfiles: chosen)
         try Task.checkCancellation()
+        return try saveToLibrary(appURL)
+    }
+
+    private static func saveToLibrary(_ appURL: URL) throws -> URL {
+        try Task.checkCancellation()
+        let fm = FileManager.default
         let result = try fm.zipAppBundle(at: appURL)
         let library = CacheManager.shared.resignedAppsDirectory
         try fm.createDirectory(at: library, withIntermediateDirectories: true)

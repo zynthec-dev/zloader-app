@@ -112,7 +112,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         
         var additionalValues: [String: Any] = [Bundle.Info.urlTypes: allURLSchemes]
 
-        if targetAppBundle.isZLoaderApp {
+        if targetAppBundle.isZLoaderApp && context.embedSigningCertificate {
             if let activeCert = CertificateManager.shared.activeCertificate {
                 additionalValues[Bundle.Info.certificateID] = activeCert.serialNumber
                 let certURL = appBundle.fileURL.appendingPathComponent("ALTCertificate.p12")

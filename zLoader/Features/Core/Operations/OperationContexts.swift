@@ -288,6 +288,8 @@ class InstallAppOperationContext: PipelineOperationContext
     }
 
     var targetCertStatus: CertificateStatus?
+    // Sign-only exports must never embed a private signing identity.
+    var embedSigningCertificate = true
     var appendTeamID: Bool = true
 
     let sharedContext: SharedPipelineContext
