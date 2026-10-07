@@ -263,7 +263,12 @@ private extension BrowseViewController
         let fetchRequest = self.makeFetchRequest()
         
         let context = self.source?.managedObjectContext ?? DatabaseManager.shared.viewContext
-        let dataSource = FetchedResultsCollectionViewPrefetchingDataSource<StoreApp, UIImage>(fetchRequest: fetchRequest, managedObjectContext: context)
+        let dataSource: FetchedResultsCollectionViewPrefetchingDataSource<StoreApp, UIImage>
+        if showsCompactAllApps {
+            dataSource = PinnedZLoaderDataSource(fetchRequest: fetchRequest, managedObjectContext: context)
+        } else {
+            dataSource = FetchedResultsCollectionViewPrefetchingDataSource(fetchRequest: fetchRequest, managedObjectContext: context)
+        }
         dataSource.placeholderView = self.placeholderView
         dataSource.cellConfigurationHandler = { [weak self] (cell, app, indexPath) in
             guard let self else { return }
@@ -611,7 +616,9 @@ private extension BrowseViewController
                     }
                     
                     UIView.performWithoutAnimation {
-                        if let indexPath = self.dataSource.fetchedResultsController.indexPath(forObject: app)
+                        let displayedIndex = (self.dataSource as? PinnedZLoaderDataSource)?.displayedIndexPath(for: app)
+                            ?? self.dataSource.fetchedResultsController.indexPath(forObject: app)
+                        if let indexPath = displayedIndex
                         {
                             debugLog("BrowseViewController.finish: reloading item at \(indexPath)")
                             self.collectionView.reloadItems(at: [indexPath])
