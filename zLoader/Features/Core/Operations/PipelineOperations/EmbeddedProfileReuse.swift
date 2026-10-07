@@ -62,6 +62,20 @@ enum EmbeddedProfileReuse {
         return (requested as? NSObject)?.isEqual(allowed) == true
     }
 
+    static func optionalMemoryOmissions(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements) -> Set<String> {
+        let optional: Set<String> = ["com.apple.developer.kernel.increased-memory-limit",
+            "com.apple.developer.kernel.extended-virtual-addressing",
+            "com.apple.developer.kernel.increased-debugging-memory-limit"]
+        let omitted = Set(target.entitlements.keys.filter { key in
+            optional.contains(key) && !authorizes(profile.entitlements[key], requested: target.entitlements[key]!)
+        })
+        let reduced = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+            certificate: target.certificate, deviceID: target.deviceID,
+            entitlements: target.entitlements.filter { !omitted.contains($0.key) })
+        // A critical mismatch must never become an optional-capability fallback.
+        return accepts(profile, for: reduced) ? omitted : []
+    }
+
     static func accepts(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements,
                         requiredDevices: Set<String>, now: Date = Date()) -> Bool {
         accepts(profile, for: target, now: now) &&

@@ -268,6 +268,18 @@ class InstallAppOperationContext: PipelineOperationContext
     let bundleIdentifier: String
     var customBundleIdentifier: String?
     var customInfoPlistByBundleID: [String: [String: any Sendable]] = [:]
+    private let optionalEntitlementsLock = NSLock()
+    private var optionalEntitlementsStorage: [String: Set<String>] = [:]
+    var omittedOptionalEntitlementsByBundleID: [String: Set<String>] {
+        optionalEntitlementsLock.lock()
+        defer { optionalEntitlementsLock.unlock() }
+        return optionalEntitlementsStorage
+    }
+    func recordOptionalEntitlementOmissions(_ keys: Set<String>, for bundleID: String) {
+        optionalEntitlementsLock.lock()
+        defer { optionalEntitlementsLock.unlock() }
+        optionalEntitlementsStorage[bundleID] = keys
+    }
     var customEntitlementsByBundleID: [String: [String: any Sendable]] = [:]
     var isStoreUpdate: Bool = false
     var targetAppBundle: ALTApplication?

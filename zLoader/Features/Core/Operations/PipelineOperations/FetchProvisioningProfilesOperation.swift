@@ -345,7 +345,7 @@ private extension FetchProvisioningProfilesOperation{
         #endif
         var required = requestedEntitlements(for: app, team: team)
         if !requiredGroups.isEmpty { required["com.apple.security.application-groups"] = requiredGroups }
-        let target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
+        var target = ProfileReuseRequirements(bundleID: appID.bundleIdentifier, teamID: team.identifier,
                                               certificate: signing.certificate.rawDER, deviceID: device.identifier, entitlements: required)
         let managedName = "zLoader " + appID.bundleIdentifier + " " + String(certificate.serialNumber.suffix(8))
         func compatible(_ profile: ALTProvisioningProfile) -> Bool {
@@ -416,6 +416,14 @@ private extension FetchProvisioningProfilesOperation{
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
         )
+        let omitted = EmbeddedProfileReuse.optionalMemoryOmissions(snapshot, for: target)
+        if !omitted.isEmpty {
+            context.recordOptionalEntitlementOmissions(omitted, for: app.bundleIdentifier)
+            target = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+                certificate: target.certificate, deviceID: target.deviceID,
+                entitlements: target.entitlements.filter { !omitted.contains($0.key) })
+            self.debugLog("[FetchProvisioningProfiles] Apple did not grant optional memory rights; signing without: " + omitted.sorted().joined(separator: ", "))
+        }
         var failures = EmbeddedProfileReuse.incompatibilities(snapshot, for: target)
         if !registeredUDIDs.isSubset(of: Set(profile.deviceIDs.map { $0.lowercased() })) {
             failures.append(NSLocalizedString("The profile does not authorize all selected registered devices.", comment: ""))
@@ -565,7 +573,7 @@ private extension FetchProvisioningProfilesOperation{
         appID.features.merge(targetFeatures) { _, requested in requested }
         
         do {
-            let updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team)
+            let updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team, requireFeatureReadback: false)
             self.verboseLog("[FetchProvisioningProfiles] Updated features for App ID \(updated.bundleIdentifier).")
             return updated
         } catch {

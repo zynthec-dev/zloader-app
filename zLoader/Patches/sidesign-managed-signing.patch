@@ -82,32 +82,38 @@ index c43fd90..697a28a 100644
              verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
  
 diff --git a/Sources/DeveloperPortal/AppIDs.swift b/Sources/DeveloperPortal/AppIDs.swift
-index efb5c44..a97c5c5 100644
+index efb5c44..b658060 100644
 --- a/Sources/DeveloperPortal/AppIDs.swift
 +++ b/Sources/DeveloperPortal/AppIDs.swift
-@@ -69,11 +69,20 @@ public extension DeveloperPortal {
+@@ -69,20 +69,15 @@ public extension DeveloperPortal {
          debugLog("[SideSign] updateAppID starting...")
          verboseLog("[SideSign] AppID: \(appID.bundleIdentifier), Team: \(team.name)")
  
+-        var parameters: [String: any Sendable] = [
+-            "appIdId": appID.identifier
+-        ]
+-
+-        for (feature, value) in appID.features {
+-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+-            if trimmed.lowercased() == "true" {
+-                parameters[feature.rawValue] = true
+-            } else if trimmed.lowercased() == "false" {
+-                parameters[feature.rawValue] = false
+-            } else {
+-                parameters[feature.rawValue] = trimmed
+-            }
 +        // Fetch the current state instead of replaying Apple's entire response
 +        // dictionary as write parameters (including unchanged, read-only services).
 +        let currentIDs = try await fetchAppIDs(for: team, session: session)
 +        guard let current = currentIDs.first(where: { $0.identifier == appID.identifier }) else {
 +            throw DeveloperPortalError.appIDDoesNotExist(identifier: appID.identifier)
-+        }
+         }
 +        let changes = appID.changedFeatures(comparedTo: current)
 +        guard !changes.isEmpty else { return current }
-         var parameters: [String: any Sendable] = [
--            "appIdId": appID.identifier
-+            "appIdId": appID.identifier,
-+            "entitlements": appID.entitlements
-         ]
++        let parameters = appID.capabilityUpdateParameters(comparedTo: current)
  
--        for (feature, value) in appID.features {
-+        for (feature, value) in changes {
-             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-             if trimmed.lowercased() == "true" {
-                 parameters[feature.rawValue] = true
+         let response: AppIDResponse = try await sendRequest(url: Constants.URLs.updateAppID, additionalParameters: parameters, session: session, team: team)
+ 
 diff --git a/Sources/DeveloperPortal/Certificates.swift b/Sources/DeveloperPortal/Certificates.swift
 index 6127e16..4adc43b 100644
 --- a/Sources/DeveloperPortal/Certificates.swift
@@ -323,10 +329,10 @@ index dfea7cc..e999075 100644
          }
  
 diff --git a/Sources/Models/AppID.swift b/Sources/Models/AppID.swift
-index 62b2f78..66e349f 100644
+index 62b2f78..e23c55b 100644
 --- a/Sources/Models/AppID.swift
 +++ b/Sources/Models/AppID.swift
-@@ -32,6 +32,16 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -32,6 +32,50 @@ public struct AppID: Sendable, Codable, Identifiable {
          self.entitlements = entitlements
      }
  
@@ -340,10 +346,44 @@ index 62b2f78..66e349f 100644
 +        }
 +    }
 +
++    /// Kernel memory options are entitlement requests, not legacy service flags.
++    public func capabilityUpdateParameters(comparedTo current: AppID) -> [String: any Sendable] {
++        var parameters: [String: any Sendable] = ["appIdId": identifier]
++        var requestedEntitlements: [String: any Sendable] = [:]
++        for (key, value) in entitlements {
++            requestedEntitlements[key] = Self.portalValue(value)
++        }
++        for (feature, value) in changedFeatures(comparedTo: current) {
++            let entitlement: Entitlement?
++            switch feature {
++            case .increasedMemoryLimit: entitlement = .increasedMemoryLimit
++            case .extendedVirtualAddressing: entitlement = .extendedVirtualAddressing
++            case .increasedDebuggingMemoryLimit: entitlement = .increasedDebuggingMemoryLimit
++            default: entitlement = nil
++            }
++            if let entitlement {
++                requestedEntitlements[entitlement.rawValue] = Self.portalValue(value)
++            } else {
++                parameters[feature.rawValue] = Self.portalValue(value)
++            }
++        }
++        parameters["entitlements"] = requestedEntitlements
++        return parameters
++    }
++
++    private static func portalValue(_ value: String) -> any Sendable {
++        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
++        switch trimmed.lowercased() {
++        case "true": return true
++        case "false": return false
++        default: return trimmed
++        }
++    }
++
      public func copy() -> AppID {
          self
      }
-@@ -51,13 +61,10 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -51,13 +95,10 @@ public struct AppID: Sendable, Codable, Identifiable {
          self.bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? ""
          self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
  
@@ -361,7 +401,7 @@ index 62b2f78..66e349f 100644
          self.entitlements = [:]
      }
  
-@@ -69,3 +76,21 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -69,3 +110,21 @@ public struct AppID: Sendable, Codable, Identifiable {
          try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
      }
  }

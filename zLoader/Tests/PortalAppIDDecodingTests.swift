@@ -36,6 +36,26 @@ struct PortalAppIDDecodingTests {
         precondition(expectedReadback.changedFeatures(comparedTo: confirmed).isEmpty)
         confirmed.features[.networkExtensions] = "true"
         precondition(Set(expectedReadback.changedFeatures(comparedTo: confirmed).keys) == Set([.networkExtensions]))
+        var memory = app
+        memory.features[.increasedMemoryLimit] = "true"
+        memory.features[.extendedVirtualAddressing] = "true"
+        memory.features[.increasedDebuggingMemoryLimit] = "false"
+        memory.features[.associatedDomains] = "true"
+        let wire = memory.capabilityUpdateParameters(comparedTo: app)
+        precondition(wire["increasedMemoryLimit"] == nil)
+        precondition(wire["extendedVirtualAddressing"] == nil)
+        precondition(wire[Feature.associatedDomains.rawValue] as? Bool == true)
+        let entitlementValues = wire["entitlements"] as! [String: any Sendable]
+        precondition(entitlementValues[Entitlement.increasedMemoryLimit.rawValue] as? Bool == true)
+        precondition(entitlementValues[Entitlement.extendedVirtualAddressing.rawValue] as? Bool == true)
+        var disabledMemory = memory
+        disabledMemory.features[.increasedMemoryLimit] = "false"
+        let disabling = disabledMemory.capabilityUpdateParameters(comparedTo: memory)
+        let disabledValues = disabling["entitlements"] as! [String: any Sendable]
+        precondition(disabledValues[Entitlement.increasedMemoryLimit.rawValue] as? Bool == false)
+        let encoded = try PropertyListSerialization.data(fromPropertyList: wire, format: .xml, options: 0)
+        let decoded = try PropertyListSerialization.propertyList(from: encoded, format: nil) as! [String: Any]
+        precondition((decoded["entitlements"] as? [String: Any])?[Entitlement.increasedMemoryLimit.rawValue] as? Bool == true)
         print("PASS: mixed Apple capability values, absent features and invalid responses")
     }
 }

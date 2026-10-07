@@ -158,6 +158,12 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         if PacketTunnelProvisioning.requiresCapability(infoPlist: appBundle.infoPlist, extensions: appBundle.appExtensions.map { $0.infoPlist }) {
             requested[PacketTunnelProvisioning.entitlement] = [PacketTunnelProvisioning.provider]
         }
+        if let omitted = context.omittedOptionalEntitlementsByBundleID[appBundle.bundleIdentifier], !omitted.isEmpty {
+            for key in omitted { requested.removeValue(forKey: key) }
+            // Preserve a diagnostic in the resulting IPA rather than claiming that
+            // an omitted optional right was authorized.
+            infoDictionary["ZLoaderOmittedOptionalEntitlements"] = omitted.sorted()
+        }
         signingEntitlements[newBundleID] = requested
         infoDictionary[kCFBundleIdentifierKey as String] = newBundleID
 

@@ -58,6 +58,16 @@ struct EmbeddedProfileReuseTests {
         print("PASS certificate rotation requires a newly authorized profile; original Xcode key is not required")
         precondition(EmbeddedProfileReuse.accepts(profile(devices: ["SYNTHETIC-DEVICE"]), for: target, now: now))
         print("PASS embedded profile reuse: exact identity/team/certificate, expiry/device and all required capabilities; seven incompatible cases rejected")
+        let memoryKey = "com.apple.developer.kernel.increased-memory-limit"
+        var memoryRequirements = values
+        memoryRequirements[memoryKey] = true
+        let memoryTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+            certificate: original, deviceID: target.deviceID, entitlements: memoryRequirements)
+        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970), for: memoryTarget) == [memoryKey])
+        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: memoryRequirements), for: memoryTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: [:]), for: memoryTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, certificates: []), for: memoryTarget).isEmpty)
+        print("PASS optional memory fallback; tunnel, App Groups and certificate mismatches remain fatal")
         let general: [String: Any] = ["com.apple.developer.associated-domains": ["applinks:example.test"],
                                       "com.apple.developer.siri": true,
                                       "aps-environment": "development",

@@ -116,7 +116,7 @@ public class DeveloperPortalProxy {
     }
 
     @discardableResult
-    public func updateAppID(_ appID: ALTAppID, team: ALTTeam? = nil) async throws -> ALTAppID {
+    public func updateAppID(_ appID: ALTAppID, team: ALTTeam? = nil, requireFeatureReadback: Bool = true) async throws -> ALTAppID {
         let session = try await self.getSession()
         let team = try await self.getTeam(team)
         let before = try await ALTAppleAPI.shared.fetchAppIDs(for: team, session: session)
@@ -125,7 +125,11 @@ public class DeveloperPortalProxy {
         }
         let changes = appID.changedFeatures(comparedTo: current)
         guard !changes.isEmpty else { return current }
-        _ = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
+        let accepted = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
+        // Signing verifies the Apple-signed profile, which is authoritative for
+        // entitlements. The service flag list does not expose every entitlement.
+        // Portal editors retain strict readback; Apple's mutation errors still throw.
+        if !requireFeatureReadback { return accepted }
         var missing = changes.keys.map(\.rawValue).sorted()
         // Read back only requested deltas. Read-only/unchanged flags can differ
         // between Apple's list and mutation responses and are not write failures.
