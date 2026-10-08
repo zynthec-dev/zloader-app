@@ -43,6 +43,14 @@ final class AppManager: ObservableObject, @unchecked Sendable
     @Published
     private(set) var updateSourcesResult: Result<Void, Error>? // nil == loading
     
+    struct PendingInstallation {
+        let bundleIdentifier: String
+        let name: String
+        let iconURL: URL?
+        let progress: Progress
+    }
+    @Published private(set) var pendingInstallations: [String: PendingInstallation] = [:]
+
     @Published private var installationProgress = [String: Progress]()
     @Published private var refreshProgress = [String: Progress]()
     private var cancellables: Set<AnyCancellable> = []
@@ -53,9 +61,9 @@ final class AppManager: ObservableObject, @unchecked Sendable
         /// Every time refreshProgress is changed, update all InstalledApps in memory
         /// so that app.isRefreshing == refreshProgress.keys.contains(app.bundleID)
         ///
-        self.$refreshProgress
+        Publishers.CombineLatest(self.$refreshProgress, self.$installationProgress)
             .receive(on: RunLoop.main)
-            .map(\.keys)
+            .map { Set($0.0.keys).union($0.1.keys) }
             .flatMap { (bundleIDs) in
                 DatabaseManager.shared.viewContext.registeredObjects.publisher
                     .compactMap { $0 as? InstalledApp }
@@ -801,12 +809,29 @@ extension AppManager: PipelineProgress, PipelineExecutionContext, PipelineErrorL
         // Access outside critical section to avoid deadlock due to `bundleIdentifier` potentially calling performAndWait() on main thread.
         let bundleID = operation.bundleIdentifier
         let operationName = String(describing: operation.loggedErrorOperation)
+        var pendingName = ""
+        var pendingIconURL: URL?
+        if let app = operation.app as? NSManagedObject, let context = app.managedObjectContext {
+            context.performAndWait {
+                pendingName = operation.app.name
+                pendingIconURL = operation.app.storeApp?.iconURL
+            }
+        } else {
+            pendingName = operation.app.name
+            pendingIconURL = operation.app.storeApp?.iconURL
+        }
 
         self.progressLock.withLock {
             switch operation
             {
             case .install, .update, .reinstall: 
                 self.installationProgress[bundleID] = progress
+                if let progress {
+                    self.pendingInstallations[bundleID] = PendingInstallation(bundleIdentifier: bundleID,
+                        name: pendingName, iconURL: pendingIconURL, progress: progress)
+                } else {
+                    self.pendingInstallations[bundleID] = nil
+                }
             case .refresh, .activate, .deactivate, .deleteApp, .backup, .restore, .resign, .removeApp, .removeDeactivatedApp: 
                 self.refreshProgress[bundleID] = progress
             }

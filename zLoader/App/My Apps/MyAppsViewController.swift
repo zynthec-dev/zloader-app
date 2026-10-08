@@ -54,6 +54,8 @@ class MyAppsViewController: UICollectionViewController
     private var expandedAppUpdates = Set<String>()
     private var isRefreshingAllApps = false
     private var refreshGroup: RefreshGroup?
+    private var pendingInstallationsObservation: AnyCancellable?
+    private var pendingInstallations: [AppManager.PendingInstallation] = []
     private var sideloadingProgress: Progress?
     private var dropDestinationIndexPath: IndexPath?
     private var isCheckingForUpdates = false
@@ -106,6 +108,20 @@ class MyAppsViewController: UICollectionViewController
         self.activeAppsDataSource.fetchedResultsController.delegate = self
         self.inactiveAppsDataSource.fetchedResultsController.delegate = self
         
+        self.pendingInstallationsObservation = AppManager.shared.$pendingInstallations
+            .receive(on: RunLoop.main)
+            .sink { [weak self] pending in
+                guard let self else { return }
+                let installed = (self.activeAppsDataSource.fetchedResultsController.fetchedObjects ?? []) +
+                    (self.inactiveAppsDataSource.fetchedResultsController.fetchedObjects ?? [])
+                let identifiers = Set(installed.map(\.bundleIdentifier))
+                self.pendingInstallations = pending.values.filter {
+                    !identifiers.contains($0.bundleIdentifier) && !$0.progress.isCancelled
+                }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                self.collectionView.collectionViewLayout.invalidateLayout()
+                self.collectionView.reloadSections(IndexSet(integer: Section.activeApps.rawValue))
+            }
+
         self.collectionView.dataSource = self.dataSource
         self.collectionView.prefetchDataSource = self.dataSource
         self.dataSource.contentView = self.collectionView
@@ -142,6 +158,8 @@ class MyAppsViewController: UICollectionViewController
         
         if let navigationBar = self.navigationController?.navigationBar
         {
+            // Per-app circular indicators replace the global navigation bar.
+            self.sideloadingProgressView.isHidden = true
             navigationBar.addSubview(self.sideloadingProgressView)
             NSLayoutConstraint.activate([self.sideloadingProgressView.leadingAnchor.constraint(equalTo: navigationBar.leadingAnchor),
                                          self.sideloadingProgressView.trailingAnchor.constraint(equalTo: navigationBar.trailingAnchor),
@@ -592,6 +610,8 @@ private extension MyAppsViewController
             if let progress = AppManager.shared.refreshProgress(for: installedApp), progress.fractionCompleted < 1.0
             {
                 cell.bannerView.button.progress = progress
+                cell.bannerView.buttonLabel.isHidden = true
+                if AppManager.shared.installationProgress(for: installedApp) != nil { cell.bannerView.alpha = 0.75 }
             }
             else
             {
@@ -1099,7 +1119,7 @@ private extension MyAppsViewController
         
         self.sideloadingProgress = group.progress
         self.sideloadingProgressView.progress = 0
-        self.sideloadingProgressView.isHidden = false
+        self.sideloadingProgressView.isHidden = true
         self.sideloadingProgressView.observedProgress = group.progress
     }
     
@@ -2075,6 +2095,8 @@ extension MyAppsViewController
                 
                 headerView.button.isIndicatingActivity = false
                 headerView.button.activityIndicatorView.color = .altPrimary
+                headerView.showPendingInstallations(self.pendingInstallations)
+                headerView.button.progress = self.isRefreshingAllApps ? self.sideloadingProgress : nil
                 headerView.button.setTitle(NSLocalizedString("Refresh All", comment: ""), for: .normal)
                 headerView.button.addTarget(self, action: #selector(MyAppsViewController.refreshAllApps(_:)), for: .primaryActionTriggered)
                 
@@ -2567,7 +2589,8 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             let height: CGFloat = (self.updatesDataSource.fetchedResultsController.fetchedObjects?.count ?? 0 > maximumCollapsedUpdatesCount) ? 26 : 0
             return CGSize(width: collectionView.bounds.width, height: height)
             
-        case .activeApps: return CGSize(width: collectionView.bounds.width, height: 29)
+        case .activeApps: return CGSize(width: collectionView.bounds.width,
+            height: (self.isRefreshingAllApps ? 54 : 29) + CGFloat(self.pendingInstallations.count) * 98)
         case .inactiveApps where self.inactiveAppsDataSource.itemCount == 0: return .zero
         case .inactiveApps: return CGSize(width: collectionView.bounds.width, height: 29)
         }

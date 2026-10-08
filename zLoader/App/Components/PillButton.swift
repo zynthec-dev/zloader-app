@@ -43,6 +43,10 @@ class PillButton: UIButton
     
     var progress: Progress? {
         didSet {
+            self.progressObservation?.invalidate()
+            self.progressObservation = self.progress?.observe(\.fractionCompleted, options: [.initial, .new]) { [weak self] _, _ in
+                DispatchQueue.main.async { [weak self] in self?.updateCircularProgress() }
+            }
             self.progressView.progress = Float(self.progress?.fractionCompleted ?? 0)
             self.progressView.observedProgress = self.progress
             
@@ -121,6 +125,7 @@ class PillButton: UIButton
     }
 
     override var intrinsicContentSize: CGSize {
+        if self.progress != nil { return CGSize(width: Self.minimumSize.width, height: 52) }
         var size = super.intrinsicContentSize
         switch self.style {
         case .pill:
@@ -155,6 +160,12 @@ class PillButton: UIButton
     }
     
     private var storyboardFontSize: CGFloat?
+    private let progressTrack = CAShapeLayer()
+    private let progressRing = CAShapeLayer()
+    private let percentageLabel = UILabel()
+    private var progressObservation: NSKeyValueObservation?
+    private var originalHeightConstraints: [(NSLayoutConstraint, CGFloat)] = []
+
     
     private let progressView = UIProgressView(progressViewStyle: .default)
     
@@ -206,6 +217,16 @@ class PillButton: UIButton
         self.activityIndicatorView.color = self.tintColor.contrastingText
         self.activityIndicatorView.isUserInteractionEnabled = false
         
+        self.originalHeightConstraints = self.constraints.filter {
+            $0.firstAttribute == .height && $0.secondItem == nil
+        }.map { ($0, $0.constant) }
+        self.layer.addSublayer(self.progressTrack)
+        self.layer.addSublayer(self.progressRing)
+        self.percentageLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        self.percentageLabel.textColor = .secondaryLabel
+        self.percentageLabel.textAlignment = .center
+        self.percentageLabel.isUserInteractionEnabled = false
+        self.addSubview(self.percentageLabel)
         self.progressView.progress = 0
         self.progressView.trackTintColor = .tertiarySystemFill
         self.progressView.isUserInteractionEnabled = false
@@ -226,6 +247,36 @@ class PillButton: UIButton
         self.progressView.center = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
         
         self.layer.cornerRadius = self.bounds.midY
+        self.updateCircularProgress()
+    }
+
+    private func updateCircularProgress() {
+        let active = self.progress != nil
+        self.progressTrack.isHidden = !active
+        self.progressRing.isHidden = !active
+        self.percentageLabel.isHidden = !active
+        guard let progress = self.progress else { return }
+        let fraction = min(1, max(0, progress.fractionCompleted))
+        let diameter: CGFloat = 30
+        let center = CGPoint(x: self.bounds.midX, y: 18)
+        let path = UIBezierPath(arcCenter: center, radius: diameter / 2,
+            startAngle: -.pi / 2, endAngle: 3 * .pi / 2, clockwise: true).cgPath
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for shape in [self.progressTrack, self.progressRing] {
+            shape.frame = self.bounds
+            shape.path = path
+            shape.fillColor = UIColor.clear.cgColor
+            shape.lineWidth = 3.5
+            shape.lineCap = .round
+        }
+        self.progressTrack.strokeColor = UIColor.systemGray4.cgColor
+        self.progressRing.strokeColor = UIColor.altPrimary.cgColor
+        self.progressRing.strokeEnd = CGFloat(fraction)
+        CATransaction.commit()
+        self.percentageLabel.frame = CGRect(x: 0, y: 37, width: self.bounds.width, height: 14)
+        self.percentageLabel.text = NumberFormatter.localizedString(from: NSNumber(value: fraction), number: .percent)
+        self.accessibilityValue = self.percentageLabel.text
     }
     
     override func tintColorDidChange()
@@ -323,6 +374,11 @@ private extension PillButton
 {
     func update()
     {
+        for (constraint, height) in self.originalHeightConstraints {
+            constraint.constant = self.progress == nil ? height : 52
+        }
+        self.invalidateIntrinsicContentSize()
+        self.updateCircularProgress()
         if self.progress == nil && !self.isIndicatingActivity
         {
             self.progressView.isHidden = true
@@ -334,10 +390,10 @@ private extension PillButton
         }
         else
         {
-            self.progressView.isHidden = self.progress == nil
+            self.progressView.isHidden = true
             self.setTitleColor(.clear, for: .normal)
             self.setTitleColor(.clear, for: .disabled)
-            self.backgroundColor = .secondarySystemGroupedBackground
+            self.backgroundColor = self.progress == nil ? .secondarySystemGroupedBackground : .clear
             self.progressView.progressTintColor = .label
             self.activityIndicatorView.color = .systemGray
             self.layer.borderColor = nil
@@ -382,7 +438,11 @@ private extension PillButton
                 }
                 return outgoing
             }
+            if self.progress != nil {
+                config.background = UIBackgroundConfiguration.clear()
+            }
             self.configuration = config
+            if self.progress != nil { self.activityIndicatorView.isHidden = true }
             self.layer.cornerRadius = self.bounds.height / 2
         }
     }

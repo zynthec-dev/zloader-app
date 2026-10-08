@@ -26547,6 +26547,23 @@
           }
         }
       }
+    },
+    "Installing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird installiert"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

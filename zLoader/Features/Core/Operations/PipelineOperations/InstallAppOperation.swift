@@ -147,8 +147,9 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             }
             
             // This preserves our data in a serilized format that will be restored at boot onyl if installtion actually completed indicated by embedded provision uuid being different.
-            let isSelfReinstall = !isDifferentZLoader &&
-                                   installedApp.storeApp?.bundleIdentifier.range(of: Bundle.Info.appbundleIdentifier) != nil
+            // The actual installation target identifies a self-update, even when
+            // its source record is missing or came from an imported IPA.
+            let isSelfReinstall = resignedAppBundle.bundleIdentifier == Bundle.main.bundleIdentifier
             if isSelfReinstall {
                 if let _ = provisioningProfiles[self.context.targetBundleIdentifier],
                    let appGroup = Bundle.main.zloaderAppGroup,
@@ -179,8 +180,9 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         
         self.setProgress(30)
         
-        // Protect the actual install call, including transport acquisition. Never
-        // stop keepalive or suspend on a timer before the request reaches iOS.
+        // Protect transport acquisition and the actual install call. For a self
+        // update, move to Home only inside the acquired transport lease, after
+        // package transfer. Do not exit, stop keepalive or use a suspension timer.
         let backgroundTask = isSelfReinstall ? await MainActor.run {
             UIApplication.shared.beginBackgroundTask(withName: "SelfReinstall", expirationHandler: nil)
         } : UIBackgroundTaskIdentifier.invalid
@@ -191,9 +193,13 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         }
         do {
             if UserDefaults.standard.preferResignedIPA {
-                try await installIPA(bundleID)
+                try await installIPA(bundleID) {
+                    if isSelfReinstall { await self.context.handler.installAppHandler.suspendToHomeScreen() }
+                }
             } else {
-                try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent)
+                try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent) {
+                    if isSelfReinstall { await self.context.handler.installAppHandler.suspendToHomeScreen() }
+                }
             }
         } catch {
             // A failed request must not be mistaken for a pending successful update

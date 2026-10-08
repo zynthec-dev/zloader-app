@@ -338,25 +338,29 @@ func sendAppBundleAfc(_ bundleId: String, at appURL: URL) async throws {
     #endif
 }
 
-func installIPA(_ bundleId: String) async throws {
+func installIPA(_ bundleId: String, beforeInstall: @Sendable () async -> Void = {}) async throws {
     defer { debugLog("[zLoader] installIPA(bundleId) completed") }
     #if targetEnvironment(simulator)
     debugLog("[zLoader] installIPA(bundleId) is no-op on simulator")
     #else
     debugLog("[zLoader] installIPA(bundleId) invoked")
     try await withDeviceTransport {
+        // The transferred package and live transport are ready before the host
+        // moves to the background. Keep this lease until iOS finishes installing.
+        await beforeInstall()
         try await minimuxer.core.installIpa(bundleId: bundleId)
     }
     #endif
 }
 
-func installAppBundle(_ bundleId: String, appName: String) async throws {
+func installAppBundle(_ bundleId: String, appName: String, beforeInstall: @Sendable () async -> Void = {}) async throws {
     defer { debugLog("[zLoader] installAppBundle(bundleId, appName) completed") }
     #if targetEnvironment(simulator)
     debugLog("[zLoader] installAppBundle(bundleId, appName) is no-op on simulator")
     #else
     debugLog("[zLoader] installAppBundle(bundleId, appName) invoked")
     try await withDeviceTransport {
+        await beforeInstall()
         try await minimuxer.core.installAppBundle(bundleId: bundleId, appName: appName)
     }
     #endif
