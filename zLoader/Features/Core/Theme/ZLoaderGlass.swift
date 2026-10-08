@@ -1,12 +1,24 @@
 import SwiftUI
 
+private struct ZLoaderUsesGlassKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    var zLoaderUsesGlass: Bool {
+        get { self[ZLoaderUsesGlassKey.self] }
+        set { self[ZLoaderUsesGlassKey.self] = newValue }
+    }
+}
+
 /// Native glass follows the system's material and accessibility settings.
 /// Earlier systems keep standard buttons and opaque, legible grouped surfaces.
 struct ZLoaderGlassButtonStyle: PrimitiveButtonStyle {
+    @Environment(\.zLoaderUsesGlass) private var usesGlass
     var prominent = false
 
     @ViewBuilder func makeBody(configuration: Configuration) -> some View {
-        if #available(iOS 26.0, tvOS 26.0, *) {
+        if #available(iOS 26.0, tvOS 26.0, *), usesGlass {
             if prominent {
                 SwiftUI.Button(role: configuration.role, action: configuration.trigger) { configuration.label }
                     .buttonStyle(.glassProminent)
@@ -27,12 +39,13 @@ struct ZLoaderGlassButtonStyle: PrimitiveButtonStyle {
 }
 
 private struct ZLoaderGlassSurface: ViewModifier {
+    @Environment(\.zLoaderUsesGlass) private var usesGlass
     var cornerRadius: CGFloat
     var interactive: Bool
     var prominent: Bool
 
     @ViewBuilder func body(content: Content) -> some View {
-        if #available(iOS 26.0, tvOS 26.0, *) {
+        if #available(iOS 26.0, tvOS 26.0, *), usesGlass {
             if prominent {
                 content.glassEffect(.regular.tint(.accentColor).interactive(), in: .rect(cornerRadius: cornerRadius))
             } else if interactive {
@@ -53,10 +66,11 @@ extension View {
 }
 
 struct ZLoaderGlassGroup<Content: View>: View {
+    @Environment(\.zLoaderUsesGlass) private var usesGlass
     @ViewBuilder var content: () -> Content
 
     @ViewBuilder var body: some View {
-        if #available(iOS 26.0, tvOS 26.0, *) {
+        if #available(iOS 26.0, tvOS 26.0, *), usesGlass {
             GlassEffectContainer(spacing: 12) { content() }
         } else {
             content()
@@ -66,6 +80,7 @@ struct ZLoaderGlassGroup<Content: View>: View {
 
 /// Shared native material for SwiftUI lists and UIKit cards.
 struct ZLoaderGlassBackground: UIViewRepresentable {
+    @Environment(\.zLoaderUsesGlass) private var usesGlass
     func makeUIView(context: Context) -> UIVisualEffectView {
         let view = UIVisualEffectView()
         view.isUserInteractionEnabled = false
@@ -76,7 +91,7 @@ struct ZLoaderGlassBackground: UIViewRepresentable {
     }
 
     func updateUIView(_ view: UIVisualEffectView, context: Context) {
-        ZLoaderCardMaterial.apply(to: view)
+        ZLoaderCardMaterial.apply(to: view, usesGlass: usesGlass)
     }
 }
 
@@ -96,9 +111,9 @@ struct ZLoaderGlassBackground: UIViewRepresentable {
         apply(to: glass)
     }
 
-    static func apply(to view: UIVisualEffectView) {
+    static func apply(to view: UIVisualEffectView, usesGlass: Bool = true) {
         #if !os(tvOS)
-        if #available(iOS 26.0, *), !UIAccessibility.isReduceTransparencyEnabled {
+        if #available(iOS 26.0, *), usesGlass, !UIAccessibility.isReduceTransparencyEnabled {
             view.effect = UIGlassEffect(style: .regular)
             view.backgroundColor = .clear
         } else {

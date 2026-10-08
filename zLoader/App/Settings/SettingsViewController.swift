@@ -334,7 +334,7 @@ private extension SettingsViewController
         // Pairing detail and wireless routes need a SwiftUI navigation container.
         let controller = ZLoaderHostingController(rootView: PairingFileNavigationView(onBack: { [weak self] in
             self?.navigationController?.popViewController(animated: true)
-        }))
+        }), usesGlass: false)
         controller.ownsNavigation = true
         controller.hidesBottomBarWhenPushed = true
         navigationController?.pushViewController(controller, animated: true)
@@ -1237,9 +1237,9 @@ extension SettingsViewController
         case .account:
             tableView.deselectRow(at: indexPath, animated: true)
             if indexPath.row == 3 {
-                navigationController?.pushViewController(ZLoaderHostingController(rootView: SigningIdentitiesView()), animated: true)
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: SigningIdentitiesView(), usesGlass: false), animated: true)
             } else if indexPath.row == 4, self.activeTeam?.type.isPaid == true {
-                navigationController?.pushViewController(ZLoaderHostingController(rootView: DeveloperServicesView(presentingViewController: self)), animated: true)
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: DeveloperServicesView(presentingViewController: self), usesGlass: false), animated: true)
             } else if indexPath.row == 5 {
                 self.resolvePendingAccountActions()
             }
@@ -1259,7 +1259,7 @@ extension SettingsViewController
             
         case .techyThings:
             if indexPath.row == TechyThingsRow.allCases.count {
-                navigationController?.pushViewController(ZLoaderHostingController(rootView: ShortcutsSettingsView()), animated: true)
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: ShortcutsSettingsView(), usesGlass: false), animated: true)
                 return
             }
             let row = TechyThingsRow.allCases[indexPath.row]
@@ -1267,7 +1267,7 @@ extension SettingsViewController
             {
             case .healthCheck:
                 let healthCheckView = HealthCheckView()
-                let vc = ZLoaderHostingController(rootView: healthCheckView)
+                let vc = ZLoaderHostingController(rootView: healthCheckView, usesGlass: false)
                 
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
@@ -1292,11 +1292,11 @@ extension SettingsViewController
                     if let url = url {
                         verboseLog("[SettingsVC] Creating DirectoryExplorerView for: \(url.path)")
                         let view = DirectoryExplorerView(url: url, onSelectFolder: onSelectFolder)
-                        return ZLoaderHostingController(rootView: view)
+                        return ZLoaderHostingController(rootView: view, usesGlass: false)
                     } else {
                         verboseLog("[SettingsVC] Creating root StorageExplorerView")
                         let view = StorageExplorerView(onSelectFolder: onSelectFolder)
-                        return ZLoaderHostingController(rootView: view)
+                        return ZLoaderHostingController(rootView: view, usesGlass: false)
                     }
                 }
                 let vc = makeExplorerVC()
@@ -1310,7 +1310,7 @@ extension SettingsViewController
             let row = CreditsRow.allCases[indexPath.row]
             switch row
             {
-            case .developer: navigationController?.pushViewController(ZLoaderHostingController(rootView: ZLoaderAboutView()), animated: true)
+            case .developer: navigationController?.pushViewController(ZLoaderHostingController(rootView: ZLoaderAboutView(), usesGlass: false), animated: true)
             case .operations: self.openWebURL(ZLoaderBrand.upstreamURL, preferredTintColor: .altPrimary)
             case .designer: self.openWebURL(ZLoaderBrand.repositoryURL, preferredTintColor: .altPrimary)
             case .softwareLicenses: break
@@ -1347,7 +1347,7 @@ extension SettingsViewController
                 
             case .refreshSideJITServer:
                 let jitConfigView = SideJITServerConfigView()
-                let vc = ZLoaderHostingController(rootView: jitConfigView)
+                let vc = ZLoaderHostingController(rootView: jitConfigView, usesGlass: false)
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
                 appearance.configureWithDefaultBackground()
@@ -1371,12 +1371,12 @@ extension SettingsViewController
                     }
                 )
                 
-                let vc = ZLoaderHostingController(rootView: anisetteServersView)
+                let vc = ZLoaderHostingController(rootView: anisetteServersView, usesGlass: false)
                 self.prepare(for: UIStoryboardSegue(identifier: "anisetteServers", source: self, destination: vc), sender: nil)
 
             case .connectionConfig:
                 let connectionConfigView = ConnectionConfigView()
-                let vc = ZLoaderHostingController(rootView: connectionConfigView)
+                let vc = ZLoaderHostingController(rootView: connectionConfigView, usesGlass: false)
 
                 #if !os(tvOS)
                 let appearance = UINavigationBarAppearance()
@@ -1389,36 +1389,36 @@ extension SettingsViewController
 
             case .networkDiscovery:
                 let discoveryView = BonjourDiscoveryView()
-                let vc = ZLoaderHostingController(rootView: discoveryView)
+                let vc = ZLoaderHostingController(rootView: discoveryView, usesGlass: false)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("Network Discovery", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
 
             case .developerServices:
                 let developerServicesView = DeveloperServicesView(presentingViewController: self)
-                let vc = ZLoaderHostingController(rootView: developerServicesView)
+                let vc = ZLoaderHostingController(rootView: developerServicesView, usesGlass: false)
                 self.prepare(for: UIStoryboardSegue(identifier: "developerServices", source: self, destination: vc), sender: nil)
 
             case .profileManagement:
                 let profileManagementView = ProfileManagementView(presentingViewController: self)
-                let vc = ZLoaderHostingController(rootView: profileManagementView)
+                let vc = ZLoaderHostingController(rootView: profileManagementView, usesGlass: false)
                 self.prepare(for: UIStoryboardSegue(identifier: "profileManagement", source: self, destination: vc), sender: nil)
 
             case .certificateManagement:
                 let certificateManagementView = CertificatesView(presentingViewController: self)
-                let vc = ZLoaderHostingController(rootView: certificateManagementView)
+                let vc = ZLoaderHostingController(rootView: certificateManagementView, usesGlass: false)
                 self.prepare(for: UIStoryboardSegue(identifier: "certificateManagement", source: self, destination: vc), sender: nil)
                 
             case .backupAndRestore:
                 let backupView = BackupAndRestoreView()
-                let vc = ZLoaderHostingController(rootView: backupView)
+                let vc = ZLoaderHostingController(rootView: backupView, usesGlass: false)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("Backup & Restore", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
                 
             case .userCustomizations:
                 let userCustomizationsView = UserCustomizationsView()
-                let vc = ZLoaderHostingController(rootView: userCustomizationsView)
+                let vc = ZLoaderHostingController(rootView: userCustomizationsView, usesGlass: false)
                 vc.view.backgroundColor = .settingsBackground
                 vc.title = NSLocalizedString("User Customizations", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
@@ -1431,13 +1431,13 @@ extension SettingsViewController
             switch row {
             case .developerOptions:
                 let developerOptionsView = DeveloperOptionsView()
-                let hostingController = ZLoaderHostingController(rootView: developerOptionsView)
+                let hostingController = ZLoaderHostingController(rootView: developerOptionsView, usesGlass: false)
                 hostingController.view.backgroundColor = .settingsBackground
                 hostingController.title = NSLocalizedString("Developer Options", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: hostingController), sender: nil)
             case .experimentalFeatures:
                 let experimentalFeaturesView = ExperimentalFeaturesView()
-                let hostingController = ZLoaderHostingController(rootView: experimentalFeaturesView)
+                let hostingController = ZLoaderHostingController(rootView: experimentalFeaturesView, usesGlass: false)
                 hostingController.view.backgroundColor = .settingsBackground
                 hostingController.title = NSLocalizedString("Experimental Features", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: hostingController), sender: nil)

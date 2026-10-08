@@ -577,6 +577,15 @@ private extension MyAppsViewController
             cell.bannerView.button.isIndicatingActivity = false
             cell.bannerView.configure(for: installedApp, action: .custom(cell.bannerView.button.title(for: .normal) ?? ""))
             cell.bannerView.isLauncherCard = true
+            let expiryFormatter = DateComponentsFormatter()
+            expiryFormatter.allowedUnits = [.day]
+            expiryFormatter.unitsStyle = .full
+            var expiryCalendar = Calendar.current
+            expiryCalendar.locale = AppLanguage.launchLocale
+            expiryFormatter.calendar = expiryCalendar
+            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
+            cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
+            cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")
             
             if cell.bundleIdentifier != installedApp.bundleIdentifier
             {
@@ -618,6 +627,7 @@ private extension MyAppsViewController
             {
                 cell.bannerView.button.progress = nil
             }
+            cell.bannerView.button.isHidden = cell.bannerView.button.progress == nil
         }
         dataSource.prefetchHandler = { (item, indexPath) in
             return try await item.loadIcon()
@@ -667,6 +677,15 @@ private extension MyAppsViewController
             cell.bannerView.button.isIndicatingActivity = false
             cell.bannerView.configure(for: installedApp, action: .custom(NSLocalizedString("ACTIVATE", comment: "")))
             cell.bannerView.isLauncherCard = true
+            let expiryFormatter = DateComponentsFormatter()
+            expiryFormatter.allowedUnits = [.day]
+            expiryFormatter.unitsStyle = .full
+            var expiryCalendar = Calendar.current
+            expiryCalendar.locale = AppLanguage.launchLocale
+            expiryFormatter.calendar = expiryCalendar
+            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
+            cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
+            cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")
             cell.layoutMargins = .zero
             
             cell.bannerView.button.tintColor = tintColor
@@ -699,6 +718,7 @@ private extension MyAppsViewController
             {
                 cell.bannerView.button.progress = nil
             }
+            cell.bannerView.button.isHidden = cell.bannerView.button.progress == nil
         }
         dataSource.prefetchHandler = { (item, indexPath) in
             return try await item.loadIcon()
@@ -2185,6 +2205,7 @@ extension MyAppsViewController
             
         case .activeApps:
             let installedApp = self.dataSource.item(at: indexPath)
+            guard AppManager.shared.installationProgress(for: installedApp) == nil else { return }
             if !installedApp.resignedBundleIdentifier.isZLoaderAppID { self.open(installedApp) }
         case .inactiveApps:
             self.activate(self.dataSource.item(at: indexPath))
@@ -2248,7 +2269,7 @@ extension MyAppsViewController
         
         let jitAction = UIAction(title: NSLocalizedString("JIT Settings", comment: ""), image: UIImage(systemName: "gearshape")) { [weak self] _ in
             let settings = PerAppJITSettingsView(bundleIdentifier: installedApp.bundleIdentifier, appName: installedApp.name)
-            self?.navigationController?.pushViewController(ZLoaderHostingController(rootView: settings), animated: true)
+            self?.navigationController?.pushViewController(ZLoaderHostingController(rootView: settings, usesGlass: false), animated: true)
         }
         
         if (installedApp.bundleIdentifier == StoreApp.zloaderAppID || installedApp.resignedBundleIdentifier == Bundle.main.bundleIdentifier),
@@ -2593,8 +2614,8 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             
         case .activeApps, .inactiveApps:
             let available = collectionView.bounds.width - 32
-            let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : max(2, floor((available + 12) / 160))
-            return CGSize(width: floor((available - (columns - 1) * 12) / columns), height: columns == 1 ? 260 : 220)
+            let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : min(6, max(2, floor((available + 12) / 88)))
+            return CGSize(width: floor((available - (columns - 1) * 12) / columns), height: columns == 1 ? 190 : 150)
         }
     }
     

@@ -334,7 +334,7 @@ struct CertificatesView: View {
             requestedDate: cert.requestedDate,
             serialNumDecimal: cert.serialNumDecimal
         )
-        let detailVC = UIHostingController(rootView: CertificateDetailView(certificate: cert, portalMetadata: metadata, viewModel: viewModel))
+        let detailVC = ZLoaderHostingController(rootView: CertificateDetailView(certificate: cert, portalMetadata: metadata, viewModel: viewModel), usesGlass: false)
         #if !os(tvOS)
         let appearance = UINavigationBarAppearance()
         appearance.configureWithDefaultBackground()

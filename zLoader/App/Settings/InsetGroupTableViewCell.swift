@@ -148,7 +148,7 @@ private extension InsetGroupTableViewCell
     {
         self.insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         self.separatorView.isHidden = true
-        ZLoaderCardMaterial.apply(to: insetView)
+        ZLoaderCardMaterial.apply(to: insetView, usesGlass: false)
 
         if self.isSelectable && (self.isHighlighted || self.isSelected)
         {

@@ -155,12 +155,14 @@ public extension UIColor {
 struct ZLoaderThemedRoot<Content: View>: View {
     @ObservedObject private var theme = ThemeManager.shared
     let content: Content
+    var usesGlass = true
 
     var body: some View {
         content
             .tint(Color(uiColor: theme.primaryColor))
             .accentColor(Color(uiColor: theme.primaryColor))
             .environment(\.locale, AppLanguage.launchLocale)
+            .environment(\.zLoaderUsesGlass, usesGlass)
             .preferredColorScheme(theme.appearance.colorScheme)
             .scrollContentBackground(.hidden)
             .background(Color(uiColor: .settingsBackground))
@@ -191,8 +193,8 @@ final class ZLoaderHostingController<Content: View>: UIHostingController<ZLoader
         }
     }
 
-    init(rootView: Content) {
-        super.init(rootView: ZLoaderThemedRoot(content: rootView))
+    init(rootView: Content, usesGlass: Bool = true) {
+        super.init(rootView: ZLoaderThemedRoot(content: rootView, usesGlass: usesGlass))
     }
 
     @MainActor required dynamic init?(coder: NSCoder) {
@@ -240,7 +242,7 @@ extension ThemeManager {
             glass.layer.cornerRadius = 20
             glass.clipsToBounds = true
             glass.isUserInteractionEnabled = false
-            ZLoaderCardMaterial.apply(to: glass)
+            ZLoaderCardMaterial.apply(to: glass, usesGlass: false)
             cell.backgroundView = glass
             cell.backgroundColor = .clear
             cell.contentView.backgroundColor = .clear
@@ -254,26 +256,7 @@ extension ThemeManager {
             } else {
                 field.backgroundColor = .settingsField
                 field.textColor = .label
-                #if !os(tvOS)
-                if #available(iOS 26.0, *) {
-                    let glass: UIVisualEffectView
-                    if let existing = field.viewWithTag(77500) as? UIVisualEffectView { glass = existing }
-                    else {
-                        glass = UIVisualEffectView()
-                        glass.tag = 77500
-                        glass.isUserInteractionEnabled = false
-                        glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                        glass.frame = field.bounds
-                        glass.layer.cornerRadius = 12
-                        glass.clipsToBounds = true
-                        field.insertSubview(glass, at: 0)
-                    }
-                    let effect = UIGlassEffect(style: .regular)
-                    effect.tintColor = nil
-                    glass.effect = effect
-                    field.backgroundColor = .clear
-                }
-                #endif
+                field.viewWithTag(77500)?.removeFromSuperview()
             }
         }
         if let image = view as? UIImageView, image.tag == 77023 {

@@ -357,7 +357,7 @@ struct ProfileManagementView: View {
                 Task {
                     await devServicesViewModel.loadAll(presentingViewController: presentingViewController)
                 }
-                let controller = UIHostingController(rootView: ProfilesListView(viewModel: devServicesViewModel, presentingViewController: presentingViewController))
+                let controller = ZLoaderHostingController(rootView: ProfilesListView(viewModel: devServicesViewModel, presentingViewController: presentingViewController), usesGlass: false)
                 presentingViewController?.navigationController?.pushViewController(controller, animated: true)
             }
             SwiftUI.Button("Cancel", role: .cancel) {}

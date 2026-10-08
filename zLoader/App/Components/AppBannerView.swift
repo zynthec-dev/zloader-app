@@ -57,20 +57,46 @@ class AppBannerView: NibView
     }
     
     var style: Style = .app
+    private var hasLauncherProgressOverlay = false
     var isLauncherCard = false {
         didSet {
             stackView.axis = isLauncherCard ? .vertical : .horizontal
             stackView.spacing = isLauncherCard ? 8 : 11
-            stackView.layoutMargins = isLauncherCard ? UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12) : layoutMargins
+            stackView.layoutMargins = isLauncherCard ? UIEdgeInsets(top: 8, left: 2, bottom: 8, right: 2) : layoutMargins
             if let labels = stackView.arrangedSubviews.dropFirst().first as? UIStackView {
                 labels.alignment = isLauncherCard ? .center : .leading
             }
             titleLabel.textAlignment = isLauncherCard ? .center : .natural
             titleLabel.numberOfLines = isLauncherCard ? 2 : 1
-            titleLabel.font = isLauncherCard ? .preferredFont(forTextStyle: .subheadline) : .preferredFont(forTextStyle: .headline)
+            titleLabel.adjustsFontForContentSizeCategory = true
+            subtitleLabel.adjustsFontForContentSizeCategory = true
+            titleLabel.font = isLauncherCard ? .preferredFont(forTextStyle: .footnote) : .preferredFont(forTextStyle: .headline)
             sourceIconImageView.isHidden = isLauncherCard
             betaBadgeView.isHidden = isLauncherCard
-            subtitleLabel.isHidden = isLauncherCard
+            subtitleLabel.isHidden = false
+            subtitleLabel.font = isLauncherCard ? .preferredFont(forTextStyle: .caption2) : .preferredFont(forTextStyle: .subheadline)
+            subtitleLabel.textAlignment = isLauncherCard ? .center : .natural
+            if isLauncherCard && !hasLauncherProgressOverlay {
+                // A hidden arranged button would conflict with its fixed nib
+                // height. Keep operation progress over the icon, outside the
+                // home-screen name/day stack.
+                stackView.removeArrangedSubview(button)
+                button.removeFromSuperview()
+                for constraint in constraints where
+                    (constraint.firstItem as AnyObject?) === button ||
+                    (constraint.secondItem as AnyObject?) === button {
+                    constraint.isActive = false
+                }
+                addSubview(button)
+                NSLayoutConstraint.activate([
+                    button.centerXAnchor.constraint(equalTo: iconImageView.centerXAnchor),
+                    button.centerYAnchor.constraint(equalTo: iconImageView.centerYAnchor)
+                ])
+                button.isUserInteractionEnabled = false
+                hasLauncherProgressOverlay = true
+            }
+            button.isHidden = isLauncherCard && button.progress == nil
+            backgroundEffectView.isHidden = isLauncherCard
             buttonLabel.isHidden = isLauncherCard
             update()
         }
@@ -399,7 +425,7 @@ private extension AppBannerView
         case .app:
             self.directionalLayoutMargins.trailing = self.stackView.directionalLayoutMargins.trailing
             
-            self.iconImageViewHeightConstraint.constant = isLauncherCard ? 64 : 60
+            self.iconImageViewHeightConstraint.constant = 60
             self.iconImageView.style = .icon
             
             self.titleLabel.textColor = .label
