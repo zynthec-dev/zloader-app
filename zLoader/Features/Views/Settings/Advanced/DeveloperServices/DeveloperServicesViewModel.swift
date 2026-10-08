@@ -137,12 +137,13 @@ class DeveloperServicesViewModel: ObservableObject {
         }
     }
 
-    func updateCapabilities(for appID: ALTAppID, features: [ALTFeature: String]) async -> Bool {
+    func updateCapabilities(for appID: ALTAppID, features: [ALTFeature: String], name: String? = nil) async -> Bool {
         isActionLoading = true
         defer { isActionLoading = false }
         do {
             var requested = appID
             requested.features.merge(features) { _, edited in edited }
+            if let name { requested.name = name }
             let updated = try await DeveloperPortalProxy.shared.updateAppID(requested)
             if let index = appIDs.firstIndex(where: { $0.identifier == appID.identifier }) { appIDs[index] = updated }
             showToastMessage("Capabilities saved. Regenerate provisioning profiles before signing with the changed permissions.")

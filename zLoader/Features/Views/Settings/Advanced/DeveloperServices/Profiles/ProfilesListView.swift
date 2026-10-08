@@ -103,7 +103,7 @@ struct ProfilesListView: View {
                 }
             }
         }
-        .navigationTitle("Profiles")
+        .navigationTitle("Provisioning Profiles")
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

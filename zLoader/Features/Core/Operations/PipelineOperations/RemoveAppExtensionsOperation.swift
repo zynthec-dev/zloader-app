@@ -47,9 +47,11 @@ public enum AppExtensionCustomization: String, CaseIterable, Identifiable, Senda
 
 
 final class RemoveAppExtensionsOperation: BasePipelineOperation<InstallAppOperationContext, ALTApplication>, @unchecked Sendable {
+    private let customization: AppExtensionCustomization
     let localAppExtensions: Set<ALTApplication>?
     
-    init(context: InstallAppOperationContext, localAppExtensions: Set<ALTApplication>?) throws {
+    init(context: InstallAppOperationContext, localAppExtensions: Set<ALTApplication>?, customization: AppExtensionCustomization = UserDefaults.standard.customizeAppExtensions) throws {
+        self.customization = customization
         self.localAppExtensions = localAppExtensions
         try super.init(context: context)
     }
@@ -86,7 +88,7 @@ final class RemoveAppExtensionsOperation: BasePipelineOperation<InstallAppOperat
         
         let handler = self.context.handler.extensionRemovalHandler
         let decision: ExtensionRemovalDecision
-        if let preset = UserDefaults.standard.customizeAppExtensions.fixedDecision {
+        if let preset = customization.fixedDecision {
             decision = preset
         } else {
             self.setProgress(50)

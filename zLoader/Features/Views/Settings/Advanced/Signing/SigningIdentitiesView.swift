@@ -4,10 +4,24 @@ import UniformTypeIdentifiers
 
 struct SigningIdentitiesView: View {
     @ObservedObject private var store = SigningIdentityStore.shared
+    @StateObject private var certificates = CertificatesViewModel()
+    @State private var managerAction: CertificateManagerAction?
+    @State private var identityToRemove: ImportedSigningIdentity?
+    @State private var confirmsRemoval = false
+    @State private var copiedActive = false
+    @State private var deactivate = false
     @State private var errorMessage: String?
 
     var body: some View {
         List {
+            ActiveCertSectionView(viewModel: certificates, hasCopiedActiveSerial: $copiedActive,
+                onDeactivate: { deactivate = true })
+            Section("Certificates & Keys") {
+                NavigationLink("Certificates") {
+                    CertificatesView(presentingViewController: UIApplication.shared.topViewController())
+                }
+                NavigationLink("Keys & Local Signing Requests…") { LocalKeyMaterialView() }
+            }.listRowBackground(ZLoaderGlassBackground())
             Section {
                 ForEach(store.identities) { identity in
                     NavigationLink { SigningIdentityEditor(identity: identity) } label: {
@@ -18,16 +32,44 @@ struct SigningIdentitiesView: View {
                     }
                     .swipeActions {
                         SwiftUI.Button("Remove", role: .destructive) {
-                            do { try store.remove(identity) } catch { errorMessage = error.localizedDescription }
+                            identityToRemove = identity
+                            confirmsRemoval = true
                         }
                     }
                 }
                 NavigationLink("Add Signing Identity") { SigningIdentityEditor() }
-            } footer: {
+            } header: { Text("Imported Signing Identities") } footer: {
                 Group {
                     Text("Import a PKCS#12 certificate with its private key and the Apple-signed profiles for the app and its extensions. Removing an identity here does not revoke anything in your Developer Account.")
                 }
             }.listRowBackground(ZLoaderGlassBackground())
+        }
+        .alert("Remove Signing Identity?", isPresented: $confirmsRemoval) {
+            SwiftUI.Button("Remove", role: .destructive) {
+                if let identity = identityToRemove {
+                    do { try store.remove(identity) } catch { errorMessage = error.localizedDescription }
+                }
+            }
+            SwiftUI.Button("Cancel", role: .cancel) {}
+        } message: { Text("This removes the local identity. Certificates and profiles on Apple's portal are not revoked.") }
+        .task { certificates.loadCertificates(presentingViewController: nil) }
+        .alert("Deactivate Certificate", isPresented: $deactivate) {
+            SwiftUI.Button("Deactivate", role: .destructive) { certificates.deactivateActiveCertificate() }
+            SwiftUI.Button("Cancel", role: .cancel) {}
+        } message: { Text("Are you sure you want to deactivate the active signing certificate locally?") }
+        .sheet(item: $managerAction, onDismiss: { certificates.loadCertificates(presentingViewController: nil) }) { action in
+            NavigationStack {
+                CertificatesView(initialAction: action, presentingViewController: UIApplication.shared.topViewController())
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { SwiftUI.Button("Done") { managerAction = nil } } }
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                SwiftUI.Button { managerAction = .importCertificate } label: { Image(systemName: "square.and.arrow.down") }
+                    .accessibilityLabel("Import Certificate and Private Key")
+                SwiftUI.Button { managerAction = .create } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Create Certificate")
+            }
         }
         .navigationTitle("Signing Identities")
         .labelStyle(.titleOnly)

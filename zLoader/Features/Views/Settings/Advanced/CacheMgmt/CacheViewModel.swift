@@ -124,10 +124,11 @@ class CacheViewModel: ObservableObject {
                 let size = CacheManager.shared.calculateSize(of: url)
                 let sizeStr = await self.formatBytes(size)
                 
-                let displayName = filename.replacingOccurrences(of: ".app", with: "")
+                let metadata = try? SignedIPAInspection.read(url)
+                let displayName = metadata?.name ?? filename.replacingOccurrences(of: ".app", with: "")
                                           .replacingOccurrences(of: ".ipa", with: "")
                 
-                var iconImage: UIImage? = nil
+                var iconImage: UIImage? = metadata?.iconData.flatMap { UIImage(data: $0) }
                 if let appIcon = ALTApplication(fileURL: url)?.icon {
                     iconImage = appIcon
                 }
@@ -135,7 +136,7 @@ class CacheViewModel: ObservableObject {
                 let item = CacheItem(
                     id: filename,
                     name: displayName,
-                    bundleIdentifier: nil,
+                    bundleIdentifier: metadata?.bundleID,
                     sizeString: sizeStr,
                     sizeInBytes: size,
                     url: url,
@@ -173,5 +174,49 @@ class CacheViewModel: ObservableObject {
                 }
             }
         }
+    }
+}
+
+/// Read the resulting IPA, including each separately signed extension.
+struct SignedIPAInspection: Sendable {
+    struct Component: Identifiable, Sendable {
+        let id: String
+        let name: String
+        let team: String
+        let profile: String
+        let expires: Date?
+        let devices: [String]
+        let certificates: [String]
+        let kind: String
+        let entitlements: [(String, String)]
+    }
+    let name: String
+    let bundleID: String
+    let iconData: Data?
+    let components: [Component]
+
+    static func read(_ url: URL) throws -> SignedIPAInspection {
+        let fm = FileManager.default
+        let temporary = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: temporary, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: temporary) }
+        let appURL = try fm.unzipAppBundle(at: url, to: temporary)
+        guard let app = ALTApplication(fileURL: appURL) else { throw OperationError.invalidApp(reason: "Invalid IPA") }
+        let components = ([app] + app.appExtensions.sorted { $0.bundleIdentifier < $1.bundleIdentifier }).map { component in
+            let profile = component.provisioningProfile
+            let kind: String
+            if profile == nil { kind = "No Embedded Profile" }
+            else if profile?.isFreeProvisioningProfile == true { kind = "Free Development" }
+            else if profile?.entitlements["get-task-allow"] as? Bool == true { kind = "Development" }
+            else if profile?.deviceIDs.isEmpty == false { kind = "Ad Hoc Distribution" }
+            else { kind = "Distribution" }
+            return Component(id: component.bundleIdentifier, name: component.name,
+                team: profile.map { $0.teamName + " · " + $0.teamIdentifier } ?? "—",
+                profile: profile.map { $0.name + " · " + $0.uuid.uuidString } ?? "—",
+                expires: profile?.expirationDate, devices: profile?.deviceIDs ?? [],
+                certificates: profile?.certificates.map { $0.name + " · " + $0.serialNumber } ?? [],
+                kind: kind, entitlements: component.entitlements.sorted { $0.key < $1.key }.map { ($0.key, String(describing: $0.value)) })
+        }
+        return SignedIPAInspection(name: app.name, bundleID: app.bundleIdentifier, iconData: app.icon?.pngData(), components: components)
     }
 }

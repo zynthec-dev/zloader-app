@@ -47,8 +47,8 @@ struct DeveloperServicesView: View {
                                 .cornerRadius(8)
                         }
                         .padding(.vertical, 4)
-                        NavigationLink(destination: AccountCertificatesView()) {
-                            SettingsEntryLabel(title: "Certificates from Account", systemImage: "icloud.and.arrow.down")
+                        NavigationLink(destination: CertificatesPortalListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
+                            SettingsEntryLabel(title: "Certificates", systemImage: "checkmark.seal")
                         }
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
@@ -143,7 +143,7 @@ struct DeveloperServicesView: View {
                     .shadow(radius: 6)
             }
         }
-        .navigationTitle("Developer Portal")
+        .navigationTitle("Apple Developer Portal")
         .labelStyle(.titleOnly)
         .onAppear {
             if viewModel.appIDs.isEmpty && viewModel.profiles.isEmpty {

@@ -11,7 +11,23 @@ import Foundation
 import CoreData
 import SideSign
 
+struct SigningCustomizationOptions: Sendable {
+    var infoPlist = UserDefaults.standard.customizeInfoPlist
+    var appID = UserDefaults.standard.customizeAppId
+    var entitlements = UserDefaults.standard.customizeEntitlements
+    var icon = UserDefaults.standard.customizeAppIcon
+    var profile = UserDefaults.standard.customizeProvisioningProfile
+    var extensions = UserDefaults.standard.customizeAppExtensions
+}
+
 final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperationContext, String?>, @unchecked Sendable {
+
+    private let options: SigningCustomizationOptions
+
+    init(context: InstallAppOperationContext, options: SigningCustomizationOptions = .init()) throws {
+        self.options = options
+        try super.init(context: context)
+    }
 
     override func execute(parentProgress: Progress?) async throws -> String? {
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -35,8 +51,10 @@ final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperatio
             throw OperationError.invalidParameters("UserCustomizationOperation: context.targetAppBundle is nil")
         }
 
-        if UserDefaults.standard.customizeInfoPlist {
-            let authTeam = try await AuthManager.shared.getAuthenticatedTeam()
+        if options.infoPlist {
+            let authTeam: ALTTeam
+            if let override = context.signingTeamOverride { authTeam = override }
+            else { authTeam = try await AuthManager.shared.getAuthenticatedTeam() }
             let teamID = authTeam.identifier
             debugLog("[UserCustomizationOperation] targetBundleIdentifier='\(context.targetBundleIdentifier)', authTeamID='\(teamID)', appendTeamID=\(context.appendTeamID)")
             guard !teamID.isEmpty else {
@@ -113,17 +131,18 @@ final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperatio
                 context.customInfoPlistByBundleID[key] = plist
             }
 
+            // Sign-only must never attach an InstalledApp or alter its stored settings.
             // Dynamically link existing installed app if bundle ID matches
             let effectiveCustomID = customID ?? initialBundleID
             let resolvedID = result.appendTeamID && !teamID.isEmpty ? "\(effectiveCustomID).\(teamID)" : effectiveCustomID
-            if let matchingApp = installedApps.first(where: { $0.bundleIdentifier == resolvedID }) {
+            if !context.isSignOnly, let matchingApp = installedApps.first(where: { $0.bundleIdentifier == resolvedID }) {
                 debugLog("[UserCustomizationOperation] Matched existing installed app: \(matchingApp.name) (\(resolvedID))")
                 context.installedApp = matchingApp
             } else {
                 debugLog("[UserCustomizationOperation] No matching installed app for \(resolvedID); treating as new install/clone.")
                 context.installedApp = nil
             }
-        } else if UserDefaults.standard.customizeAppId {
+        } else if options.appID {
             let initialBundleID = context.targetBundleIdentifier
             self.setProgress(40)
             
@@ -139,8 +158,10 @@ final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperatio
             }
         }
 
-        if UserDefaults.standard.customizeEntitlements {
-            let authTeam = try await AuthManager.shared.getAuthenticatedTeam()
+        if options.entitlements {
+            let authTeam: ALTTeam
+            if let override = context.signingTeamOverride { authTeam = override }
+            else { authTeam = try await AuthManager.shared.getAuthenticatedTeam() }
             let mainTargetID = context.targetBundleIdentifier
             self.setProgress(70)
 
@@ -210,14 +231,14 @@ final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperatio
             }
         }
 
-        if UserDefaults.standard.customizeAppIcon {
+        if options.icon {
             self.setProgress(85)
             if let iconURL = try await handler.resolveAppIconCustomization(appName: targetAppBundle.name) {
                 context.alternateIconMode = .set(iconURL)
             }
         }
 
-        if UserDefaults.standard.customizeProvisioningProfile {
+        if options.profile {
             self.setProgress(95)
             let effectiveBundleID = context.customBundleIdentifier ?? context.targetBundleIdentifier
             let choice = try await handler.resolveProvisioningProfileCustomization(
@@ -234,7 +255,7 @@ final class UserCustomizationOperation: BasePipelineOperation<InstallAppOperatio
         }
 
         self.setProgress(100)
-        if UserDefaults.standard.customizeInfoPlist || UserDefaults.standard.customizeAppId || UserDefaults.standard.customizeAppIcon || UserDefaults.standard.customizeProvisioningProfile {
+        if options.infoPlist || options.appID || options.icon || options.profile {
             return context.targetBundleIdentifier
         } else {
             return nil

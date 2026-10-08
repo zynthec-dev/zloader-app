@@ -13,6 +13,8 @@ struct CertificatesPortalListView: View {
     @ObservedObject var viewModel: DeveloperServicesViewModel
     weak var presentingViewController: UIViewController?
 
+    @State private var certificateToDelete: ALTX509Certificate?
+    @State private var showDeleteConfirmation = false
     @State private var searchText = ""
     @State private var certificateToRevoke: ALTX509Certificate? = nil
     @State private var showRevokeConfirmation = false
@@ -52,6 +54,11 @@ struct CertificatesPortalListView: View {
                         }
                         #if !os(tvOS)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if CertificateManager.shared.getLocalX509Certificate(serialNumber: cert.serialNumber) != nil {
+                                SwiftUI.Button("Delete Locally", role: .destructive) {
+                                    certificateToDelete = cert; showDeleteConfirmation = true
+                                }
+                            }
                             SwiftUI.Button(role: .destructive) {
                                 certificateToRevoke = cert
                                 showRevokeConfirmation = true
@@ -85,6 +92,12 @@ struct CertificatesPortalListView: View {
                 }
             }
         }
+        .alert("Delete Certificate", isPresented: $showDeleteConfirmation) {
+            SwiftUI.Button("Delete", role: .destructive) {
+                if let cert = certificateToDelete { CertificateManager.shared.deleteCertificate(serialNumber: cert.serialNumber) }
+            }
+            SwiftUI.Button("Cancel", role: .cancel) {}
+        } message: { Text("Deleting locally removes the certificate and private key from this device. It does not revoke the certificate in your Apple Account.") }
         .navigationTitle("Certificates")
         .labelStyle(.titleOnly)
         .refreshable {

@@ -1560,7 +1560,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktives Signierzertifikat"
+            "value": "Aktives Signierungszertifikat"
           }
         }
       }
@@ -3447,7 +3447,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bundle-Kennung"
+            "value": "Bundle-ID"
           }
         }
       }
@@ -3832,13 +3832,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Certificate Management"
+            "value": "Certificates"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zertifikatsverwaltung"
+            "value": "Zertifikate"
           }
         }
       }
@@ -4614,13 +4614,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connection"
+            "value": "Connection Settings"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbindung"
+            "value": "Verbindungseinstellung"
           }
         }
       }
@@ -4631,13 +4631,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connection Config"
+            "value": "Connection Settings"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbindungskonfiguration"
+            "value": "Verbindungseinstellung"
           }
         }
       }
@@ -4648,13 +4648,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connection Configuration"
+            "value": "Connection Settings"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbindungskonfiguration"
+            "value": "Verbindungseinstellung"
           }
         }
       }
@@ -5181,7 +5181,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "App-Symbol anpassen"
+            "value": "App-Symbol bearbeiten"
           }
         }
       }
@@ -9646,7 +9646,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Internal Tunnel Addresses"
+            "value": "zLoader Local Tunnel Addresses"
           }
         },
         "de": {
@@ -9669,7 +9669,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der interne Tunnel ist bereit."
+            "value": "Der zLoader Local Tunnel ist bereit."
           }
         }
       }
@@ -12468,13 +12468,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pairing File Management"
+            "value": "Pairing File Configuration"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pairing-Dateiverwaltung"
+            "value": "Pairing File Konfiguration"
           }
         }
       }
@@ -13148,13 +13148,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Profiles Management"
+            "value": "Provisioning Profiles"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Profilverwaltung"
+            "value": "Provisioning Profile"
           }
         }
       }
@@ -13256,7 +13256,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provisioning Profiles"
+            "value": "Provisioning Profile"
           }
         }
       }
@@ -14967,13 +14967,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saved signed IPA files. Tap a file to share it or save it to Files."
+            "value": "Saved signed IPA files. Touch and hold for details, sharing or installation."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gespeicherte signierte IPA-Dateien. Tippe auf eine Datei, um sie zu teilen oder in Dateien zu speichern."
+            "value": "Gespeicherte signierte IPA-Dateien. Halte einen Eintrag gedrückt für Details, Teilen oder Installation."
           }
         }
       }
@@ -17279,13 +17279,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The integrated tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles."
+            "value": "The zLoader Local Tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der integrierte Tunnel verbindet sich nur, solange ein Gerätevorgang ihn benötigt. Apple muss Network Extensions in den Profilen der App und des Providers autorisieren."
+            "value": "Der zLoader Local Tunnel verbindet sich nur, solange ein Gerätevorgang ihn benötigt. Apple muss Network Extensions in den Profilen der App und des Providers autorisieren."
           }
         }
       }
@@ -17296,13 +17296,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The internal tunnel stays disabled until self-signing succeeds. Leave your external tunnel enabled during this operation."
+            "value": "The zLoader Local Tunnel stays disabled until self-signing succeeds. Leave your external tunnel enabled during this operation."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der interne Tunnel bleibt deaktiviert, bis die Selbstsignierung erfolgreich ist. Lass deinen externen Tunnel während dieses Vorgangs aktiviert."
+            "value": "Der zLoader Local Tunnel bleibt deaktiviert, bis die Selbstsignierung erfolgreich ist. Lass deinen externen Tunnel während dieses Vorgangs aktiviert."
           }
         }
       }
@@ -18894,13 +18894,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use Internal Tunnel"
+            "value": "Use zLoader Local Tunnel"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Internen Tunnel verwenden"
+            "value": "zLoader Local Tunnel verwenden"
           }
         }
       }
@@ -18928,13 +18928,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use a compatible external local VPN tunnel, or enable the optional integrated tunnel with an eligible paid Apple developer team. No specific external VPN app is required."
+            "value": "Use a compatible external local VPN tunnel, or enable the optional zLoader Local Tunnel with an eligible paid Apple developer team. No specific external VPN app is required."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verwende einen kompatiblen externen lokalen VPN-Tunnel oder aktiviere den optionalen integrierten Tunnel mit einem geeigneten bezahlten Apple-Entwicklerteam. Eine bestimmte externe VPN-App ist nicht erforderlich."
+            "value": "Verwende einen kompatiblen externen lokalen VPN-Tunnel oder aktiviere den optionalen zLoader Local Tunnel mit einem geeigneten bezahlten Apple-Entwicklerteam. Eine bestimmte externe VPN-App ist nicht erforderlich."
           }
         }
       }
@@ -18945,13 +18945,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use the Internal Tunnel?"
+            "value": "Use zLoader Local Tunnel?"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Internen Tunnel verwenden?"
+            "value": "zLoader Local Tunnel verwenden?"
           }
         }
       }
@@ -19030,13 +19030,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "VPN configuration and the optional internal tunnel are available on iPhone and iPad."
+            "value": "VPN configuration and the optional zLoader Local Tunnel are available on iPhone and iPad."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "VPN-Konfiguration und optionaler interner Tunnel sind auf iPhone und iPad verfügbar."
+            "value": "VPN-Konfiguration und optionaler zLoader Local Tunnel sind auf iPhone und iPad verfügbar."
           }
         }
       }
@@ -20645,13 +20645,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "zLoader connects its internal tunnel only while pairing, installation or refresh needs it. External tunnel shortcuts are disabled for this connection method."
+            "value": "zLoader connects its zLoader Local Tunnel only while pairing, installation or refresh needs it. External tunnel shortcuts are disabled for this connection method."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "zLoader verbindet den internen Tunnel nur, solange Pairing, Installation oder Refresh ihn benötigt. Kurzbefehle für externe Tunnel sind bei dieser Verbindungsmethode deaktiviert."
+            "value": "zLoader verbindet den zLoader Local Tunnel nur, solange Pairing, Installation oder Refresh ihn benötigt. Kurzbefehle für externe Tunnel sind bei dieser Verbindungsmethode deaktiviert."
           }
         }
       }
@@ -20679,7 +20679,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "zLoader requests the required capabilities and separate provisioning profiles for the app and its extensions from Apple. It then signs and reinstalls itself. Reopen the app afterwards. Your App ID and App Group stay the same. Once setup succeeds, device operations use the integrated tunnel instead of an external VPN."
+            "value": "zLoader requests the required capabilities and separate provisioning profiles for the app and its extensions from Apple. It then signs and reinstalls itself. Reopen the app afterwards. Your App ID and App Group stay the same. Once setup succeeds, device operations use the zLoader Local Tunnel instead of an external VPN."
           }
         },
         "de": {
@@ -21841,7 +21841,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provisioning Profile anpassen"
+            "value": "Provisioning-Profil auswählen"
           }
         }
       }
@@ -21926,7 +21926,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zertifikate des Entwickler-Accounts"
+            "value": "Zertifikate aus dem Entwickler-Account"
           }
         }
       }
@@ -22776,7 +22776,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schlüssel und lokale Signieranfragen …"
+            "value": "Schlüssel und lokale Signierungsanfragen …"
           }
         }
       }
@@ -24248,7 +24248,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der verbundene interne Tunnel hat keinen gültigen Geräte-Endpunkt. Konfiguriere ihn erneut in den Verbindungseinstellungen."
+            "value": "Der verbundene zLoader Local Tunnel hat keinen gültigen Geräte-Endpunkt. Konfiguriere ihn erneut in den Verbindungseinstellungen."
           }
         }
       }
@@ -25248,7 +25248,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erstelle eine persönliche Automation in Kurzbefehle: App → Wird geöffnet → Sofort ausführen → JIT aktivieren. Wähle in der JIT-Aktion dieselbe App. Der integrierte Tunnel verbindet sich für die Aktivierung und trennt sich danach. JIT bleibt bis zum Ende dieses App-Prozesses aktiv. Externe Tunnel müssen separat verbunden werden. iOS entscheidet über die Ausführung im Hintergrund."
+            "value": "Erstelle eine persönliche Automation in Kurzbefehle: App → Wird geöffnet → Sofort ausführen → JIT aktivieren. Wähle in der JIT-Aktion dieselbe App. Der zLoader Local Tunnel verbindet sich für die Aktivierung und trennt sich danach. JIT bleibt bis zum Ende dieses App-Prozesses aktiv. Externe Tunnel müssen separat verbunden werden. iOS entscheidet über die Ausführung im Hintergrund."
           }
         }
       }
@@ -25762,6 +25762,720 @@
           "stringUnit": {
             "state": "translated",
             "value": "1. Verlasse zLoader und öffne die Einstellungen auf diesem Gerät.\n\n2. Gehe zu Datenschutz & Sicherheit → Entwicklermodus, öffne die Pairing-Einstellungen und wähle zLoader aus.\n\n3. Gib gegebenenfalls deinen Gerätecode ein und danach die sechsstellige Pairing-PIN aus der Live-Aktivität oder Mitteilung.\n\n4. Tippe nach Abschluss des Pairings auf die Mitteilung oder Live-Aktivität, um zu zLoader zurückzukehren. Deine Pairing-Datei wird automatisch gespeichert."
+          }
+        }
+      }
+    },
+    "Connection Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindungseinstellung"
+          }
+        }
+      }
+    },
+    "Certificates & Keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certificates & Keys"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zertifikate und Schlüssel"
+          }
+        }
+      }
+    },
+    "Profile Management": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provisioning Profiles"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provisioning Profile"
+          }
+        }
+      }
+    },
+    "Apple Developer Portal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Developer Portal"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Developer Portal"
+          }
+        }
+      }
+    },
+    "Edit Before Signing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Before Signing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vor dem Signieren bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit App": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit App"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App bearbeiten"
+          }
+        }
+      }
+    },
+    "Changes ready for signing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes ready for signing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen zum Signieren bereit"
+          }
+        }
+      }
+    },
+    "Customize App ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize App ID"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-ID bearbeiten"
+          }
+        }
+      }
+    },
+    "Local tunnel VPN via an external app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local tunnel VPN via an external app"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokales Tunnel-VPN über externe App"
+          }
+        }
+      }
+    },
+    "Integrated zLoader Local Tunnel (Recommended)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integrated VPN: zLoader Local Tunnel (Recommended)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integriertes VPN: zLoader Local Tunnel (empfohlen)"
+          }
+        }
+      }
+    },
+    "Tunnel Data": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tunnel Data"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tunnel-Daten"
+          }
+        }
+      }
+    },
+    "Not Reachable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Reachable"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Reachable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reachable"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreichbar"
+          }
+        }
+      }
+    },
+    "Imported Signing Identities": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported Signing Identities"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importierte Signierungsidentitäten"
+          }
+        }
+      }
+    },
+    "Remove Signing Identity?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Signing Identity?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierungsidentität entfernen?"
+          }
+        }
+      }
+    },
+    "This removes the local identity. Certificates and profiles on Apple's portal are not revoked.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the local identity. Certificates and profiles on Apple's portal are not revoked."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt die lokale Identität. Zertifikate und Profile im Apple-Portal werden nicht widerrufen."
+          }
+        }
+      }
+    },
+    "Delete Locally": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Locally"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokal löschen"
+          }
+        }
+      }
+    },
+    "Deleting locally removes the certificate and private key from this device. It does not revoke the certificate in your Apple Account.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting locally removes the certificate and private key from this device. It does not revoke the certificate in your Apple Account."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim lokalen Löschen werden Zertifikat und privater Schlüssel von diesem Gerät entfernt. Das Zertifikat im Apple Account wird nicht widerrufen."
+          }
+        }
+      }
+    },
+    "Create Profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Profile"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil erstellen"
+          }
+        }
+      }
+    },
+    "Signed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signiert"
+          }
+        }
+      }
+    },
+    "Details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "Signing Details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signing Details"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierungsdetails"
+          }
+        }
+      }
+    },
+    "Signing Type": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signing Type"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierungsart"
+          }
+        }
+      }
+    },
+    "Signed Components": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed Components"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierte Komponenten"
+          }
+        }
+      }
+    },
+    "Authorized Devices (%lld)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authorized Devices (%lld)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisierte Geräte (%lld)"
+          }
+        }
+      }
+    },
+    "Authorized Certificates": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authorized Certificates"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisierte Zertifikate"
+          }
+        }
+      }
+    },
+    "Signed Entitlements": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed Entitlements"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierte Entitlements"
+          }
+        }
+      }
+    },
+    "No Embedded Profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Embedded Profile"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein eingebettetes Profil"
+          }
+        }
+      }
+    },
+    "Free Development": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free Development"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlose Entwicklung"
+          }
+        }
+      }
+    },
+    "Development": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Development"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwicklung"
+          }
+        }
+      }
+    },
+    "Ad Hoc Distribution": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ad Hoc Distribution"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ad-hoc-Verteilung"
+          }
+        }
+      }
+    },
+    "Distribution": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distribution"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verteilung"
+          }
+        }
+      }
+    },
+    "These values are read from the saved IPA. A profile authorizes its listed devices and certificates; this view does not verify installation on another device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These values are read from the saved IPA. A profile authorizes its listed devices and certificates; this view does not verify installation on another device."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Werte werden aus der gespeicherten IPA gelesen. Ein Profil autorisiert die darin aufgeführten Geräte und Zertifikate. Diese Ansicht bestätigt keine Installation auf einem anderen Gerät."
+          }
+        }
+      }
+    },
+    "Capabilities & Features": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capabilities & Features"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capabilities und Funktionen"
+          }
+        }
+      }
+    },
+    "SideJITServer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SideJITServer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SideJITServer"
+          }
+        }
+      }
+    },
+    "Not Detected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Detected"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht erkannt"
+          }
+        }
+      }
+    },
+    "Active Local Certificate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active Local Certificate"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktives lokales Zertifikat"
+          }
+        }
+      }
+    },
+    "Certificates": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certificates"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zertifikate"
+          }
+        }
+      }
+    },
+    "Internal Tunnel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zLoader Local Tunnel"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zLoader Local Tunnel"
+          }
+        }
+      }
+    },
+    "Optional Internal Tunnel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional zLoader Local Tunnel"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optionales zLoader Local Tunnel"
+          }
+        }
+      }
+    },
+    "App ID Details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App ID Details"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-ID-Details"
+          }
+        }
+      }
+    },
+    "App ID (Identifier)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App ID (Identifier)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-ID (Kennung)"
           }
         }
       }

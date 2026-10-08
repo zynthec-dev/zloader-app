@@ -23,7 +23,9 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         }
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         
-        let team = try await AuthManager.shared.getAuthenticatedTeam()
+        let team: ALTTeam
+        if let override = context.signingTeamOverride { team = override }
+        else { team = try await AuthManager.shared.getAuthenticatedTeam() }
         guard
             let appBundle = self.context.targetAppBundle,
             let profiles = self.context.provisioningProfiles,
@@ -76,7 +78,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         let bundleIdentifier = context.targetBundleIdentifier
         let finalBundleIdentifier: String
         if let profile = context.useMainProfile ? profiles.values.first : profiles[bundleIdentifier] {
-            finalBundleIdentifier = profile.bundleIdentifier
+            finalBundleIdentifier = profile.bundleIdentifier.contains("*") ? bundleIdentifier : profile.bundleIdentifier
         } else {
             finalBundleIdentifier = bundleIdentifier
         }
@@ -146,8 +148,8 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         }
         var infoDictionary = parser.rawDictionary as [String: Any]
         
-        let newBundleID = appexBundleIds[identifier] ?? profile.bundleIdentifier
-        var requested = context.customEntitlementsByBundleID[appBundle.bundleIdentifier] ?? appBundle.entitlements
+        let newBundleID = appexBundleIds[identifier] ?? (profile.bundleIdentifier.contains("*") ? identifier : profile.bundleIdentifier)
+        var requested = context.customEntitlementsByBundleID[identifier] ?? context.customEntitlementsByBundleID[appBundle.bundleIdentifier] ?? appBundle.entitlements
         if appBundle.fileURL.pathExtension.lowercased() != "appex" {
             for (key, value) in context.additionalEntitlements { requested[key] = value }
         }
@@ -182,7 +184,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
             infoDictionary[key] = value
         }
 
-        if let customPlist = context.customInfoPlistByBundleID[identifier] {
+        if let customPlist = context.customInfoPlistByBundleID[identifier] ?? context.customInfoPlistByBundleID[appBundle.bundleIdentifier] {
             for (key, value) in customPlist {
                 if key == (kCFBundleIdentifierKey as String) || key == "CFBundleIdentifier" {
                     continue
@@ -205,7 +207,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         let installedAppUTI = ["UTTypeConformsTo": [],
                                "UTTypeDescription": "ZLoader Installed App",
                                "UTTypeIconFiles": [],
-                               "UTTypeIdentifier": InstalledApp.installedAppUTI(forBundleIdentifier: profile.bundleIdentifier),
+                               "UTTypeIdentifier": InstalledApp.installedAppUTI(forBundleIdentifier: newBundleID),
                                "UTTypeTagSpecification": [:]] as [String : Any]
         
         var exportedUTIs = infoDictionary[Bundle.Info.exportedUTIs] as? [[String: Any]] ?? []

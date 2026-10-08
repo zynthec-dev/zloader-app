@@ -14,6 +14,12 @@ struct CreateManualProfileView: View {
     weak var presentingViewController: UIViewController?
     @Environment(\.presentationMode) var presentationMode
 
+    init(viewModel: DeveloperServicesViewModel, presentingViewController: UIViewController? = nil, appIDIdentifier: String = "") {
+        self.viewModel = viewModel
+        self.presentingViewController = presentingViewController
+        _selectedAppIDIdentifier = State(initialValue: appIDIdentifier)
+    }
+
     @State private var profileName: String = ""
     @State private var selectedProfileType: ALTProfileType = .iOS
     @State private var selectedAppIDIdentifier: String = ""

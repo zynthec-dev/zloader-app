@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 struct SignIPAView: View {
     var onInstall: ((URL) -> Void)? = nil
     @ObservedObject private var identities = SigningIdentityStore.shared
+    @State private var preparation: SignIPAPreparation?
+    @State private var customization = SigningCustomizationOptions()
     @State private var identityID: UUID?
     @State private var ipa: URL?
     @State private var importingIPA = false
@@ -16,6 +18,20 @@ struct SignIPAView: View {
         Form {
             Section("IPA") {
                 SwiftUI.Button(ipa?.lastPathComponent ?? NSLocalizedString("Choose IPA", comment: "")) { importingIPA = true }
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section("Edit Before Signing") {
+                Toggle("Customize Info.plist", isOn: $customization.infoPlist)
+                Toggle("Customize App ID", isOn: $customization.appID).disabled(customization.infoPlist)
+                Toggle("Customize Entitlements", isOn: $customization.entitlements)
+                Toggle("Customize App Icon", isOn: $customization.icon)
+                Toggle("Customize Provisioning Profile", isOn: $customization.profile)
+                Picker("Customize Extensions", selection: $customization.extensions) {
+                    ForEach(AppExtensionCustomization.allCases) { option in
+                        Text(LocalizedStringKey(option.displayName)).tag(option)
+                    }
+                }
+                SwiftUI.Button("Edit App") { Task { await editApp() } }.disabled(ipa == nil)
+                if preparation != nil { Text("Changes ready for signing").foregroundStyle(.secondary) }
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Sign With") {
                 Picker("Signing Method", selection: $identityID) {
@@ -46,8 +62,9 @@ struct SignIPAView: View {
         .navigationTitle("Sign App")
         .labelStyle(.titleOnly)
         .disabled(isSigning)
+        .onChange(of: identityID) { _, _ in preparation = nil; result = nil }
         .fileImporter(isPresented: $importingIPA, allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data]) { selection in
-            do { ipa = try selection.get(); result = nil } catch { errorMessage = error.localizedDescription }
+            do { ipa = try selection.get(); result = nil; preparation = nil } catch { errorMessage = error.localizedDescription }
         }
         .fileImporter(isPresented: $importingProfiles, allowedContentTypes: [.data], allowsMultipleSelection: true) { selection in
             do {
@@ -59,11 +76,23 @@ struct SignIPAView: View {
                     if !identity.profileIDs.contains(profile.uuid) { identity.profileIDs.append(profile.uuid) }
                 }
                 try identities.save(identity)
+                preparation = nil
             } catch { errorMessage = error.localizedDescription }
         }
         .alert("Signing Failed", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             SwiftUI.Button("OK", role: .cancel) { errorMessage = nil }
         } message: { Text(verbatim: errorMessage ?? "") }
+    }
+
+    @MainActor private func editApp() async {
+        guard let ipa, !isSigning else { return }
+        let identity = identityID.flatMap { selected in identities.identities.first { $0.id == selected } }
+        guard identityID == nil || identity != nil else { return }
+        isSigning = true
+        result = nil
+        defer { isSigning = false }
+        do { preparation = try await SignIPAService.prepare(ipa, identity: identity, customization: customization) }
+        catch { errorMessage = error.localizedDescription }
     }
 
     @MainActor private func sign() async {
@@ -77,7 +106,14 @@ struct SignIPAView: View {
         isSigning = true
         result = nil
         defer { isSigning = false }
-        do { result = try await SignIPAService.sign(ipa, identity: identity) }
+        do {
+            if let preparation { result = try await SignIPAService.sign(preparation) }
+            else {
+                let ready = try await SignIPAService.prepare(ipa, identity: identity, customization: customization)
+                result = try await SignIPAService.sign(ready)
+            }
+            preparation = nil
+        }
         catch { errorMessage = error.localizedDescription }
     }
 }

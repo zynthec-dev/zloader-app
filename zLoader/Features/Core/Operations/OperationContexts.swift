@@ -281,6 +281,8 @@ class InstallAppOperationContext: PipelineOperationContext
         optionalEntitlementsStorage[bundleID] = keys
     }
     var customEntitlementsByBundleID: [String: [String: any Sendable]] = [:]
+    var signingTeamOverride: ALTTeam?
+    var isSignOnly = false
     var isStoreUpdate: Bool = false
     var targetAppBundle: ALTApplication?
 

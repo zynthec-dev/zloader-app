@@ -462,7 +462,7 @@ struct InfoRow: View {
     
     var body: some View {
         HStack {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Spacer()
@@ -481,7 +481,7 @@ struct ProfileInfoRow: View {
     
     var body: some View {
         HStack {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Spacer()

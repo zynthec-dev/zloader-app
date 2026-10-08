@@ -82,7 +82,7 @@ index c43fd90..697a28a 100644
              verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
  
 diff --git a/Sources/DeveloperPortal/AppIDs.swift b/Sources/DeveloperPortal/AppIDs.swift
-index efb5c44..b658060 100644
+index efb5c44..65701c7 100644
 --- a/Sources/DeveloperPortal/AppIDs.swift
 +++ b/Sources/DeveloperPortal/AppIDs.swift
 @@ -69,20 +69,15 @@ public extension DeveloperPortal {
@@ -109,7 +109,7 @@ index efb5c44..b658060 100644
 +            throw DeveloperPortalError.appIDDoesNotExist(identifier: appID.identifier)
          }
 +        let changes = appID.changedFeatures(comparedTo: current)
-+        guard !changes.isEmpty else { return current }
++        guard !changes.isEmpty || appID.name != current.name else { return current }
 +        let parameters = appID.capabilityUpdateParameters(comparedTo: current)
  
          let response: AppIDResponse = try await sendRequest(url: Constants.URLs.updateAppID, additionalParameters: parameters, session: session, team: team)
@@ -329,10 +329,10 @@ index dfea7cc..e999075 100644
          }
  
 diff --git a/Sources/Models/AppID.swift b/Sources/Models/AppID.swift
-index 62b2f78..e23c55b 100644
+index 62b2f78..5c0707d 100644
 --- a/Sources/Models/AppID.swift
 +++ b/Sources/Models/AppID.swift
-@@ -32,6 +32,50 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -32,6 +32,51 @@ public struct AppID: Sendable, Codable, Identifiable {
          self.entitlements = entitlements
      }
  
@@ -349,6 +349,7 @@ index 62b2f78..e23c55b 100644
 +    /// Kernel memory options are entitlement requests, not legacy service flags.
 +    public func capabilityUpdateParameters(comparedTo current: AppID) -> [String: any Sendable] {
 +        var parameters: [String: any Sendable] = ["appIdId": identifier]
++        if name != current.name { parameters["name"] = name }
 +        var requestedEntitlements: [String: any Sendable] = [:]
 +        for (key, value) in entitlements {
 +            requestedEntitlements[key] = Self.portalValue(value)
@@ -383,7 +384,7 @@ index 62b2f78..e23c55b 100644
      public func copy() -> AppID {
          self
      }
-@@ -51,13 +95,10 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -51,13 +96,10 @@ public struct AppID: Sendable, Codable, Identifiable {
          self.bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? ""
          self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
  
@@ -401,7 +402,7 @@ index 62b2f78..e23c55b 100644
          self.entitlements = [:]
      }
  
-@@ -69,3 +110,21 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -69,3 +111,21 @@ public struct AppID: Sendable, Codable, Identifiable {
          try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
      }
  }

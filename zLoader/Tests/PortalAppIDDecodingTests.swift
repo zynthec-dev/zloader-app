@@ -53,6 +53,13 @@ struct PortalAppIDDecodingTests {
         let disabling = disabledMemory.capabilityUpdateParameters(comparedTo: memory)
         let disabledValues = disabling["entitlements"] as! [String: any Sendable]
         precondition(disabledValues[Entitlement.increasedMemoryLimit.rawValue] as? Bool == false)
+        var renamed = app
+        renamed.name = "Renamed App"
+        let renameRequest = renamed.capabilityUpdateParameters(comparedTo: app)
+        precondition(renameRequest["name"] as? String == "Renamed App")
+        precondition(renameRequest["appIdId"] as? String == app.identifier)
+        precondition(renamed.changedFeatures(comparedTo: app).isEmpty)
+        precondition(app.capabilityUpdateParameters(comparedTo: app)["name"] == nil)
         let encoded = try PropertyListSerialization.data(fromPropertyList: wire, format: .xml, options: 0)
         let decoded = try PropertyListSerialization.propertyList(from: encoded, format: nil) as! [String: Any]
         precondition((decoded["entitlements"] as? [String: Any])?[Entitlement.increasedMemoryLimit.rawValue] as? Bool == true)

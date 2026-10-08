@@ -13,6 +13,10 @@ struct AppIDsListView: View {
     @ObservedObject var viewModel: DeveloperServicesViewModel
     weak var presentingViewController: UIViewController?
 
+    @State private var selectedAppID: ALTAppID?
+    @State private var showInfo = false
+    @State private var showEditor = false
+    @State private var showProfile = false
     @State private var searchText = ""
     @State private var showRegisterSheet = false
     @State private var newAppIDName = ""
@@ -92,8 +96,16 @@ struct AppIDsListView: View {
                                 SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
                         }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            SwiftUI.Button("Info") { selectedAppID = appID; showInfo = true }.tint(.gray)
+                            SwiftUI.Button("Edit") { selectedAppID = appID; showEditor = true }.tint(.accentColor)
+                            SwiftUI.Button("Create Profile") { selectedAppID = appID; showProfile = true }.tint(.accentColor)
+                        }
                         #endif
                         .contextMenu {
+                            SwiftUI.Button("Info") { selectedAppID = appID; showInfo = true }
+                            SwiftUI.Button("Edit") { selectedAppID = appID; showEditor = true }
+                            SwiftUI.Button("Create Profile") { selectedAppID = appID; showProfile = true }
                             SwiftUI.Button(role: .destructive) {
                                 appIDToDelete = appID
                                 showDeleteConfirmation = true
@@ -182,6 +194,22 @@ struct AppIDsListView: View {
                 },
                 secondaryButton: .cancel()
             )
+        }
+        .sheet(isPresented: $showInfo) {
+            NavigationStack { if let appID = selectedAppID {
+                AppIDInfoView(appID: appID)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { showInfo = false } } }
+            } }
+        }
+        .sheet(isPresented: $showEditor) {
+            NavigationStack { if let appID = selectedAppID {
+                AppIDDetailView(appID: appID, viewModel: viewModel, presentingViewController: presentingViewController)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { SwiftUI.Button("Done") { showEditor = false } } }
+            } }
+        }
+        .sheet(isPresented: $showProfile) {
+            CreateManualProfileView(viewModel: viewModel, presentingViewController: presentingViewController,
+                appIDIdentifier: selectedAppID?.identifier ?? "")
         }
         .developerServicesToast(viewModel: viewModel)
     }

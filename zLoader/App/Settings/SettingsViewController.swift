@@ -95,8 +95,6 @@ extension SettingsViewController
             rows.append(contentsOf: [
                 .connectionConfig,
                 .networkDiscovery,
-                .profileManagement,
-                .certificateManagement,
                 .backupAndRestore,
                 .userCustomizations
             ])
@@ -480,7 +478,7 @@ private extension SettingsViewController
         guard self.isViewLoaded else { return }
         let typeIndexPath = IndexPath(row: 2, section: Section.account.rawValue)
         if let typeCell = self.tableView.cellForRow(at: typeIndexPath) as? InsetGroupTableViewCell {
-            typeCell.style = (self.accountStatus == .completed) ? .bottom : .middle
+            typeCell.style = .middle
         }
     }
     
@@ -939,8 +937,8 @@ extension SettingsViewController
     {
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 52 }
         if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return UITableView.automaticDimension }
-        if Section.allCases[indexPath.section] == .account && indexPath.row == 3 { return 52 }
-        if Section.allCases[indexPath.section] == .account && indexPath.row == 4 {
+        if Section.allCases[indexPath.section] == .account && (indexPath.row == 3 || indexPath.row == 4) { return 52 }
+        if Section.allCases[indexPath.section] == .account && indexPath.row == 5 {
             return AccountVerificationRow.preferredHeight
         }
         let effectiveIndexPath: IndexPath
@@ -960,7 +958,7 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .account {
             if indexPath.row == 2, let insetCell = cell as? InsetGroupTableViewCell {
                 insetCell.style = .middle
-            } else if indexPath.row == 4, let actionCell = cell as? AccountVerificationRow {
+            } else if indexPath.row == 5, let actionCell = cell as? AccountVerificationRow {
                 actionCell.style = .bottom
                 actionCell.backgroundColor = .clear
                 actionCell.contentView.backgroundColor = .clear
@@ -995,7 +993,7 @@ extension SettingsViewController
         {
         case _ where isSectionHidden(section): return 0
         case .signIn: return (self.activeTeam == nil) ? 1 : 0
-        case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 4 : 5)
+        case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 5 : 6)
         case .display: return 1
         case .appRefresh: return AppRefreshRow.allCases.count + 1
         case .techyThings: return TechyThingsRow.allCases.count + 1
@@ -1075,7 +1073,7 @@ extension SettingsViewController
 
         if Section.allCases[indexPath.section] == .account && indexPath.row == 3 {
             let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
-            cell.style = accountStatus == .completed ? .bottom : .middle
+            cell.style = .middle
             cell.isSelectable = true
             cell.textLabel?.text = NSLocalizedString("Signing Identities", comment: "")
             cell.accessoryType = .disclosureIndicator
@@ -1083,6 +1081,18 @@ extension SettingsViewController
             return cell
         }
         if Section.allCases[indexPath.section] == .account && indexPath.row == 4 {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.style = accountStatus == .completed ? .bottom : .middle
+            let paid = self.activeTeam?.type.isPaid == true
+            cell.isSelectable = paid
+            cell.textLabel?.text = NSLocalizedString("Apple Developer Portal", comment: "")
+            cell.accessoryType = .disclosureIndicator
+            cell.textLabel?.textColor = paid ? .label : .tertiaryLabel
+            decorateSettingsCell(cell)
+            cell.imageView?.tintColor = paid ? .settingsSymbol : .tertiaryLabel
+            return cell
+        }
+        if Section.allCases[indexPath.section] == .account && indexPath.row == 5 {
             let cell = tableView.dequeueReusableCell(withIdentifier: AccountVerificationRow.reuseIdentifier) as? AccountVerificationRow
                 ?? AccountVerificationRow()
             cell.configure(with: self.accountStatus)
@@ -1228,7 +1238,9 @@ extension SettingsViewController
             tableView.deselectRow(at: indexPath, animated: true)
             if indexPath.row == 3 {
                 navigationController?.pushViewController(ZLoaderHostingController(rootView: SigningIdentitiesView()), animated: true)
-            } else if indexPath.row == 4 {
+            } else if indexPath.row == 4, self.activeTeam?.type.isPaid == true {
+                navigationController?.pushViewController(ZLoaderHostingController(rootView: DeveloperServicesView(presentingViewController: self)), animated: true)
+            } else if indexPath.row == 5 {
                 self.resolvePendingAccountActions()
             }
         case .appRefresh:

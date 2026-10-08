@@ -14,6 +14,8 @@ struct AppIDDetailView: View {
     @ObservedObject var viewModel: DeveloperServicesViewModel
     weak var presentingViewController: UIViewController?
 
+    @State private var editedName = ""
+    @State private var hasModifiedName = false
     @State private var selectedGroupIDs: Set<String> = []
     @State private var hasModifiedGroups = false
     @State private var isSaving = false
@@ -34,7 +36,8 @@ struct AppIDDetailView: View {
     var body: some View {
         List {
             Section(header: Text("App ID Metadata")) {
-                InfoRow(label: "Name", value: currentAppID.name)
+                TextField("Name", text: $editedName)
+                    .onChange(of: editedName) { _, value in hasModifiedName = value != currentAppID.name }
                 InfoRow(label: "Bundle Identifier", value: currentAppID.bundleIdentifier)
                 InfoRow(label: "App ID (Identifier)", value: currentAppID.identifier)
                 if let expiration = currentAppID.expirationDate {
@@ -149,12 +152,13 @@ struct AppIDDetailView: View {
                     }
                 }
                 .accessibilityLabel(Text("Save Changes"))
-                .disabled(isSaving || viewModel.isActionLoading || !(hasModifiedFeatures || hasModifiedGroups))
+                .disabled(isSaving || viewModel.isActionLoading || !(hasModifiedFeatures || hasModifiedGroups || hasModifiedName) || editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .disabled(isSaving)
         .labelStyle(.titleOnly)
         .onAppear {
+            if !hasModifiedName { editedName = currentAppID.name }
             initializeSelectedGroups()
         }
         .refreshable {
@@ -172,10 +176,12 @@ struct AppIDDetailView: View {
         defer { isSaving = false }
         // Apple exposes separate mutations. Keep unsaved changes when either fails;
         // successfully saved capabilities are not submitted again on a retry.
-        if hasModifiedFeatures {
-            guard await viewModel.updateCapabilities(for: currentAppID, features: editedFeatures) else { return }
+        if hasModifiedFeatures || hasModifiedName {
+            guard await viewModel.updateCapabilities(for: currentAppID, features: editedFeatures,
+                name: editedName.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
             editedFeatures = [:]
             hasModifiedFeatures = false
+            hasModifiedName = false
         }
         if hasModifiedGroups {
             let groups = viewModel.appGroups.filter { selectedGroupIDs.contains($0.identifier) }
@@ -226,5 +232,29 @@ struct AppIDDetailView: View {
         case .increasedDebuggingMemoryLimit: return "Increased Debugging Memory Limit"
         default: return feature.rawValue
         }
+    }
+}
+
+struct AppIDInfoView: View {
+    let appID: ALTAppID
+    var body: some View {
+        List {
+            Section("App ID Metadata") {
+                LabeledContent("Name", value: appID.name)
+                LabeledContent("Bundle Identifier", value: appID.bundleIdentifier)
+                LabeledContent("App ID (Identifier)", value: appID.identifier)
+                if let expiration = appID.expirationDate { LabeledContent("Expires") { Text(expiration, style: .date) } }
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section("Capabilities & Features") {
+                ForEach(appID.features.sorted { $0.key.rawValue < $1.key.rawValue }, id: \.key.rawValue) { feature, value in
+                    LabeledContent(feature.rawValue, value: value)
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
+            Section("Requested Entitlements") {
+                ForEach(appID.entitlements.sorted { $0.key < $1.key }, id: \.key) { key, value in
+                    LabeledContent(key, value: value)
+                }
+            }.listRowBackground(ZLoaderGlassBackground())
+        }.navigationTitle("App ID Details").textSelection(.enabled)
     }
 }

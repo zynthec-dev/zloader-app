@@ -13,6 +13,9 @@ struct AppGroupsListView: View {
     @ObservedObject var viewModel: DeveloperServicesViewModel
     weak var presentingViewController: UIViewController?
 
+    @State private var groupForInfo: ALTAppGroup?
+    @State private var showInfo = false
+    @State private var showProfile = false
     @State private var searchText = ""
     @State private var showCreateSheet = false
     @State private var newGroupName = ""
@@ -89,6 +92,10 @@ struct AppGroupsListView: View {
                                 SettingsEntryLabel(title: "Delete", systemImage: "trash")
                             }
 
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            SwiftUI.Button("Info") { groupForInfo = group; showInfo = true }.tint(.gray)
+                            SwiftUI.Button("Create Profile") { showProfile = true }.tint(.accentColor)
                             SwiftUI.Button {
                                 editGroupName = group.name
                                 groupToEdit = group
@@ -99,6 +106,8 @@ struct AppGroupsListView: View {
                         }
                         #endif
                         .contextMenu {
+                            SwiftUI.Button("Info") { groupForInfo = group; showInfo = true }.tint(.gray)
+                            SwiftUI.Button("Create Profile") { showProfile = true }.tint(.accentColor)
                             SwiftUI.Button {
                                 editGroupName = group.name
                                 groupToEdit = group
@@ -272,6 +281,21 @@ struct AppGroupsListView: View {
                 },
                 secondaryButton: .cancel()
             )
+        }
+        .sheet(isPresented: $showInfo) {
+            NavigationStack {
+                List { if let group = groupForInfo {
+                    Section("App Group") {
+                        LabeledContent("Name", value: group.name)
+                        LabeledContent("Identifier", value: group.groupIdentifier)
+                        LabeledContent("Group ID", value: group.identifier)
+                    }.listRowBackground(ZLoaderGlassBackground())
+                } }.navigationTitle("Info")
+                .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { showInfo = false } } }
+            }
+        }
+        .sheet(isPresented: $showProfile) {
+            CreateManualProfileView(viewModel: viewModel, presentingViewController: presentingViewController)
         }
         .developerServicesToast(viewModel: viewModel)
     }

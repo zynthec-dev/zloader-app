@@ -75,6 +75,10 @@ final class EmbeddedTunnel {
             ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == providerID
         } ?? NETunnelProviderManager()
         manager = selected
+        if selected.localizedDescription != "zLoader Local Tunnel" {
+            selected.localizedDescription = "zLoader Local Tunnel"
+            try await selected.saveToPreferences()
+        }
         if selected.connection.status == .connected {
             // Restore the exact routed peer after relaunch or a network change.
             // A connected provider does not imply that the host's settings cache survived.
@@ -88,7 +92,7 @@ final class EmbeddedTunnel {
         }
         let config = NETunnelProviderProtocol()
         config.providerBundleIdentifier = providerID
-        config.serverAddress = "zLoader local device tunnel"
+        config.serverAddress = "zLoader Local Tunnel"
         let peer = UserDefaults.standard.string(forKey: "zLoader.internalPeer") ?? "10.7.0.1"
         let iface = UserDefaults.standard.string(forKey: "zLoader.internalInterface") ?? "10.7.1.1"
         guard isPrivateTunnelIPv4(peer), isPrivateTunnelIPv4(iface), peer != iface else {
@@ -97,7 +101,7 @@ final class EmbeddedTunnel {
         config.providerConfiguration = ["peer": peer, "interface": iface]
         ConnectionConfig.shared.overrideTunnelPeerIp = peer
         selected.protocolConfiguration = config
-        selected.localizedDescription = "zLoader"
+        selected.localizedDescription = "zLoader Local Tunnel"
         selected.isEnabled = true
         selected.isOnDemandEnabled = false
         try await selected.saveToPreferences()

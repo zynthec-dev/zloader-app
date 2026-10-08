@@ -496,7 +496,8 @@ private extension FetchProvisioningProfilesOperation{
     }
 
     func requestedEntitlements(for app: ALTApplication, team: ALTTeam) -> [String: Any] {
-        var entitlements = context.customEntitlementsByBundleID[app.bundleIdentifier] ?? app.entitlements
+        let editedHost = app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier ? context.customEntitlementsByBundleID[context.targetBundleIdentifier] : nil
+        var entitlements = editedHost ?? context.customEntitlementsByBundleID[app.bundleIdentifier] ?? app.entitlements
         // Host customization must not add host-only capabilities to extensions.
         if app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier {
             for (key, value) in context.additionalEntitlements { entitlements[key] = value }

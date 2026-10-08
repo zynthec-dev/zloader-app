@@ -51,13 +51,6 @@ struct DeveloperOptionsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 ZLoaderGlassGroup { HStack(alignment: .top, spacing: 12) {
-                    NavigationLink(destination: DeveloperServicesView()) {
-                        Text("Developer Portal")
-                            .font(.body).foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, minHeight: 76)
-                            .padding(.horizontal, 12)
-                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
-                    }
                     NavigationLink(destination: WirelessPairView()) {
                         Text("Wireless Pairing")
                             .font(.body).foregroundStyle(.primary)

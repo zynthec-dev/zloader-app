@@ -271,6 +271,7 @@ enum SettingsEntrySymbol {
     static func name(for title: String) -> String {
         let entries: [(String, String)] = [
             ("Signing Identities", "signature"),
+            ("Apple Developer Portal", "hammer.circle"),
             ("Name", "person"),
             ("Email", "envelope"),
             ("Type", "person.badge.shield.checkmark"),

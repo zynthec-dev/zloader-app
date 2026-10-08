@@ -11,6 +11,7 @@ import SwiftUI
 struct CacheManagementView: View {
     var signedIPAsOnly: Bool = false
     var onInstall: ((URL) -> Void)? = nil
+    @State private var detailsItem: CacheItem?
     @StateObject private var viewModel = CacheViewModel()
     @Environment(\.colorScheme) var colorScheme
     
@@ -54,7 +55,7 @@ struct CacheManagementView: View {
                                 .padding(.vertical, 4)
                         } else {
                             ForEach(viewModel.resignedApps) { item in
-                                CacheItemRow(item: item, tapToExport: true, onInstall: onInstall.map { install in { install(item.url) } }, onExport: {
+                                CacheItemRow(item: item, tapToExport: true, onDetails: { detailsItem = item }, onInstall: onInstall.map { install in { install(item.url) } }, onExport: {
                                     viewModel.activeExportURL = item.url
                                 }, onDelete: {
                                     viewModel.deleteItem(item)
@@ -121,6 +122,12 @@ struct CacheManagementView: View {
                 }
             )
         }
+        .sheet(item: $detailsItem) { item in
+            NavigationStack {
+                SignedIPADetailView(url: item.url)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { detailsItem = nil } } }
+            }
+        }
         .sheet(isPresented: Binding<Bool>(
             get: { viewModel.activeExportURL != nil },
             set: { if !$0 { viewModel.activeExportURL = nil } }
@@ -135,6 +142,7 @@ struct CacheManagementView: View {
 struct CacheItemRow: View {
     let item: CacheItem
     var tapToExport: Bool = false
+    var onDetails: (() -> Void)? = nil
     var onInstall: (() -> Void)? = nil
     let onExport: () -> Void
     let onDelete: () -> Void
@@ -168,6 +176,11 @@ struct CacheItemRow: View {
                     .fontWeight(.semibold)
                     .lineLimit(1)
                 
+                if tapToExport {
+                    Text("Signed").font(.caption2).foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.12), in: Capsule())
+                }
                 if let bundleID = item.bundleIdentifier {
                     Text(bundleID)
                         .font(.caption)
@@ -186,6 +199,7 @@ struct CacheItemRow: View {
         .contentShape(Rectangle())
         .onTapGesture { if tapToExport { onExport() } }
         .contextMenu {
+            if let onDetails { SwiftUI.Button(action: onDetails) { Label("Details", systemImage: "info.circle") } }
             if let onInstall {
                 SwiftUI.Button(action: onInstall) {
                     Label("Install IPA", systemImage: "square.and.arrow.down")
@@ -197,6 +211,52 @@ struct CacheItemRow: View {
             SwiftUI.Button(role: .destructive, action: onDelete) {
                 Label(tapToExport ? NSLocalizedString("Delete IPA", comment: "") : NSLocalizedString("Delete Cache", comment: ""), systemImage: "trash")
             }
+        }
+    }
+}
+
+struct SignedIPADetailView: View {
+    let url: URL
+    @State private var inspection: SignedIPAInspection?
+    @State private var error: String?
+    var body: some View {
+        List {
+            if let inspection {
+                Section("App") {
+                    LabeledContent("Name", value: inspection.name)
+                    LabeledContent("Bundle Identifier", value: inspection.bundleID)
+                    LabeledContent("Signed Components", value: String(inspection.components.count))
+                }.listRowBackground(ZLoaderGlassBackground())
+                ForEach(inspection.components) { component in
+                    Section {
+                        LabeledContent("Signing Type") { Text(LocalizedStringKey(component.kind)) }
+                        LabeledContent("Team", value: component.team)
+                        LabeledContent("Provisioning Profile", value: component.profile)
+                        if let expires = component.expires { LabeledContent("Expires") { Text(expires, style: .date) } }
+                        DisclosureGroup("Authorized Devices (\(component.devices.count))") {
+                            ForEach(component.devices, id: \.self) { Text(verbatim: $0).font(.caption).textSelection(.enabled) }
+                        }
+                        DisclosureGroup("Authorized Certificates") {
+                            ForEach(component.certificates, id: \.self) { Text(verbatim: $0).font(.caption).textSelection(.enabled) }
+                        }
+                        DisclosureGroup("Signed Entitlements") {
+                            ForEach(component.entitlements, id: \.0) { key, value in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(verbatim: key).font(.caption)
+                                    Text(verbatim: value).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                                }
+                            }
+                        }
+                    } header: { Text(verbatim: component.name + " · " + component.id) }
+                    .listRowBackground(ZLoaderGlassBackground())
+                }
+                Section { Text("These values are read from the saved IPA. A profile authorizes its listed devices and certificates; this view does not verify installation on another device.").font(.footnote).foregroundStyle(.secondary) }
+            } else if let error { Text(verbatim: error).foregroundStyle(.red) }
+            else { ProgressView() }
+        }.navigationTitle("Signing Details")
+        .task {
+            do { inspection = try await Task.detached { try SignedIPAInspection.read(url) }.value }
+            catch { self.error = error.localizedDescription }
         }
     }
 }

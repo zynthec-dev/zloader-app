@@ -10,7 +10,13 @@ import SwiftUI
 import SideSign
 import UniformTypeIdentifiers
 
+enum CertificateManagerAction: String, Identifiable {
+    case create, importCertificate
+    var id: String { rawValue }
+}
+
 struct CertificatesView: View {
+    var initialAction: CertificateManagerAction? = nil
     weak var presentingViewController: UIViewController?
 
     @StateObject private var viewModel = CertificatesViewModel()
@@ -94,7 +100,7 @@ struct CertificatesView: View {
                     }
                 }
             }
-            .navigationTitle("Certificates & Keys")
+            .navigationTitle("Certificates")
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
             .toolbar {
@@ -126,6 +132,8 @@ struct CertificatesView: View {
                 guard !hasInitialLoaded else { return }
                 hasInitialLoaded = true
                 viewModel.loadCertificates(presentingViewController: nil)
+                if initialAction == .create { showCreateSheet = true }
+                if initialAction == .importCertificate { importCertificatesAction() }
             }
 
             if viewModel.isLoading { LoadingOverlay() }
@@ -158,6 +166,14 @@ struct CertificatesView: View {
                 isPresented: $showCreateSheet
             )
         }
+        .alert("Revoke Certificate", isPresented: $showRevokeConfirmation) {
+            SwiftUI.Button("Revoke", role: .destructive) {
+                if let cert = certificateToRevoke {
+                    viewModel.revokeCertificate(cert, keepLocal: false, presentingViewController: presentingViewController)
+                }
+            }
+            SwiftUI.Button("Cancel", role: .cancel) {}
+        } message: { Text("Are you sure you want to revoke this certificate? This will permanently delete the certificate on Apple's servers.") }
         .alert("Deactivate Certificate", isPresented: $showDeactivateConfirmation) {
             SwiftUI.Button("Deactivate", role: .destructive) { viewModel.deactivateActiveCertificate() }
             SwiftUI.Button("Cancel", role: .cancel) {}
@@ -329,26 +345,8 @@ struct CertificatesView: View {
     }
 
     private func presentRevokeAlert(for cert: ALTX509Certificate) {
-        let contentVC = RevokeAlertViewController()
-
-        let alertController = UIAlertController(
-            title: NSLocalizedString("Revoke Certificate", comment: ""),
-            message: NSLocalizedString("Are you sure you want to revoke this certificate? This will permanently delete the certificate on Apple's servers.", comment: ""),
-            preferredStyle: .alert
-        )
-
-        alertController.setValue(contentVC, forKey: "contentViewController")
-
-        let cancelAction = UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel, handler: nil)
-        let revokeAction = UIAlertAction(title: NSLocalizedString("Revoke", comment: ""), style: .destructive) { _ in
-            let keepLocal = contentVC.isKeepLocalChecked
-            viewModel.revokeCertificate(cert, keepLocal: keepLocal, presentingViewController: presentingViewController)
-        }
-
-        alertController.addAction(cancelAction)
-        alertController.addAction(revokeAction)
-
-        presentingViewController?.present(alertController, animated: true)
+        certificateToRevoke = cert
+        showRevokeConfirmation = true
     }
 
     private func importPrivateKeyAction(for cert: ALTX509Certificate) {
@@ -475,6 +473,9 @@ private struct CreateCertificateSheetView: View {
 struct AccountCertificatesView: View {
     @StateObject private var viewModel = CertificatesViewModel()
 
+    @State private var revokeTarget: ALTX509Certificate?
+    @State private var confirmsRevoke = false
+
     var body: some View {
         List {
             Section {
@@ -483,19 +484,32 @@ struct AccountCertificatesView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(viewModel.portalCertificates, id: \.serialNumber) { cert in
-                    VStack(alignment: .leading, spacing: 8) {
+                    NavigationLink {
+                        CertificateDetailView(certificate: cert, viewModel: viewModel)
+                    } label: { VStack(alignment: .leading, spacing: 8) {
                         Text(cert.name).font(.headline)
                         Text(cert.certificateTypeName ?? cert.certificateType ?? cert.serialNumber)
                             .font(.caption).foregroundStyle(.secondary)
-                        SwiftUI.Button("In zLoader importieren") {
-                            viewModel.installPortalCertificate(cert)
-                        }.buttonStyle(.borderless)
-                        SwiftUI.Button("Zertifikat als Datei herunterladen") {
-                            CertificateExporter.sharePublicCertAsDER(cert, onShare: { viewModel.shareURL = $0 }) {
-                                viewModel.errorMessage = $0
-                            }
-                        }.buttonStyle(.borderless)
-                    }.padding(.vertical, 4)
+
+                    }.padding(.vertical, 4) }
+                    #if !os(tvOS)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        SwiftUI.Button("Revoke", role: .destructive) { revokeTarget = cert; confirmsRevoke = true }
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        SwiftUI.Button("Download") { viewModel.installPortalCertificate(cert) }.tint(.accentColor)
+                        SwiftUI.Button("Share") {
+                            CertificateExporter.sharePublicCertAsDER(cert, onShare: { viewModel.shareURL = $0 }) { viewModel.errorMessage = $0 }
+                        }.tint(.gray)
+                    }
+                    #endif
+                    .contextMenu {
+                        SwiftUI.Button("Download") { viewModel.installPortalCertificate(cert) }
+                        SwiftUI.Button("Share") {
+                            CertificateExporter.sharePublicCertAsDER(cert, onShare: { viewModel.shareURL = $0 }) { viewModel.errorMessage = $0 }
+                        }
+                        SwiftUI.Button("Revoke", role: .destructive) { revokeTarget = cert; confirmsRevoke = true }
+                    }
                 }
             } footer: {
                 Group {
@@ -503,6 +517,12 @@ struct AccountCertificatesView: View {
                 }
             }.listRowBackground(ZLoaderGlassBackground())
         }
+        .alert("Revoke Certificate", isPresented: $confirmsRevoke) {
+            SwiftUI.Button("Revoke", role: .destructive) {
+                if let cert = revokeTarget { viewModel.revokeCertificate(cert, keepLocal: false, presentingViewController: nil) }
+            }
+            SwiftUI.Button("Cancel", role: .cancel) {}
+        } message: { Text("Are you sure you want to revoke this certificate? This will permanently delete the certificate on Apple's servers.") }
         .navigationTitle("Certificates from Account")
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)

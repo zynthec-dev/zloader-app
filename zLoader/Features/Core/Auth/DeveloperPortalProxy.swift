@@ -124,7 +124,8 @@ public class DeveloperPortalProxy {
             throw PortalMutationError.updateNotConfirmed
         }
         let changes = appID.changedFeatures(comparedTo: current)
-        guard !changes.isEmpty else { return current }
+        let rename = appID.name != current.name
+        guard !changes.isEmpty || rename else { return current }
         let accepted = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
         // Signing verifies the Apple-signed profile, which is authoritative for
         // entitlements. The service flag list does not expose every entitlement.
@@ -139,8 +140,9 @@ public class DeveloperPortalProxy {
             var desired = confirmed
             desired.features.merge(changes) { _, requested in requested }
             missing = desired.changedFeatures(comparedTo: confirmed).keys.map(\.rawValue).sorted()
-            if missing.isEmpty { return confirmed }
+            if missing.isEmpty && (!rename || confirmed.name == appID.name) { return confirmed }
         }
+        if missing.isEmpty { throw PortalMutationError.updateNotConfirmed }
         throw PortalMutationError.capabilitiesNotConfirmed(missing)
     }
 
