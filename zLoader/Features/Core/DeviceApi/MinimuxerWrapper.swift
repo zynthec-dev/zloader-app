@@ -414,8 +414,13 @@ func installSelfUpdate(_ bundleId: String, appName: String?) async throws {
         try await minimuxer.core.installSelfApp(bundleId: bundleId, appName: appName) {
             // No timer or early exit: installation_proxy has acknowledged the
             // submitted package. iOS owns the replacement from this point on.
-            DispatchQueue.main.async { exit(EXIT_SUCCESS) }
+            // Terminate from this callback thread: dispatching to main can
+            // leave the old executable running while installation waits for it.
+            exit(EXIT_SUCCESS)
         }
+        // Some installer versions finish without a PercentComplete response.
+        // A successful return is also safe proof that the request was handled.
+        exit(EXIT_SUCCESS)
     }
     #endif
 }

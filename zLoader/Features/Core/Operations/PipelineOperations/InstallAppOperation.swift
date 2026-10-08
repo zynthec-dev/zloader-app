@@ -192,10 +192,14 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             }
         }
         do {
+            // Match SendAppOperation's actual choice. An absent IPA makes AFC
+            // transfer the app directory even when the preference is enabled.
+            let sentIPA = UserDefaults.standard.preferResignedIPA && self.context.ipaURL != nil
             if isSelfReinstall {
-                let appName = UserDefaults.standard.preferResignedIPA ? nil : resignedAppBundle.fileURL.lastPathComponent
+                let appName = sentIPA ? nil : resignedAppBundle.fileURL.lastPathComponent
+                self.debugLog("[InstallAppOperation] Handing self-update to installation_proxy (IPA: \(sentIPA))")
                 try await installSelfUpdate(bundleID, appName: appName)
-            } else if UserDefaults.standard.preferResignedIPA {
+            } else if sentIPA {
                 try await installIPA(bundleID)
             } else {
                 try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent)

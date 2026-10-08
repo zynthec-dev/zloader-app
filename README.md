@@ -18,6 +18,16 @@ The fixed, non-removable default source is
 [zLoader Source](https://zloader.zynthec.com). zLoader self-updates use its own
 `com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
 
+Self-updates hand the staged package to iOS's installation service before
+terminating the old process. The first progress response, including 0%, is an
+acknowledgement; waiting for positive progress can keep replacement stalled.
+The installer uses the same IPA/directory choice as the AFC transfer. Release
+0.7.46 fixes these paths, but a successful build does not establish device
+replacement. Validate on an iPhone by refreshing/updating from an installed
+0.7.46 or newer, reopening zLoader and checking the installed build and preserved
+app records. An older build's broken updater needs an initial manual replacement
+using the same app identity and App Group, without deleting the app.
+
 ## Build
 
 Requires macOS, Xcode and the pinned submodules:

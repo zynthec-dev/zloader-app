@@ -51,7 +51,7 @@ index 0a581fb..8590fbb 100644
          try await start(pairingFileContent: pairingFileContent, preferred: preferred)
      }
 diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
-index e9310d0..5b1e748 100644
+index e9310d0..a8c7bf7 100644
 --- a/DeviceGateway/idevice/IdeviceGateway.swift
 +++ b/DeviceGateway/idevice/IdeviceGateway.swift
 @@ -43,7 +43,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
@@ -221,7 +221,7 @@ index e9310d0..5b1e748 100644
          }
      }
  
-@@ -2353,6 +2417,83 @@ extension IdeviceGateway {
+@@ -2353,6 +2417,88 @@ extension IdeviceGateway {
          }
      }
  
@@ -252,12 +252,17 @@ index e9310d0..5b1e748 100644
 +                    plist_dict_set_item(options, "PackageType", plist_new_string("Developer"))
 +                }
 +                let path = "PublicStaging/\(bundleId)/\(appName ?? "app.ipa")"
++                debugLog("[IdeviceGateway] Submitting self-update package: \(path)")
 +                let error = path.withCString { pathPointer in
 +                    installation_proxy_install_with_callback(client, pathPointer, options, { progress, context in
-+                        guard let context, progress > 0 else { return }
++                        // Zero is a real response after Install was submitted,
++                        // not an uninitialized callback. Waiting for positive
++                        // progress can deadlock replacement of the running host.
++                        guard let context else { return }
 +                        let acknowledgement = Unmanaged<SelfInstallAcknowledgement>.fromOpaque(context).takeUnretainedValue()
 +                        if !acknowledgement.accepted {
 +                            acknowledgement.accepted = true
++                            debugLog("[IdeviceGateway] Self-update acknowledged at \(progress)%")
 +                            acknowledgement.onAccepted()
 +                        }
 +                    }, context)
