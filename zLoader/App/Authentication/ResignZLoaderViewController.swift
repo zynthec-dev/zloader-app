@@ -27,7 +27,7 @@ final class ResignZLoaderViewController: UIViewController
         self.placeholderView.textLabel.isHidden = true
         
         self.placeholderView.detailTextLabel.textAlignment = .left
-        self.placeholderView.detailTextLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        self.placeholderView.detailTextLabel.textColor = UIColor.secondaryLabel
         
         let isFreeTeam = self.isFreeTeam
         let reason = self.mismatchReason ?? (isFreeTeam ? .freeAccountLimitRevoked : .revoked)
@@ -71,14 +71,14 @@ final class ResignZLoaderViewController: UIViewController
         
         if let headerRange = fullText.range(of: header) {
             let nsRange = NSRange(headerRange, in: fullText)
-            attributedString.addAttribute(.foregroundColor, value: UIColor.white, range: nsRange)
+            attributedString.addAttribute(.foregroundColor, value: UIColor.label, range: nsRange)
         }
         
         self.placeholderView.detailTextLabel.attributedText = attributedString
         
         // Separator Line
         let separator = UIView()
-        separator.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        separator.backgroundColor = UIColor.separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         separator.heightAnchor.constraint(equalToConstant: 1).isActive = true
         
@@ -92,7 +92,7 @@ final class ResignZLoaderViewController: UIViewController
         // Reason Description
         let reasonTextLabel = UILabel()
         reasonTextLabel.text = reasonText
-        reasonTextLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        reasonTextLabel.textColor = UIColor.secondaryLabel
         reasonTextLabel.font = UIFont.systemFont(ofSize: 14)
         reasonTextLabel.numberOfLines = 0
         

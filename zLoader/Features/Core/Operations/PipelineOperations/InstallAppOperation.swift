@@ -168,7 +168,7 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
                         dict["expectedBuild"] = resignedAppBundle.infoPlist["CFBundleVersion"]
                         
                         if let finalData = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]) {
-                            try? finalData.write(to: jsonURL)
+                            try finalData.write(to: jsonURL, options: .atomic)
                             self.debugLog("[InstallAppOperation] Wrote recursively serialized staged self-reinstall metadata to JSON: \(jsonURL.path)")
                         }
                     }
@@ -180,9 +180,9 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         
         self.setProgress(30)
         
-        // Protect transport acquisition and the actual install call. For a self
-        // update, move to Home only inside the acquired transport lease, after
-        // package transfer. Do not exit, stop keepalive or use a suspension timer.
+        // Keep transport alive while submitting a self-update. The gateway's
+        // first acknowledged progress response hands replacement to iOS; only
+        // then may the host process terminate. Ordinary installs stay in-app.
         let backgroundTask = isSelfReinstall ? await MainActor.run {
             UIApplication.shared.beginBackgroundTask(withName: "SelfReinstall", expirationHandler: nil)
         } : UIBackgroundTaskIdentifier.invalid
@@ -192,14 +192,13 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             }
         }
         do {
-            if UserDefaults.standard.preferResignedIPA {
-                try await installIPA(bundleID) {
-                    if isSelfReinstall { await self.context.handler.installAppHandler.suspendToHomeScreen() }
-                }
+            if isSelfReinstall {
+                let appName = UserDefaults.standard.preferResignedIPA ? nil : resignedAppBundle.fileURL.lastPathComponent
+                try await installSelfUpdate(bundleID, appName: appName)
+            } else if UserDefaults.standard.preferResignedIPA {
+                try await installIPA(bundleID)
             } else {
-                try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent) {
-                    if isSelfReinstall { await self.context.handler.installAppHandler.suspendToHomeScreen() }
-                }
+                try await installAppBundle(bundleID, appName: resignedAppBundle.fileURL.lastPathComponent)
             }
         } catch {
             // A failed request must not be mistaken for a pending successful update

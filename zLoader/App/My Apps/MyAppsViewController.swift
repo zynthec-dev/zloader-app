@@ -372,10 +372,9 @@ class MyAppsViewController: UICollectionViewController
     {
         guard identifier == "showApp" else { return true }
         
-        guard let cell = sender as? UICollectionViewCell, let indexPath = self.collectionView.indexPath(for: cell) else { return true }
+        guard sender is InstalledAppCollectionViewCell else { return true }
         
-        let installedApp = self.dataSource.item(at: indexPath)
-        return !installedApp.isSideloaded
+        return false // Launcher cards open apps directly; details remain in their context menu.
     }
     
     @IBAction func unwindToMyAppsViewController(_ segue: UIStoryboardSegue)
@@ -573,9 +572,11 @@ private extension MyAppsViewController
                 cell.deactivateBadge?.transform = CGAffineTransform.identity.scaledBy(x: 0.33, y: 0.33)
             }
             
+            cell.layoutMargins = .zero
             cell.bannerView.button.configure(for: installedApp)
             cell.bannerView.button.isIndicatingActivity = false
             cell.bannerView.configure(for: installedApp, action: .custom(cell.bannerView.button.title(for: .normal) ?? ""))
+            cell.bannerView.isLauncherCard = true
             
             if cell.bundleIdentifier != installedApp.bundleIdentifier
             {
@@ -586,7 +587,7 @@ private extension MyAppsViewController
             
             let currentDate = Date()
             let isExpired = currentDate > installedApp.expirationDate
-            cell.bannerView.buttonLabel.isHidden = isExpired || installedApp.certificateStatus == .revoked
+            cell.bannerView.buttonLabel.isHidden = cell.bannerView.isLauncherCard || isExpired || installedApp.certificateStatus == .revoked
             cell.bannerView.buttonLabel.text = NSLocalizedString("Expires in", comment: "")
             
             cell.bannerView.button.removeTarget(self, action: nil, for: .primaryActionTriggered)
@@ -665,6 +666,8 @@ private extension MyAppsViewController
             
             cell.bannerView.button.isIndicatingActivity = false
             cell.bannerView.configure(for: installedApp, action: .custom(NSLocalizedString("ACTIVATE", comment: "")))
+            cell.bannerView.isLauncherCard = true
+            cell.layoutMargins = .zero
             
             cell.bannerView.button.tintColor = tintColor
             cell.bannerView.button.removeTarget(self, action: nil, for: .primaryActionTriggered)
@@ -1243,14 +1246,12 @@ private extension MyAppsViewController
 {
     func open(_ installedApp: InstalledApp)
     {
+        if UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) {
+            self.enableJIT(for: installedApp, launchBeforeAttaching: true)
+            return
+        }
         UIApplication.shared.open(installedApp.openAppURL) { success in
-            if success {
-                if UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) {
-                    self.enableJIT(for: installedApp)
-                }
-                return
-            }
-            ToastView(error: OperationError.openAppFailed(name: installedApp.name), opensLog: true).show(in: self)
+            if !success { ToastView(error: OperationError.openAppFailed(name: installedApp.name), opensLog: true).show(in: self) }
         }
     }
     
@@ -1864,7 +1865,7 @@ private extension MyAppsViewController
         }
     }
     
-    func enableJIT(for installedApp: InstalledApp) {
+    func enableJIT(for installedApp: InstalledApp, launchBeforeAttaching: Bool = false) {
         var backgroundTask = UIBackgroundTaskIdentifier.invalid
         backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "zLoader.EnableJIT") {
             if backgroundTask != .invalid {
@@ -1872,7 +1873,7 @@ private extension MyAppsViewController
                 backgroundTask = .invalid
             }
         }
-        AppManager.shared.enableJIT(for: installedApp) { result in
+        AppManager.shared.enableJIT(for: installedApp, launchBeforeAttaching: launchBeforeAttaching) { result in
             DispatchQueue.main.async {
                 if backgroundTask != .invalid {
                     UIApplication.shared.endBackgroundTask(backgroundTask)
@@ -1880,6 +1881,7 @@ private extension MyAppsViewController
                 }
                 switch result {
                 case .success:
+                    if launchBeforeAttaching { UIApplication.shared.open(installedApp.openAppURL) }
                     break
                 case .failure(let error):
                     ToastView(error: error, opensLog: true).show(in: self)
@@ -2181,6 +2183,11 @@ extension MyAppsViewController
             guard let cell = collectionView.cellForItem(at: indexPath) else { break }
             self.performSegue(withIdentifier: "showUpdate", sender: cell)
             
+        case .activeApps:
+            let installedApp = self.dataSource.item(at: indexPath)
+            if !installedApp.resignedBundleIdentifier.isZLoaderAppID { self.open(installedApp) }
+        case .inactiveApps:
+            self.activate(self.dataSource.item(at: indexPath))
         default: break
         }
     }
@@ -2196,7 +2203,10 @@ extension MyAppsViewController
             self.open(installedApp)
         }
         
-        let openMenu = UIMenu(title: "", options: .displayInline, children: [openAction])
+        let openWithJITAction = UIAction(title: NSLocalizedString("Open with JIT", comment: ""), image: UIImage(systemName: "bolt.fill")) { [weak self] _ in
+            self?.enableJIT(for: installedApp, launchBeforeAttaching: true)
+        }
+        let openMenu = UIMenu(title: "", options: .displayInline, children: [openAction, openWithJITAction])
         
         let refreshAction = UIAction(title: NSLocalizedString("Refresh", comment: ""), image: UIImage(systemName: "arrow.clockwise")) { (action) in
             self.refresh(installedApp)
@@ -2236,11 +2246,9 @@ extension MyAppsViewController
             self.remove(installedApp)
         }
         
-        let jitAction = UIAction(title: NSLocalizedString("Enable JIT Automatically", comment: ""), image: UIImage(systemName: "bolt"),
-            state: UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) ? .on : .off) { _ in
-            let enabled = !UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier)
-            UserDefaults.standard.setAutomaticJIT(enabled, for: installedApp.bundleIdentifier)
-            if enabled { self.open(installedApp) }
+        let jitAction = UIAction(title: NSLocalizedString("JIT Settings", comment: ""), image: UIImage(systemName: "gearshape")) { [weak self] _ in
+            let settings = PerAppJITSettingsView(bundleIdentifier: installedApp.bundleIdentifier, appName: installedApp.name)
+            self?.navigationController?.pushViewController(ZLoaderHostingController(rootView: settings), animated: true)
         }
         
         if (installedApp.bundleIdentifier == StoreApp.zloaderAppID || installedApp.resignedBundleIdentifier == Bundle.main.bundleIdentifier),
@@ -2551,6 +2559,9 @@ extension MyAppsViewController
 
 extension MyAppsViewController: UICollectionViewDelegateFlowLayout
 {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat { 12 }
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat { 12 }
+
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize
     {
         let section = Section.allCases[indexPath.section]
@@ -2581,7 +2592,9 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             return size
             
         case .activeApps, .inactiveApps:
-            return CGSize(width: collectionView.bounds.width, height: 88)
+            let available = collectionView.bounds.width - 32
+            let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : max(2, floor((available + 12) / 160))
+            return CGSize(width: floor((available - (columns - 1) * 12) / columns), height: columns == 1 ? 260 : 220)
         }
     }
     
@@ -2641,6 +2654,7 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
         let section = Section.allCases[section]
         switch section
         {
+        case .activeApps, .inactiveApps: return UIEdgeInsets(top: 12, left: 16, bottom: 20, right: 16)
         case .noUpdates where self.updatesDataSource.itemCount != 0: return .zero
         case .updates where self.updatesDataSource.itemCount == 0: return .zero
         default: return UIEdgeInsets(top: 12, left: 0, bottom: 20, right: 0)
@@ -3051,5 +3065,36 @@ extension MyAppsViewController {
             try? context.save()
         }
         self.resign(installedApp)
+    }
+}
+
+
+private struct PerAppJITSettingsView: View {
+    let bundleIdentifier: String
+    let appName: String
+    @State private var automaticJIT: Bool
+
+    init(bundleIdentifier: String, appName: String) {
+        self.bundleIdentifier = bundleIdentifier
+        self.appName = appName
+        // A one-time seed for this editing session; updates persist immediately.
+        _automaticJIT = State(initialValue: UserDefaults.standard.automaticJITEnabled(for: bundleIdentifier))
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable JIT Automatically", isOn: $automaticJIT)
+            } header: {
+                Text(appName)
+            } footer: {
+                Text("Opening this app from zLoader launches it with JIT. Changing this setting does not launch the app. For launches outside zLoader, use a Shortcuts automation.")
+            }
+            .listRowBackground(ZLoaderGlassBackground())
+        }
+        .navigationTitle("JIT Settings")
+        .onChange(of: automaticJIT) { _, enabled in
+            UserDefaults.standard.setAutomaticJIT(enabled, for: bundleIdentifier)
+        }
     }
 }

@@ -24,6 +24,7 @@ final class NewsCollectionViewCell: UICollectionViewCell
         
         self.contentView.preservesSuperviewLayoutMargins = true
         
+        ZLoaderCardMaterial.install(in: self.contentBackgroundView, cornerRadius: 30)
         self.contentBackgroundView.layer.cornerRadius = 30
         self.contentBackgroundView.clipsToBounds = true
         

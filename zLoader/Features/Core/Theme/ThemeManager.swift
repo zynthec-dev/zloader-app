@@ -203,6 +203,7 @@ final class ZLoaderHostingController<Content: View>: UIHostingController<ZLoader
 extension ThemeManager {
     @MainActor func installAppearance() {
         UITableView.appearance().backgroundColor = .settingsBackground
+        UICollectionView.appearance().backgroundColor = .settingsBackground
         UITextField.appearance().tintColor = .altPrimary
         UITextField.appearance().backgroundColor = .settingsField
         UISwitch.appearance().onTintColor = .altPrimary
@@ -226,6 +227,23 @@ extension ThemeManager {
             if let button = view as? UIButton {
                 button.setTitleColor(UIColor.altPrimary.contrastingText, for: .normal)
             }
+        }
+        if let table = view as? UITableView {
+            table.backgroundColor = .settingsBackground
+            table.separatorStyle = .none
+        }
+        if let collection = view as? UICollectionView { collection.backgroundColor = .settingsBackground }
+        // SwiftUI list backgrounds already own a material; UIKit rows need one
+        // as well. Inset rows preserve their own margins and glass surface.
+        if let cell = view as? UITableViewCell, !(cell is InsetGroupTableViewCell) {
+            let glass = (cell.backgroundView as? UIVisualEffectView) ?? UIVisualEffectView()
+            glass.layer.cornerRadius = 20
+            glass.clipsToBounds = true
+            glass.isUserInteractionEnabled = false
+            ZLoaderCardMaterial.apply(to: glass)
+            cell.backgroundView = glass
+            cell.backgroundColor = .clear
+            cell.contentView.backgroundColor = .clear
         }
         if let field = view as? UITextField {
             if field.tag == AddSourceTextFieldCell.sourceURLFieldTag {

@@ -408,11 +408,29 @@ func debugApp(_ appId: String) async throws {
     #endif
 }
 
-func safeDebugApp(_ appId: String) async throws {
+func installSelfUpdate(_ bundleId: String, appName: String?) async throws {
+    #if !targetEnvironment(simulator)
+    try await withDeviceTransport {
+        try await minimuxer.core.installSelfApp(bundleId: bundleId, appName: appName) {
+            // No timer or early exit: installation_proxy has acknowledged the
+            // submitted package. iOS owns the replacement from this point on.
+            DispatchQueue.main.async { exit(EXIT_SUCCESS) }
+        }
+    }
+    #endif
+}
+
+func safeLaunchAppWithJIT(_ appId: String) async throws {
+    #if !targetEnvironment(simulator)
     try await ZLoaderTransport.withLease {
         try await ensureMinimuxerReady()
-        try await debugApp(appId)
+        try await minimuxer.core.launchAppWithJIT(appId: appId)
     }
+    #endif
+}
+
+func safeDebugApp(_ appId: String) async throws {
+    try await debugApp(appId)
 }
 
 func attachDebugger(_ pid: UInt32) async throws {

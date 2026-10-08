@@ -21,9 +21,11 @@ enum SideJITServerErrorType: Error {
 final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationContext, Bool>, @unchecked Sendable
 {
     let installedApp: InstalledApp
+    let launchBeforeAttaching: Bool
 
-    init(installedApp: InstalledApp, context: StandaloneOperationContext) throws {
+    init(installedApp: InstalledApp, context: StandaloneOperationContext, launchBeforeAttaching: Bool = false) throws {
         self.installedApp = installedApp
+        self.launchBeforeAttaching = launchBeforeAttaching
         try super.init(context: context)
     }
 
@@ -51,6 +53,14 @@ final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationConte
 
         let (targetBundleId, appName) = await dbContext.performWithObject(installedApp) { installedApp in
             (installedApp.resignedBundleIdentifier, installedApp.name)
+        }
+
+        if launchBeforeAttaching {
+            self.setProgress(30)
+            // One transport lease and one launch/attach request, without opening
+            // the app first or repeating an identical failed request three times.
+            try await safeLaunchAppWithJIT(targetBundleId)
+            return
         }
 
         if #available(iOS 17, *), userdefaults.isSideJITServerEnabled {
@@ -88,19 +98,7 @@ final class EnableJITOperation: BaseStandaloneOperation<StandaloneOperationConte
         } else {
             self.setProgress(30)
 
-            var lastError: Error?
-            let maxRetries = 3
-            for retry in 0..<maxRetries {
-                let percent = 30 + Int64(Double(retry) / Double(maxRetries) * 60.0)
-                self.setProgress(percent)
-                do {
-                    try await safeDebugApp(targetBundleId)
-                    return
-                } catch {
-                    lastError = error
-                }
-            }
-            if let error = lastError { throw error }
+            try await safeDebugApp(targetBundleId)
         }
     }
 }
@@ -154,9 +152,7 @@ func enableJITSideJITServer(serverURL: URL, bundleIdentifier: String, appName: S
 
     let cleanString = dataString.trimmingCharacters(in: CharacterSet(charactersIn: "\"'\n\r\t "))
 
-    if cleanString.contains("Enabled JIT for") {
-        await notifyJITSuccess(appName: appName)
-    } else {
+    if !cleanString.contains("Enabled JIT for") {
         let errorType: SideJITServerErrorType = cleanString.contains("Could not find device")
             ? .deviceNotFound
             : .other(cleanString)

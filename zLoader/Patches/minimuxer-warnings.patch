@@ -12,10 +12,17 @@ index 2501584..5d67b58 100644
          bundlePath: String? = nil,
          executableName: String? = nil,
 diff --git a/DeviceGateway/DeviceGatewayAPI.swift b/DeviceGateway/DeviceGatewayAPI.swift
-index 0a581fb..93fd936 100644
+index 0a581fb..8590fbb 100644
 --- a/DeviceGateway/DeviceGatewayAPI.swift
 +++ b/DeviceGateway/DeviceGatewayAPI.swift
-@@ -59,6 +59,8 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
+@@ -54,11 +54,15 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
+     func installAppBundle(bundleId: String, appName: String) async throws
+     func wipeContainer(identifier: String) async throws
+ 
++    func installSelfApp(bundleId: String, appName: String?, onAccepted: @escaping @Sendable () -> Void) async throws
++    func launchAppWithJIT(appId: String) async throws
+     func debugApp(appId: String) async throws
+     func debugProcess(pid: UInt32) async throws
  
      func performHeartbeat(interval: UInt64) async throws -> UInt64
  
@@ -24,10 +31,18 @@ index 0a581fb..93fd936 100644
      func startWirelessPair(
          hostName: String,
          hostModel: String,
-@@ -84,6 +86,10 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
+@@ -84,6 +88,18 @@ public protocol DeviceGatewayAPI: AnyObject, Sendable {
  }
  
  public extension DeviceGatewayAPI {
++    func installSelfApp(bundleId: String, appName: String?, onAccepted: @escaping @Sendable () -> Void) async throws {
++        throw NSError(domain: "Minimuxer.SelfUpdate", code: 1, userInfo: [NSLocalizedDescriptionKey: "Self-update requires the Idevice backend."])
++    }
++
++    func launchAppWithJIT(appId: String) async throws {
++        throw NSError(domain: "Minimuxer.JITLaunch", code: 1, userInfo: [NSLocalizedDescriptionKey: "Launch with JIT requires the Idevice backend."])
++    }
++
 +    func createLockdownPairing(targetIP: String, hostName: String, hostID: String, systemBUID: String) async throws -> Data {
 +        throw NSError(domain: "Minimuxer.LockdownPairing", code: 1, userInfo: [NSLocalizedDescriptionKey: "Local Lockdown pairing requires the Idevice backend. Existing Lockdown files can still be imported."])
 +    }
@@ -36,7 +51,7 @@ index 0a581fb..93fd936 100644
          try await start(pairingFileContent: pairingFileContent, preferred: preferred)
      }
 diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
-index e9310d0..7363f20 100644
+index e9310d0..5b1e748 100644
 --- a/DeviceGateway/idevice/IdeviceGateway.swift
 +++ b/DeviceGateway/idevice/IdeviceGateway.swift
 @@ -43,7 +43,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
@@ -104,7 +119,25 @@ index e9310d0..7363f20 100644
      public override func setLogging(_ enabled: Bool) {
          let lowerBoundLevel = IdeviceLogLevel(rawValue: 0)
          #if DEBUG
-@@ -2014,7 +2063,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -1233,7 +1282,16 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+ 
+         if pairingFileType == .lockdown {
+             verboseLog("[IdeviceGateway] debugApp() attempting legacy lockdownd debugserver via launchAppPre17")
+-            try launchAppPre17(appId: appId)
++            let (_, bundlePath, executableName) = try getAppPaths(appId: appId)
++            let port = try startDebugserverService()
++            let client = try connectDebugProxy(port: port)
++            defer { debug_proxy_free(client) }
++            guard let pid = try findProcessPID(appId: appId, bundlePath: bundlePath, executableName: executableName,
++                sendCommand: { name, args in try self.sendDebugProxyCommand(client: client, name: name, args: args) }) else {
++                throw IdeviceGatewayError(.serviceError, reason: "App is not running. Use Open with JIT to launch it.")
++            }
++            try sendDebugProxyCommand(client: client, name: "vAttach;\(String(format: "%x", pid))", args: [])
++            try sendDebugProxyCommand(client: client, name: "D", args: [])
+         } else {
+             let (_, bundlePath, executableName) = try getAppPaths(appId: appId)
+             try performWithService(
+@@ -2014,7 +2072,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          hostModel: String,
          outPath: String,
          resolveFileName: ((String, String) -> String)?,
@@ -113,7 +146,7 @@ index e9310d0..7363f20 100644
      ) throws -> PairedDeviceRecord {
          debugLog("[IdeviceGateway] triggerWirelessPair() called, targetIp: \(targetIp), targetPort: \(targetPort), hostName: \(hostName), hostModel: \(hostModel), outPath: \(outPath)")
          
-@@ -2027,8 +2076,8 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2027,8 +2085,8 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
  
          class PinContext {
@@ -124,7 +157,7 @@ index e9310d0..7363f20 100644
                  self.onRequestPin = onRequestPin
              }
          }
-@@ -2051,18 +2100,24 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2051,18 +2109,24 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
                          guard let context = context else { return nil }
                          let ctxObj = Unmanaged<PinContext>.fromOpaque(context).takeUnretainedValue()
                          let sema = DispatchSemaphore(value: 0)
@@ -152,7 +185,7 @@ index e9310d0..7363f20 100644
                          return UnsafePointer(p)
                      },
                      pinContextPtr,
-@@ -2134,7 +2189,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2134,7 +2198,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
              if let err = err {
                  let msg = self.getErrorMessage(from: err)
                  debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container failed: \(msg)")
@@ -161,7 +194,7 @@ index e9310d0..7363f20 100644
                  throw IdeviceGatewayError(.serviceError, reason: "Failed to vend container for \(bundleId), error: (\(msg))")
              }
              debugLog("[IdeviceGateway] startHouseArrestAfc() house_arrest_vend_container succeeded")
-@@ -2157,7 +2212,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2157,7 +2221,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          if let err = err {
              let msg = self.getErrorMessage(from: err)
              debugLog("[IdeviceGateway] afcListDirectory() afc_list_directory failed for: \(path), error: (\(msg))")
@@ -170,7 +203,7 @@ index e9310d0..7363f20 100644
              throw IdeviceGatewayError(.serviceError, reason: "Failed to list directory: \(path), error: (\(msg))")
          }
          var items: [String] = []
-@@ -2220,7 +2275,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2220,7 +2284,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
          if let err = err {
              debugLog("[IdeviceGateway] afcGetFileInfo() afc_get_file_info failed for: \(path)")
@@ -179,7 +212,7 @@ index e9310d0..7363f20 100644
              throw IdeviceGatewayError(.serviceError, reason: "Failed to get info for path: \(path)")
          }
          defer {
-@@ -2268,7 +2323,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
+@@ -2268,7 +2332,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
          }
          if let err = err {
              verboseLog("[IdeviceGateway] afcRemovePathRecursive() afc_remove_path failed for: \(path)")
@@ -188,6 +221,90 @@ index e9310d0..7363f20 100644
          }
      }
  
+@@ -2353,6 +2417,83 @@ extension IdeviceGateway {
+         }
+     }
+ 
++    // Called only after installation_proxy has sent its first progress response.
++    // The app must leave the process; suspending it alone still leaves the old
++    // executable open and can stall replacement of the running store.
++    private final class SelfInstallAcknowledgement {
++        let onAccepted: @Sendable () -> Void
++        var accepted = false
++        init(_ onAccepted: @escaping @Sendable () -> Void) { self.onAccepted = onAccepted }
++    }
++
++    public func installSelfApp(bundleId: String, appName: String?, onAccepted: @escaping @Sendable () -> Void) async throws {
++        try await withFFIDispatch {
++            try self.verifyInitialized()
++            let acknowledgement = SelfInstallAcknowledgement(onAccepted)
++            let context = Unmanaged.passRetained(acknowledgement).toOpaque()
++            defer { Unmanaged<SelfInstallAcknowledgement>.fromOpaque(context).release() }
++            try self.performWithEitherService(
++                connectRP: installation_proxy_connect_rsd,
++                connectLockdown: installation_proxy_connect,
++                cleanup: installation_proxy_client_free,
++                serviceName: "instproxy self update"
++            ) { client in
++                let options = plist_new_dict()
++                defer { plist_free(options) }
++                if appName != nil {
++                    plist_dict_set_item(options, "PackageType", plist_new_string("Developer"))
++                }
++                let path = "PublicStaging/\(bundleId)/\(appName ?? "app.ipa")"
++                let error = path.withCString { pathPointer in
++                    installation_proxy_install_with_callback(client, pathPointer, options, { progress, context in
++                        guard let context, progress > 0 else { return }
++                        let acknowledgement = Unmanaged<SelfInstallAcknowledgement>.fromOpaque(context).takeUnretainedValue()
++                        if !acknowledgement.accepted {
++                            acknowledgement.accepted = true
++                            acknowledgement.onAccepted()
++                        }
++                    }, context)
++                }
++                if let error {
++                    defer { idevice_error_free(error) }
++                    throw IdeviceGatewayError(.serviceError, reason: self.getErrorMessage(from: error))
++                }
++            }
++        }
++    }
++
++    public func launchAppWithJIT(appId: String) async throws {
++        try await withFFIDispatch {
++            try self.verifyInitialized()
++            if self.pairingFileType == .lockdown {
++                try self.launchAppPre17(appId: appId)
++                return
++            }
++            try self.performWithService(connect: app_service_connect_rsd, cleanup: app_service_free, serviceName: "app service") { client in
++                var response: UnsafeMutablePointer<LaunchResponseC>?
++                // Launch suspended: application code must not run before attachment.
++                let error = appId.withCString { app_service_launch_app(client, $0, nil, 0, 1, 1, nil, &response) }
++                if let error {
++                    defer { idevice_error_free(error) }
++                    throw IdeviceGatewayError(.serviceError, reason: self.getErrorMessage(from: error))
++                }
++                guard let response else { throw IdeviceGatewayError(.serviceError, reason: "Missing launch PID") }
++                defer { app_service_free_launch_response(response) }
++                do {
++                    try self.syncDebugProcess(pid: response.pointee.pid)
++                } catch {
++                    // Do not leave a newly launched application frozen if
++                    // debugger attachment fails. Report failure to the caller.
++                    var signalResponse: UnsafeMutablePointer<SignalResponseC>?
++                    let resumeError = app_service_send_signal(client, response.pointee.pid, UInt32(SIGCONT), &signalResponse)
++                    if let resumeError { idevice_error_free(resumeError) }
++                    if let signalResponse { app_service_free_signal_response(signalResponse) }
++                    throw error
++                }
++            }
++        }
++    }
++
+     public func debugApp(appId: String) async throws {
+         try await withFFIDispatch {
+             try self.syncDebugApp(appId: appId)
 diff --git a/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift b/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift
 index 44de525..522cef1 100644
 --- a/DeviceGateway/libimobiledevice/LibimobiledeviceGateway.swift
@@ -222,8 +339,21 @@ index 44de525..522cef1 100644
              defer { if let p = plist { plist_free(p) } }
              plist_dict_set_item(plist, "Command", plist_new_string("Pico"))
  
+diff --git a/Sources/MinimuxerApi.swift b/Sources/MinimuxerApi.swift
+index 419b667..8eaeaf2 100644
+--- a/Sources/MinimuxerApi.swift
++++ b/Sources/MinimuxerApi.swift
+@@ -115,6 +115,8 @@ public protocol MinimuxerAPI: AnyObject {
+     func installAppBundle(bundleId: String, appName: String) async throws
+     func removeApp(bundleId: String) async throws
+     func wipeContainer(identifier: String) async throws
++    func installSelfApp(bundleId: String, appName: String?, onAccepted: @escaping @Sendable () -> Void) async throws
++    func launchAppWithJIT(appId: String) async throws
+     func debugApp(appId: String) async throws
+     func attachDebugger(pid: UInt32) async throws
+     func installProvisioningProfile(profile: Data) async throws
 diff --git a/Sources/MinimuxerImpl.swift b/Sources/MinimuxerImpl.swift
-index 4c05971..4e1e3fc 100644
+index 4c05971..b7b4958 100644
 --- a/Sources/MinimuxerImpl.swift
 +++ b/Sources/MinimuxerImpl.swift
 @@ -137,14 +137,14 @@ final internal class MinimuxerImpl: MinimuxerAPI {
@@ -243,6 +373,26 @@ index 4c05971..4e1e3fc 100644
                      }
                  }
  
+@@ -454,6 +454,19 @@ final internal class MinimuxerImpl: MinimuxerAPI {
+         }
+     }
+ 
++    func installSelfApp(bundleId: String, appName: String?, onAccepted: @escaping @Sendable () -> Void) async throws(MinimuxerError) {
++        try await runWithChecks("while installing self update", catchAll: MinimuxerError.installApp) {
++            try await self.gateway.installSelfApp(bundleId: bundleId, appName: appName, onAccepted: onAccepted)
++        }
++    }
++
++    func launchAppWithJIT(appId: String) async throws(MinimuxerError) {
++        try await runWithChecks("while launching with JIT", catchAll: MinimuxerError.createDebug) {
++            try await self.ensureDDIMounted()
++            try await self.gateway.launchAppWithJIT(appId: appId)
++        }
++    }
++
+     func debugApp(appId: String) async throws(MinimuxerError) {
+         try await runWithChecks("while debugging App", catchAll: MinimuxerError.createDebug) {
+             try await self.ensureDDIMounted()
 diff --git a/Sources/Services/DeviceConnectionManager.swift b/Sources/Services/DeviceConnectionManager.swift
 index 01b6e27..c3a28b3 100644
 --- a/Sources/Services/DeviceConnectionManager.swift

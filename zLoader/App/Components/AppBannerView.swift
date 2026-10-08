@@ -57,6 +57,24 @@ class AppBannerView: NibView
     }
     
     var style: Style = .app
+    var isLauncherCard = false {
+        didSet {
+            stackView.axis = isLauncherCard ? .vertical : .horizontal
+            stackView.spacing = isLauncherCard ? 8 : 11
+            stackView.layoutMargins = isLauncherCard ? UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12) : layoutMargins
+            if let labels = stackView.arrangedSubviews.dropFirst().first as? UIStackView {
+                labels.alignment = isLauncherCard ? .center : .leading
+            }
+            titleLabel.textAlignment = isLauncherCard ? .center : .natural
+            titleLabel.numberOfLines = isLauncherCard ? 2 : 1
+            titleLabel.font = isLauncherCard ? .preferredFont(forTextStyle: .subheadline) : .preferredFont(forTextStyle: .headline)
+            sourceIconImageView.isHidden = isLauncherCard
+            betaBadgeView.isHidden = isLauncherCard
+            subtitleLabel.isHidden = isLauncherCard
+            buttonLabel.isHidden = isLauncherCard
+            update()
+        }
+    }
     
     private var originalTintColor: UIColor?
     
@@ -381,7 +399,7 @@ private extension AppBannerView
         case .app:
             self.directionalLayoutMargins.trailing = self.stackView.directionalLayoutMargins.trailing
             
-            self.iconImageViewHeightConstraint.constant = 60
+            self.iconImageViewHeightConstraint.constant = isLauncherCard ? 64 : 60
             self.iconImageView.style = .icon
             
             self.titleLabel.textColor = .label
@@ -389,7 +407,7 @@ private extension AppBannerView
             self.button.style = .pill
             
             self.backgroundEffectView.contentView.backgroundColor = .clear
-            self.backgroundEffectView.backgroundColor = .settingsHighlighted
+            ZLoaderCardMaterial.apply(to: self.backgroundEffectView)
             
         case .source:
             self.directionalLayoutMargins.trailing = 20
@@ -402,8 +420,9 @@ private extension AppBannerView
             
             self.button.style = .custom
             
-            self.backgroundEffectView.contentView.backgroundColor = tintColor?.adjustedForDisplay
-            self.backgroundEffectView.backgroundColor = nil
+            ZLoaderCardMaterial.apply(to: self.backgroundEffectView)
+            self.titleLabel.textColor = .label
+            self.subtitleLabel.textColor = .secondaryLabel
             
 
         }

@@ -26564,6 +26564,54 @@
           }
         }
       }
+    },
+    "Open with JIT": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open with JIT"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit JIT öffnen"
+          }
+        }
+      }
+    },
+    "JIT Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JIT Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JIT-Einstellungen"
+          }
+        }
+      }
+    },
+    "Opening this app from zLoader launches it with JIT. Changing this setting does not launch the app. For launches outside zLoader, use a Shortcuts automation.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening this app from zLoader launches it with JIT. Changing this setting does not launch the app. For launches outside zLoader, use a Shortcuts automation."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Öffnen über zLoader startet diese App mit JIT. Das Ändern dieser Einstellung startet die App nicht. Für Starts außerhalb von zLoader verwende eine Kurzbefehle-Automation."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

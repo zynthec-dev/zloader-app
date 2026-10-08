@@ -34,7 +34,7 @@ class InsetGroupTableViewCell: UITableViewCell
     @IBInspectable var isSelectable: Bool = false
     
     private let separatorView = UIView()
-    private let insetView = UIView()
+    private let insetView = UIVisualEffectView()
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?)
     {
@@ -98,7 +98,7 @@ class InsetGroupTableViewCell: UITableViewCell
         }
         self.backgroundColor = nil
         
-        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 0, left: 15, bottom: 0, right: 15))
+        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 4, left: 15, bottom: 4, right: 15))
         self.sendSubviewToBack(self.insetView)
         
         NSLayoutConstraint.activate([self.separatorView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 30),
@@ -146,32 +146,17 @@ private extension InsetGroupTableViewCell
 {
     func update()
     {
-        switch self.style
-        {
-        case .single:
-            self.insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            self.separatorView.isHidden = true
-            
-        case .top:
-            self.insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-            self.separatorView.isHidden = false
-            
-        case .middle:
-            self.insetView.layer.maskedCorners = []
-            self.separatorView.isHidden = false
-            
-        case .bottom:
-            self.insetView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            self.separatorView.isHidden = true
-        }
-        
+        self.insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        self.separatorView.isHidden = true
+        ZLoaderCardMaterial.apply(to: insetView)
+
         if self.isSelectable && (self.isHighlighted || self.isSelected)
         {
             self.insetView.backgroundColor = UIColor.settingsHighlighted
         }
         else
         {
-            self.insetView.backgroundColor = UIColor.settingsCard
+            if insetView.effect == nil { self.insetView.backgroundColor = UIColor.settingsCard }
         }
     }
 }

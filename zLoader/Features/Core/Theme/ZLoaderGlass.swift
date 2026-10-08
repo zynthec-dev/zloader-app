@@ -64,17 +64,51 @@ struct ZLoaderGlassGroup<Content: View>: View {
     }
 }
 
-/// Opaque list rows remain legible independently of glass preferences.
-/// The name is retained for existing listRowBackground call sites.
+/// Shared native material for SwiftUI lists and UIKit cards.
 struct ZLoaderGlassBackground: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        let view = UIVisualEffectView()
         view.isUserInteractionEnabled = false
+        view.layer.cornerRadius = 20
+        view.clipsToBounds = true
         updateUIView(view, context: context)
         return view
     }
 
-    func updateUIView(_ view: UIView, context: Context) {
+    func updateUIView(_ view: UIVisualEffectView, context: Context) {
+        ZLoaderCardMaterial.apply(to: view)
+    }
+}
+
+@MainActor enum ZLoaderCardMaterial {
+    static func install(in view: UIView, cornerRadius: CGFloat = 22) {
+        let glass = (view.viewWithTag(77544) as? UIVisualEffectView) ?? UIVisualEffectView()
+        if glass.superview == nil {
+            glass.tag = 77544
+            glass.isUserInteractionEnabled = false
+            glass.frame = view.bounds
+            glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            view.insertSubview(glass, at: 0)
+        }
+        glass.layer.cornerRadius = cornerRadius
+        glass.clipsToBounds = true
+        view.backgroundColor = .clear
+        apply(to: glass)
+    }
+
+    static func apply(to view: UIVisualEffectView) {
+        #if !os(tvOS)
+        if #available(iOS 26.0, *), !UIAccessibility.isReduceTransparencyEnabled {
+            view.effect = UIGlassEffect(style: .regular)
+            view.backgroundColor = .clear
+        } else {
+            view.effect = nil
+            view.backgroundColor = .secondarySystemGroupedBackground
+        }
+        #else
+        view.effect = nil
         view.backgroundColor = .secondarySystemGroupedBackground
+        #endif
+        view.contentView.backgroundColor = .clear
     }
 }
