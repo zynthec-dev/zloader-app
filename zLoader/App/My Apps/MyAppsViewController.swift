@@ -136,6 +136,8 @@ class MyAppsViewController: UICollectionViewController
         #endif
         self.sideloadingProgressView.translatesAutoresizingMaskIntoConstraints = false
         self.sideloadingProgressView.progressTintColor = .altPrimary
+        self.sideloadingProgressView.trackTintColor = .systemGray4
+        self.sideloadingProgressView.isHidden = true
         self.sideloadingProgressView.progress = 0
         
         if let navigationBar = self.navigationController?.navigationBar
@@ -143,7 +145,8 @@ class MyAppsViewController: UICollectionViewController
             navigationBar.addSubview(self.sideloadingProgressView)
             NSLayoutConstraint.activate([self.sideloadingProgressView.leadingAnchor.constraint(equalTo: navigationBar.leadingAnchor),
                                          self.sideloadingProgressView.trailingAnchor.constraint(equalTo: navigationBar.trailingAnchor),
-                                         self.sideloadingProgressView.bottomAnchor.constraint(equalTo: navigationBar.bottomAnchor)])
+                                         self.sideloadingProgressView.bottomAnchor.constraint(equalTo: navigationBar.bottomAnchor),
+                                         self.sideloadingProgressView.heightAnchor.constraint(equalToConstant: 6)])
         }
         
         #if !os(tvOS)

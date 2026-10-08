@@ -10,6 +10,8 @@
 - Connection Settings contains only connection method and tunnel interface/peer/reachability. External-app setup controls, shortcuts, provisioning controls and address text fields have been removed from this screen.
 - The embedded provider's iOS VPN name is zLoader Local Tunnel, including existing configurations, and user-facing internal-tunnel translations use this name. Pairing File Configuration / Pairing File Konfiguration, Connection Settings / Verbindungseinstellung, Certificates / Zertifikate and Provisioning Profiles / Provisioning Profile are localized in the catalog and Settings storyboard resources.
 
+- Refresh progress uses an opaque, adaptive foreground fill against a native neutral track instead of blending into a tinted Liquid Glass pill. The overall navigation progress bar has a visible six-point height and a contrasting track. Idle buttons keep their existing appearance.
+
 ## Verification
 
 Run transport, App Group and context regression scripts, portal serializer tests (including rename with no capability change), managed signing and embedded profile reuse tests, Release build and bootstrap IPA integrity test. No live portal mutations/deletions/revocations are performed during verification. Physical-device editing, swipe presentation, signing, tunnel activation and JIT background execution need device acceptance; a build does not prove those flows work on hardware.

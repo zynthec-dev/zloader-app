@@ -207,7 +207,7 @@ class PillButton: UIButton
         self.activityIndicatorView.isUserInteractionEnabled = false
         
         self.progressView.progress = 0
-        self.progressView.trackImage = UIImage()
+        self.progressView.trackTintColor = .tertiarySystemFill
         self.progressView.isUserInteractionEnabled = false
         self.addSubview(self.progressView)
         
@@ -325,6 +325,7 @@ private extension PillButton
     {
         if self.progress == nil && !self.isIndicatingActivity
         {
+            self.progressView.isHidden = true
             self.setTitleColor(self.tintColor.contrastingText, for: .normal)
             self.backgroundColor = self.tintColor
             self.progressView.progressTintColor = self.progressTintColor ?? self.tintColor
@@ -333,10 +334,12 @@ private extension PillButton
         }
         else
         {
+            self.progressView.isHidden = self.progress == nil
             self.setTitleColor(.clear, for: .normal)
             self.setTitleColor(.clear, for: .disabled)
-            self.backgroundColor = self.tintColor.withAlphaComponent(0.15)
-            self.progressView.progressTintColor = self.progressTintColor ?? self.tintColor
+            self.backgroundColor = .secondarySystemGroupedBackground
+            self.progressView.progressTintColor = .label
+            self.activityIndicatorView.color = .systemGray
             self.layer.borderColor = nil
             self.layer.borderWidth = 0
         }
@@ -354,14 +357,14 @@ private extension PillButton
         case .custom: break // Don't update insets in case client has updated them.
         case .pill:
             var config: UIButton.Configuration
-            if #available(iOS 26.0, tvOS 26.0, *) {
+            if #available(iOS 26.0, tvOS 26.0, *), self.progress == nil && !self.isIndicatingActivity {
                 config = UIButton.Configuration.prominentGlass()
                 config.title = self.currentTitle
                 config.image = self.currentImage
                 config.baseBackgroundColor = self.tintColor
                 self.backgroundColor = .clear
             } else {
-                config = self.configuration ?? UIButton.Configuration.plain()
+                config = UIButton.Configuration.plain()
             }
             config.cornerStyle = .capsule
             config.titleLineBreakMode = .byClipping
