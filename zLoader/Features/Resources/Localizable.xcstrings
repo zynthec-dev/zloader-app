@@ -26479,6 +26479,74 @@
           }
         }
       }
+    },
+    "Capability Requests": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capability Requests"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capability-Anträge"
+          }
+        }
+      }
+    },
+    "Request Capability Access": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request Capability Access"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capability-Freigabe beantragen"
+          }
+        }
+      }
+    },
+    "Apple's Capability Request Guide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple's Capability Request Guide"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apples Anleitung zu Capability-Anträgen"
+          }
+        }
+      }
+    },
+    "Opens this App ID in Apple's Developer Portal. Sign in with the selected team, open Capability Requests, then choose Request or Status. Only the Account Holder can submit a request. Apple reviews the application; approval is not automatic. After approval, enable the capability here and sign the app again to update its profiles.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens this App ID in Apple's Developer Portal. Sign in with the selected team, open Capability Requests, then choose Request or Status. Only the Account Holder can submit a request. Apple reviews the application; approval is not automatic. After approval, enable the capability here and sign the app again to update its profiles."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet diese App-ID in Apples Developer Portal. Melde dich mit dem ausgewählten Team an, öffne „Capability Requests“ und wähle „Request“ oder „Status“. Nur der Account Holder kann einen Antrag stellen. Apple prüft den Antrag; eine Freigabe erfolgt nicht automatisch. Aktiviere die Capability nach der Freigabe hier und signiere die App erneut, damit ihre Profile aktualisiert werden."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

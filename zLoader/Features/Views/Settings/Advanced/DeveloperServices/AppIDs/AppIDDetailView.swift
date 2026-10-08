@@ -33,6 +33,32 @@ struct AppIDDetailView: View {
         viewModel.appIDs.first(where: { $0.identifier == appID.identifier }) ?? appID
     }
 
+    private var capabilityRequestURL: URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "developer.apple.com"
+        components.path = "/account/resources/identifiers/bundleId/edit/" + currentAppID.identifier
+        return components.url
+    }
+
+    #if !os(tvOS)
+    private var capabilityRequestsSection: some View {
+        Section {
+            if let portalURL = capabilityRequestURL {
+                Link(destination: portalURL) {
+                    Label("Request Capability Access", systemImage: "checkmark.seal")
+                }
+            }
+            Link("Apple's Capability Request Guide", destination: URL(string: "https://developer.apple.com/help/account/capabilities/capability-requests")!)
+        } header: {
+            Text("Capability Requests")
+        } footer: {
+            Text("Opens this App ID in Apple's Developer Portal. Sign in with the selected team, open Capability Requests, then choose Request or Status. Only the Account Holder can submit a request. Apple reviews the application; approval is not automatic. After approval, enable the capability here and sign the app again to update its profiles.")
+        }
+        .listRowBackground(ZLoaderGlassBackground())
+    }
+    #endif
+
     var body: some View {
         List {
             Section(header: Text("App ID Metadata")) {
@@ -118,6 +144,10 @@ struct AppIDDetailView: View {
 
                 }
             }.listRowBackground(ZLoaderGlassBackground())
+
+            #if !os(tvOS)
+            capabilityRequestsSection
+            #endif
 
             Section(header: Text("Actions")) {
                 SwiftUI.Button {
