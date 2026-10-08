@@ -20,7 +20,7 @@ struct ProfileReuseRequirements {
 enum EmbeddedProfileReuse {
     static func incompatibilities(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements, now: Date = Date()) -> [String] {
         var failures: [String] = []
-        if profile.bundleID != target.bundleID { failures.append("app ID mismatch (returned " + profile.bundleID + ")") }
+        if !matchesBundleID(profile.bundleID, target: target.bundleID) { failures.append("app ID mismatch (returned " + profile.bundleID + ")") }
         if profile.teamID != target.teamID { failures.append("developer team mismatch") }
         if profile.expiresAt <= now { failures.append("profile expired") }
         if target.certificate.isEmpty || !profile.certificates.contains(target.certificate) { failures.append("selected signing certificate is not authorized") }
@@ -38,6 +38,9 @@ enum EmbeddedProfileReuse {
                     guard let dot = group.firstIndex(of: ".") else { return group }
                     return target.teamID + group[dot...]
                 }
+            } else if key == "com.apple.security.application-groups", let groups = required as? [String],
+                      let granted = profile.entitlements[key] as? [String] {
+                value = groups.map { granted.contains($0) ? $0 : $0 + "." + target.teamID }
             } else {
                 value = required
             }
@@ -46,6 +49,14 @@ enum EmbeddedProfileReuse {
             }
         }
         return failures
+    }
+
+    static func matchesBundleID(_ rule: String, target: String) -> Bool {
+        guard !target.isEmpty, !target.contains("*") else { return false }
+        if rule == target || rule == "*" { return true }
+        guard rule.hasSuffix(".*"), rule.filter({ $0 == "*" }).count == 1 else { return false }
+        let prefix = String(rule.dropLast())
+        return target.hasPrefix(prefix) && target.count > prefix.count
     }
 
     private static func authorizes(_ allowed: Any?, requested: Any) -> Bool {
@@ -62,12 +73,19 @@ enum EmbeddedProfileReuse {
         return (requested as? NSObject)?.isEqual(allowed) == true
     }
 
-    static func optionalMemoryOmissions(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements) -> Set<String> {
-        let optional: Set<String> = ["com.apple.developer.kernel.increased-memory-limit",
-            "com.apple.developer.kernel.extended-virtual-addressing",
-            "com.apple.developer.kernel.increased-debugging-memory-limit"]
-        let omitted = Set(target.entitlements.keys.filter { key in
-            optional.contains(key) && !authorizes(profile.entitlements[key], requested: target.entitlements[key]!)
+    static func optionalCapabilityOmissions(_ profile: EmbeddedProfileSnapshot, for target: ProfileReuseRequirements) -> Set<String> {
+        // Signature identity is generated from Apple's profile. Unsupported
+        // application capabilities are omitted, never invented in the profile.
+        var protected: Set<String> = ["application-identifier", "com.apple.developer.team-identifier", "get-task-allow",
+            "com.apple.developer.networking.networkextension"]
+        if target.bundleID.hasPrefix("com.zynthec.zLoader") {
+            protected.insert("com.apple.security.application-groups")
+        }
+        let prefix = "missing or incompatible entitlement "
+        let omitted = Set(incompatibilities(profile, for: target).compactMap { failure -> String? in
+            guard failure.hasPrefix(prefix) else { return nil }
+            let key = String(failure.dropFirst(prefix.count))
+            return protected.contains(key) ? nil : key
         })
         let reduced = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
             certificate: target.certificate, deviceID: target.deviceID,

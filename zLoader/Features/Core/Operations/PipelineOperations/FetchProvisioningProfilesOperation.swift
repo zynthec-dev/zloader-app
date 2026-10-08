@@ -240,6 +240,17 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         } else {
             profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
         }
+        if !team.type.isPaid, let certificate = context.targetSigningCertificate {
+            let udid = try await safeFetchUDID()
+            let snapshot = EmbeddedProfileSnapshot(bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
+                expiresAt: profile.expirationDate, certificates: profile.certificates.map { $0.rawDER },
+                devices: profile.deviceIDs, entitlements: profile.entitlements)
+            let target = ProfileReuseRequirements(bundleID: groupAppID.bundleIdentifier, teamID: team.identifier,
+                certificate: certificate.certificate.rawDER, deviceID: udid,
+                entitlements: requestedEntitlements(for: targetAppBundle, team: team))
+            let omitted = EmbeddedProfileReuse.optionalCapabilityOmissions(snapshot, for: target)
+            if !omitted.isEmpty { context.recordOptionalEntitlementOmissions(omitted, for: targetAppBundle.bundleIdentifier) }
+        }
         self.debugLog("[FetchProvisioningProfiles] Provisioning profile fetched for \(groupAppID.bundleIdentifier) (Name: \(profile.name), Expiration: \(String(describing: profile.expirationDate)))")
         if requiresPacketTunnelCapability(for: targetAppBundle),
            !PacketTunnelProvisioning.isAuthorized(by: profile.entitlements) {
@@ -353,7 +364,15 @@ private extension FetchProvisioningProfilesOperation{
                 bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
                 certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
             )
-            return EmbeddedProfileReuse.accepts(snapshot, for: target, requiredDevices: registeredUDIDs)
+            let omitted = EmbeddedProfileReuse.optionalCapabilityOmissions(snapshot, for: target)
+            let reduced = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+                certificate: target.certificate, deviceID: target.deviceID,
+                entitlements: target.entitlements.filter { !omitted.contains($0.key) })
+            guard EmbeddedProfileReuse.accepts(snapshot, for: reduced, requiredDevices: registeredUDIDs) else { return false }
+            if !omitted.isEmpty {
+                context.recordOptionalEntitlementOmissions(omitted, for: app.bundleIdentifier)
+            }
+            return true
         }
         // Check actual authorization, not profile names. An update can reuse the
         // installed profile even when the downloaded IPA contains no profile.
@@ -371,7 +390,7 @@ private extension FetchProvisioningProfilesOperation{
         }
         let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
         let candidates = existing.filter {
-            $0.identifier != nil && ($0.bundleIdentifier == appID.bundleIdentifier ||
+            $0.identifier != nil && ($0.bundleIdentifier.map { EmbeddedProfileReuse.matchesBundleID($0, target: appID.bundleIdentifier) } == true ||
                 $0.bundleIdentifier == nil || ManagedProfileNaming.isOwned($0.name, base: managedName))
         }.sorted { ($0.identifier ?? "") < ($1.identifier ?? "") }
         var selectedID: String?
@@ -416,13 +435,13 @@ private extension FetchProvisioningProfilesOperation{
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
         )
-        let omitted = EmbeddedProfileReuse.optionalMemoryOmissions(snapshot, for: target)
+        let omitted = EmbeddedProfileReuse.optionalCapabilityOmissions(snapshot, for: target)
         if !omitted.isEmpty {
             context.recordOptionalEntitlementOmissions(omitted, for: app.bundleIdentifier)
             target = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
                 certificate: target.certificate, deviceID: target.deviceID,
                 entitlements: target.entitlements.filter { !omitted.contains($0.key) })
-            self.debugLog("[FetchProvisioningProfiles] Apple did not grant optional memory rights; signing without: " + omitted.sorted().joined(separator: ", "))
+            self.debugLog("[FetchProvisioningProfiles] Apple did not grant optional capabilities; signing without: " + omitted.sorted().joined(separator: ", "))
         }
         var failures = EmbeddedProfileReuse.incompatibilities(snapshot, for: target)
         if !registeredUDIDs.isSubset(of: Set(profile.deviceIDs.map { $0.lowercased() })) {
@@ -432,7 +451,8 @@ private extension FetchProvisioningProfilesOperation{
             throw OperationError.invalidParameters("Apple's newly issued profile for " + appID.bundleIdentifier +
                 " was rejected: " + failures.joined(separator: "; ") + ". No signing permissions were bypassed.")
         }
-        if let groups = app.entitlements["com.apple.security.application-groups"] as? [String], !groups.isEmpty,
+        if context.targetAppBundle?.isZLoaderApp == true,
+           let groups = app.entitlements["com.apple.security.application-groups"] as? [String], !groups.isEmpty,
            (profile.entitlements["com.apple.security.application-groups"] as? [String] ?? []).isEmpty {
             throw OperationError.invalidParameters("Apple's newly issued profile omits the App Groups required by " + appID.bundleIdentifier)
         }
@@ -554,7 +574,7 @@ private extension FetchProvisioningProfilesOperation{
         
         if !droppedFeatures.isEmpty {
             let bulleted = droppedFeatures.map { "  • \($0.rawValue)" }.joined(separator: "\n")
-            throw OperationError.invalidParameters("The selected Apple team cannot authorize the IPA's requested capabilities:\n" + bulleted + "\nSelect an eligible team. Required capabilities will not be silently removed.")
+            self.debugLog("[FetchProvisioningProfiles] Team cannot request these capabilities; profile-authorized signing will omit unavailable rights:\n" + bulleted)
         }
         
         // check if we really need to make a update on portal

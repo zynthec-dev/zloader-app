@@ -63,11 +63,32 @@ struct EmbeddedProfileReuseTests {
         memoryRequirements[memoryKey] = true
         let memoryTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
             certificate: original, deviceID: target.deviceID, entitlements: memoryRequirements)
-        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970), for: memoryTarget) == [memoryKey])
-        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: memoryRequirements), for: memoryTarget).isEmpty)
-        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: [:]), for: memoryTarget).isEmpty)
-        precondition(EmbeddedProfileReuse.optionalMemoryOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, certificates: []), for: memoryTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970), for: memoryTarget) == [memoryKey])
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: memoryRequirements), for: memoryTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, entitlements: [:]), for: memoryTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: Date().addingTimeInterval(3600).timeIntervalSince1970, certificates: []), for: memoryTarget).isEmpty)
         print("PASS optional memory fallback; tunnel, App Groups and certificate mismatches remain fatal")
+        let healthKeys: Set<String> = ["com.apple.developer.healthkit", "com.apple.developer.healthkit.access",
+            "com.apple.developer.healthkit.background-delivery"]
+        var optionalRequirements = memoryRequirements
+        optionalRequirements["com.apple.developer.healthkit"] = true
+        optionalRequirements["com.apple.developer.healthkit.access"] = ["health-records"]
+        optionalRequirements["com.apple.developer.healthkit.background-delivery"] = true
+        let optionalTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+            certificate: original, deviceID: target.deviceID, entitlements: optionalRequirements)
+        let validExpiry = Date().addingTimeInterval(3600).timeIntervalSince1970
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: validExpiry), for: optionalTarget) == healthKeys.union([memoryKey]))
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: validExpiry, entitlements: optionalRequirements), for: optionalTarget).isEmpty)
+        for invalid in [profile(team: "other-team", expiry: validExpiry), profile(expiry: validExpiry, certificates: []),
+            profile(expiry: validExpiry, devices: []), profile(expiry: validExpiry, entitlements: [:]), profile(expiry: 999)] {
+            precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(invalid, for: optionalTarget).isEmpty)
+        }
+        print("PASS simultaneous HealthKit and memory omissions; authorized rights preserved, identity/device/tunnel/group mismatches remain fatal")
+        precondition(EmbeddedProfileReuse.matchesBundleID("example.*", target: "example.test"))
+        precondition(!EmbeddedProfileReuse.matchesBundleID("example.*", target: "examples.test"))
+        precondition(!EmbeddedProfileReuse.matchesBundleID("example.*", target: "example"))
+        precondition(EmbeddedProfileReuse.accepts(profile(bundle: "example.*"), for: target, now: now))
+        print("PASS reusable wildcard profiles with bundle-prefix boundaries")
         let general: [String: Any] = ["com.apple.developer.associated-domains": ["applinks:example.test"],
                                       "com.apple.developer.siri": true,
                                       "aps-environment": "development",
@@ -84,6 +105,9 @@ struct EmbeddedProfileReuseTests {
             missing.removeValue(forKey: key)
             precondition(!EmbeddedProfileReuse.accepts(profile(entitlements: missing), for: generalTarget, now: now))
         }
+        let optionalGeneral = EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: validExpiry, entitlements: [:]), for: generalTarget)
+        precondition(optionalGeneral == Set(general.keys))
+        print("PASS all ungranted non-structural capabilities omitted, including push, Siri, domains and keychain")
         var wrongEnvironment = permitted
         wrongEnvironment["aps-environment"] = "production"
         precondition(!EmbeddedProfileReuse.accepts(profile(entitlements: wrongEnvironment), for: generalTarget, now: now))
