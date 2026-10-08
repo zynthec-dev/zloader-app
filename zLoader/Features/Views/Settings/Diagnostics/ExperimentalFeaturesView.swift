@@ -63,8 +63,8 @@ struct ExperimentalFeaturesView: View {
                 .tint(Color(uiColor: .altPrimary))
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .frame(minHeight: 50)
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
     }
 
     private var divider: some View {

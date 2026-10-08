@@ -44,10 +44,12 @@ final class AccountVerificationRow: InsetGroupTableViewCell {
         self.layoutMargins = UIEdgeInsets(top: 8, left: 30, bottom: 8, right: 30)
         
         self.titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        self.titleLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        self.titleLabel.font = .preferredFont(forTextStyle: .body)
+        self.titleLabel.adjustsFontForContentSizeCategory = true
         
         self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        self.subtitleLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
+        self.subtitleLabel.font = .preferredFont(forTextStyle: .footnote)
+        self.subtitleLabel.adjustsFontForContentSizeCategory = true
         self.subtitleLabel.textColor = UIColor.secondaryLabel
         self.subtitleLabel.numberOfLines = 2
         
@@ -123,7 +125,7 @@ final class AccountVerificationRow: InsetGroupTableViewCell {
             
         case .checking:
             self.titleLabel.text = NSLocalizedString("Account Verification", comment: "")
-            self.titleLabel.textColor = .white
+            self.titleLabel.textColor = .label
             self.subtitleLabel.text = NSLocalizedString("Verifying account status...", comment: "")
             self.subtitleLabel.textColor = UIColor.secondaryLabel
             self.iconImageView.image = nil

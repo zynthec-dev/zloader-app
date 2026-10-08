@@ -55,6 +55,10 @@ final class SettingsHeaderFooterView: UITableViewHeaderFooterView
 
     private func configureLayout()
     {
+        primaryLabel.font = .preferredFont(forTextStyle: .footnote)
+        secondaryLabel.font = .preferredFont(forTextStyle: .footnote)
+        primaryLabel.adjustsFontForContentSizeCategory = true
+        secondaryLabel.adjustsFontForContentSizeCategory = true
         self.contentView.layoutMargins = .zero
         self.contentView.preservesSuperviewLayoutMargins = true
         

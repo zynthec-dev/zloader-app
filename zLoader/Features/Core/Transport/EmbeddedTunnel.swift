@@ -51,6 +51,22 @@ final class EmbeddedTunnel {
         do { try validateInstalledAuthorization(); return nil }
         catch { return error.localizedDescription }
     }
+    /// Whether a valid VPN configuration already exists, including while active.
+    /// Checking this must not create a profile or display the iOS consent prompt.
+    func hasSavedConfiguration() async -> Bool {
+        guard unavailableReason == nil, let providerID else { return false }
+        do {
+            let configurations = try await NETunnelProviderManager.loadAllFromPreferences()
+            return configurations.contains { selected in
+                guard selected.isEnabled,
+                      let config = selected.protocolConfiguration as? NETunnelProviderProtocol,
+                      config.providerBundleIdentifier == providerID,
+                      let peer = config.providerConfiguration?["peer"] as? String,
+                      let iface = config.providerConfiguration?["interface"] as? String else { return false }
+                return isPrivateTunnelIPv4(peer) && isPrivateTunnelIPv4(iface) && peer != iface
+            }
+        } catch { return false }
+    }
     /// Read-only readiness for the status dot. An idle provider is expected to be disconnected.
     func isConfiguredAndIdle() async -> Bool {
         guard unavailableReason == nil, let providerID else { return false }

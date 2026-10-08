@@ -163,6 +163,8 @@ struct ZLoaderThemedRoot<Content: View>: View {
             .accentColor(Color(uiColor: theme.primaryColor))
             .environment(\.locale, AppLanguage.launchLocale)
             .environment(\.zLoaderUsesGlass, usesGlass)
+            .environment(\.defaultMinListRowHeight, 44)
+            .font(.body)
             .preferredColorScheme(theme.appearance.colorScheme)
             .scrollContentBackground(.hidden)
             .background(Color(uiColor: .settingsBackground))
@@ -232,19 +234,19 @@ extension ThemeManager {
         }
         if let table = view as? UITableView {
             table.backgroundColor = .settingsBackground
-            table.separatorStyle = .none
+            if table.delegate is SettingsViewController {
+                // The storyboard table draws its own inset group separators.
+                table.separatorStyle = .none
+            } else if table.style != .plain {
+                table.separatorStyle = .singleLine
+            }
         }
         if let collection = view as? UICollectionView { collection.backgroundColor = .settingsBackground }
-        // SwiftUI list backgrounds already own a material; UIKit rows need one
-        // as well. Inset rows preserve their own margins and glass surface.
+        // Native grouped tables own their group clipping and separators. A
+        // rounded background on every cell breaks those continuous sections.
         if let cell = view as? UITableViewCell, !(cell is InsetGroupTableViewCell) {
-            let glass = (cell.backgroundView as? UIVisualEffectView) ?? UIVisualEffectView()
-            glass.layer.cornerRadius = 20
-            glass.clipsToBounds = true
-            glass.isUserInteractionEnabled = false
-            ZLoaderCardMaterial.apply(to: glass, usesGlass: false)
-            cell.backgroundView = glass
-            cell.backgroundColor = .clear
+            if cell.backgroundView is UIVisualEffectView { cell.backgroundView = nil }
+            cell.backgroundColor = .settingsCard
             cell.contentView.backgroundColor = .clear
         }
         if let field = view as? UITextField {

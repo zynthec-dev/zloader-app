@@ -60,14 +60,17 @@ struct ConnectionConfigView: View {
     @AppStorage("zLoader.useInternalVPN") private var useInternal = false
     @AppStorage("zLoader.internalPeer") private var peer = "10.7.0.1"
     @AppStorage("zLoader.internalInterface") private var interface = "10.7.1.1"
+    @ObservedObject private var provisioning = SelfProvisioning.shared
+    @State private var showsTunnelSetup = false
+    @State private var selectingMethod = false
     var body: some View {
         List {
             Section("Connection Method") {
-                Picker("VPN", selection: $useInternal) {
+                Picker("VPN", selection: Binding(get: { useInternal }, set: selectMethod)) {
                     Text("Local tunnel VPN via an external app").tag(false)
                     Text("Integrated zLoader Local Tunnel (Recommended)").tag(true)
-                        .disabled(EmbeddedTunnel.shared.unavailableReason != nil)
                 }.pickerStyle(.inline)
+                    .disabled(selectingMethod || provisioning.busy)
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Tunnel Data") {
                 LabeledContent("Interface") { Text(verbatim: config.formattedTunnelIface ?? NSLocalizedString("Not Detected", comment: "")) }
@@ -77,6 +80,24 @@ struct ConnectionConfigView: View {
         }
         .navigationTitle("Connection Settings")
         .labelStyle(.titleOnly)
+        .sheet(isPresented: $showsTunnelSetup) {
+            NavigationStack {
+                Form {
+                    Section("zLoader Local Tunnel") {
+                        SelfProvisioningView(onReady: { showsTunnelSetup = false })
+                    }.listRowBackground(ZLoaderGlassBackground())
+                }
+                .navigationTitle("zLoader Local Tunnel")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        SButton("Cancel", role: .cancel) { showsTunnelSetup = false }
+                            .disabled(provisioning.busy)
+                    }
+                }
+            }
+            .interactiveDismissDisabled(provisioning.busy)
+        }
         .task {
             if EmbeddedTunnel.shared.unavailableReason != nil { useInternal = false }
             config.useLocalVPN = true
@@ -90,6 +111,25 @@ struct ConnectionConfigView: View {
                 if !internalVPN { await EmbeddedTunnel.shared.stop() }
                 syncMinimuxerBackendFromUserDefaults()
                 await bindConnectionConfig()
+            }
+        }
+    }
+
+    private func selectMethod(_ internalVPN: Bool) {
+        guard !selectingMethod, !provisioning.busy else { return }
+        if !internalVPN {
+            useInternal = false
+            return
+        }
+        selectingMethod = true
+        Task { @MainActor in
+            defer { selectingMethod = false }
+            if await EmbeddedTunnel.shared.hasSavedConfiguration() {
+                useInternal = true
+            } else {
+                // Keep the external transport selected until setup verifies
+                // the new internal tunnel; self-signing needs that connection.
+                showsTunnelSetup = true
             }
         }
     }

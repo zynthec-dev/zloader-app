@@ -2614,8 +2614,21 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             
         case .activeApps, .inactiveApps:
             let available = collectionView.bounds.width - 32
-            let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : min(6, max(2, floor((available + 12) / 88)))
-            return CGSize(width: floor((available - (columns - 1) * 12) / columns), height: columns == 1 ? 190 : 150)
+            let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : 4
+            let width = floor((available - (columns - 1) * 12) / columns)
+            let font = UIFont.preferredFont(forTextStyle: .footnote)
+            let name = self.dataSource.item(at: indexPath).name
+            let nameHeight = (name as NSString).boundingRect(
+                with: CGSize(width: max(1, width - 4), height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font], context: nil
+            ).height
+            // Reserve the full name, rather than truncating after two lines.
+            // Icons remain aligned at the top even when names wrap differently.
+            let height = AppBannerView.launcherIconSize(for: width) + 8 +
+                ceil(max(font.lineHeight * 2, nameHeight)) + 2 +
+                ceil(UIFont.preferredFont(forTextStyle: .caption2).lineHeight) + 16
+            return CGSize(width: width, height: height)
         }
     }
     

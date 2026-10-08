@@ -35,6 +35,7 @@ class InsetGroupTableViewCell: UITableViewCell
     
     private let separatorView = UIView()
     private let insetView = UIVisualEffectView()
+    private var separatorLeadingConstraint: NSLayoutConstraint!
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?)
     {
@@ -57,6 +58,7 @@ class InsetGroupTableViewCell: UITableViewCell
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        separatorLeadingConstraint?.constant = contentView.viewWithTag(77023) == nil ? 30 : 62
         // Match the 22-point symbols and 30/62-point leading positions used
         // by storyboard rows decorated in SettingsViewController.
         guard let icon = imageView, icon.tag == 77023, icon.image != nil,
@@ -88,7 +90,8 @@ class InsetGroupTableViewCell: UITableViewCell
         self.addSubview(self.separatorView)
         
         self.insetView.layer.masksToBounds = true
-        self.insetView.layer.cornerRadius = 16
+        self.insetView.layer.cornerRadius = 12
+        self.insetView.layer.cornerCurve = .continuous
         
         // Get the preferred background color from Interface Builder if set.
         if let bgColor = self.backgroundColor, bgColor != .clear {
@@ -98,13 +101,15 @@ class InsetGroupTableViewCell: UITableViewCell
         }
         self.backgroundColor = nil
         
-        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 4, left: 15, bottom: 4, right: 15))
+        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16))
         self.sendSubviewToBack(self.insetView)
         
-        NSLayoutConstraint.activate([self.separatorView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 30),
-                                     self.separatorView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -30),
+        separatorLeadingConstraint = self.separatorView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 30)
+        NSLayoutConstraint.activate([separatorLeadingConstraint,
+                                     self.separatorView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16),
                                      self.separatorView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
-                                     self.separatorView.heightAnchor.constraint(equalToConstant: 1)])
+                                     self.separatorView.heightAnchor.constraint(equalToConstant: 1 / traitCollection.displayScale)])
+        self.bringSubviewToFront(separatorView)
         
         self.update()
     }
@@ -146,8 +151,17 @@ private extension InsetGroupTableViewCell
 {
     func update()
     {
-        self.insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-        self.separatorView.isHidden = true
+        switch style {
+        case .single:
+            insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        case .top:
+            insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        case .middle:
+            insetView.layer.maskedCorners = []
+        case .bottom:
+            insetView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        }
+        self.separatorView.isHidden = style == .single || style == .bottom
         ZLoaderCardMaterial.apply(to: insetView, usesGlass: false)
 
         if self.isSelectable && (self.isHighlighted || self.isSelected)

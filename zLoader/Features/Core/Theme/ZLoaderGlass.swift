@@ -54,7 +54,7 @@ private struct ZLoaderGlassSurface: ViewModifier {
                 content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
             }
         } else {
-            content.background(prominent ? Color.accentColor : Color(uiColor: .settingsCard), in: RoundedRectangle(cornerRadius: cornerRadius))
+            content.background(prominent ? Color.accentColor : Color(uiColor: .settingsCard), in: RoundedRectangle(cornerRadius: usesGlass ? cornerRadius : 12))
         }
     }
 }
@@ -91,6 +91,9 @@ struct ZLoaderGlassBackground: UIViewRepresentable {
     }
 
     func updateUIView(_ view: UIVisualEffectView, context: Context) {
+        // Form/List provides the rounding around the entire section. Opaque
+        // row backgrounds must join edge-to-edge inside that native group.
+        view.layer.cornerRadius = usesGlass ? 20 : 0
         ZLoaderCardMaterial.apply(to: view, usesGlass: usesGlass)
     }
 }

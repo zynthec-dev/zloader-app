@@ -58,16 +58,23 @@ class AppBannerView: NibView
     
     var style: Style = .app
     private var hasLauncherProgressOverlay = false
+    private var launcherLabelsWidthConstraint: NSLayoutConstraint?
     var isLauncherCard = false {
         didSet {
             stackView.axis = isLauncherCard ? .vertical : .horizontal
             stackView.spacing = isLauncherCard ? 8 : 11
             stackView.layoutMargins = isLauncherCard ? UIEdgeInsets(top: 8, left: 2, bottom: 8, right: 2) : layoutMargins
+            stackView.preservesSuperviewLayoutMargins = !isLauncherCard
             if let labels = stackView.arrangedSubviews.dropFirst().first as? UIStackView {
-                labels.alignment = isLauncherCard ? .center : .leading
+                labels.alignment = isLauncherCard ? .fill : .leading
+                if launcherLabelsWidthConstraint == nil {
+                    launcherLabelsWidthConstraint = labels.widthAnchor.constraint(equalTo: stackView.layoutMarginsGuide.widthAnchor)
+                }
+                launcherLabelsWidthConstraint?.isActive = isLauncherCard
             }
             titleLabel.textAlignment = isLauncherCard ? .center : .natural
-            titleLabel.numberOfLines = isLauncherCard ? 2 : 1
+            titleLabel.numberOfLines = isLauncherCard ? 0 : 1
+            titleLabel.lineBreakMode = isLauncherCard ? .byWordWrapping : .byTruncatingTail
             titleLabel.adjustsFontForContentSizeCategory = true
             subtitleLabel.adjustsFontForContentSizeCategory = true
             titleLabel.font = isLauncherCard ? .preferredFont(forTextStyle: .footnote) : .preferredFont(forTextStyle: .headline)
@@ -163,6 +170,18 @@ class AppBannerView: NibView
         }
         
         self.update()
+    }
+
+    override func layoutSubviews()
+    {
+        if isLauncherCard {
+            iconImageViewHeightConstraint.constant = Self.launcherIconSize(for: bounds.width)
+        }
+        super.layoutSubviews()
+    }
+
+    static func launcherIconSize(for width: CGFloat) -> CGFloat {
+        min(112, max(0, width - 4))
     }
 }
 
@@ -413,7 +432,7 @@ private extension AppBannerView
     func update()
     {
         self.clipsToBounds = true
-        self.layer.cornerRadius = 22
+        self.layer.cornerRadius = isLauncherCard ? 0 : 22
         
         let tintColor = self.originalTintColor ?? self.tintColor
         // Render semantic labels directly; vibrancy can wash them out in Light Mode.
@@ -425,7 +444,7 @@ private extension AppBannerView
         case .app:
             self.directionalLayoutMargins.trailing = self.stackView.directionalLayoutMargins.trailing
             
-            self.iconImageViewHeightConstraint.constant = 60
+            self.iconImageViewHeightConstraint.constant = isLauncherCard ? Self.launcherIconSize(for: bounds.width) : 60
             self.iconImageView.style = .icon
             
             self.titleLabel.textColor = .label

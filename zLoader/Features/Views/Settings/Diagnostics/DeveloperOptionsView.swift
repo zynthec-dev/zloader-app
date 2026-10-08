@@ -169,7 +169,7 @@ struct DeveloperOptionsView: View {
                                     .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -203,7 +203,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -222,7 +222,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -249,7 +249,7 @@ struct DeveloperOptionsView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         .disabled(isExportingDB)
                         
@@ -263,7 +263,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -276,7 +276,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -289,7 +289,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -321,7 +321,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -334,7 +334,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -373,7 +373,7 @@ struct DeveloperOptionsView: View {
                                 }
                         }
                         .padding(.horizontal, 16)
-                        .frame(height: 50)
+                        .frame(minHeight: 44)
                         
                         divider
                         
@@ -389,7 +389,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -443,7 +443,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -468,7 +468,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -499,7 +499,7 @@ struct DeveloperOptionsView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         .disabled(isDumpingProfiles)
                     }
@@ -525,7 +525,7 @@ struct DeveloperOptionsView: View {
                                     .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         .sheet(isPresented: $showOnboardingSheet) {
                             OnboardingView(onFinish: {
@@ -552,7 +552,7 @@ struct DeveloperOptionsView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
@@ -731,8 +731,8 @@ struct DeveloperOptionsView: View {
                 .tint(Color(uiColor: .altPrimary))
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .frame(minHeight: 50)
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
     }
     
     private var divider: some View {

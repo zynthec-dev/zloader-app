@@ -935,26 +935,23 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat
     {
-        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 52 }
         if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return UITableView.automaticDimension }
-        if Section.allCases[indexPath.section] == .account && (indexPath.row == 3 || indexPath.row == 4) { return 52 }
         if Section.allCases[indexPath.section] == .account && indexPath.row == 5 {
-            return AccountVerificationRow.preferredHeight
+            return UITableView.automaticDimension
         }
-        let effectiveIndexPath: IndexPath
-        if Section.allCases[indexPath.section] == .advancedSettings {
-            let row = AdvancedSettingsRow.allCases[indexPath.row]
-            effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
-        } else if Section.allCases[indexPath.section] == .appRefresh {
-            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
-        } else {
-            effectiveIndexPath = indexPath
+        let body = UIFont.preferredFont(forTextStyle: .body)
+        if Section.allCases[indexPath.section] == .credits && indexPath.row > 0 {
+            return max(60, body.lineHeight + UIFont.preferredFont(forTextStyle: .footnote).lineHeight + 16)
         }
-        return super.tableView(tableView, heightForRowAt: effectiveIndexPath)
+        return max(44, body.lineHeight + 20)
     }
 
     override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath)
     {
+        if let insetCell = cell as? InsetGroupTableViewCell {
+            let count = tableView.numberOfRows(inSection: indexPath.section)
+            insetCell.style = count == 1 ? .single : indexPath.row == 0 ? .top : indexPath.row == count - 1 ? .bottom : .middle
+        }
         if Section.allCases[indexPath.section] == .account {
             if indexPath.row == 2, let insetCell = cell as? InsetGroupTableViewCell {
                 insetCell.style = .middle
@@ -1039,8 +1036,9 @@ extension SettingsViewController
                 title.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 30),
                 title.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
                 title.trailingAnchor.constraint(lessThanOrEqualTo: toggle.leadingAnchor, constant: -12),
-                title.topAnchor.constraint(greaterThanOrEqualTo: cell.contentView.topAnchor, constant: 12),
-                title.bottomAnchor.constraint(lessThanOrEqualTo: cell.contentView.bottomAnchor, constant: -12),
+                title.topAnchor.constraint(greaterThanOrEqualTo: cell.contentView.topAnchor, constant: 10),
+                title.bottomAnchor.constraint(lessThanOrEqualTo: cell.contentView.bottomAnchor, constant: -10),
+                cell.contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
                 toggle.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -30),
                 toggle.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor)
             ])

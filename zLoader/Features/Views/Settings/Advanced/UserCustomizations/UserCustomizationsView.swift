@@ -85,7 +85,6 @@ struct UserCustomizationsView: View {
                         }
                     }
 
-                    .padding(.vertical, 14)
                 }
 
             }.listRowBackground(ZLoaderGlassBackground())
@@ -113,7 +112,6 @@ struct UserCustomizationsView: View {
                         Spacer()
                     }
 
-                    .frame(minHeight: 32)
                 }
 
                 SwiftUI.Button(role: .destructive) {
@@ -134,8 +132,6 @@ struct UserCustomizationsView: View {
                             .foregroundColor(.red)
                     }
 
-                    .padding(.vertical, 10)
-                    .frame(minHeight: 50)
                 }
 
             }.listRowBackground(ZLoaderGlassBackground())
@@ -151,7 +147,6 @@ struct UserCustomizationsView: View {
                         Spacer()
                     }
 
-                    .frame(minHeight: 32)
                 }
 
             }.listRowBackground(ZLoaderGlassBackground())
@@ -267,7 +262,6 @@ struct UserCustomizationsView: View {
                             }
                         }
 
-                        .padding(.vertical, 14)
                     }
                     if backend != GatewayBackend.allCases.last {
 
@@ -314,7 +308,6 @@ struct UserCustomizationsView: View {
                             }
                         }
 
-                        .padding(.vertical, 12)
                     }
                     .disabled(!isBackgroundServiceEnabled)
                 }
@@ -540,8 +533,6 @@ struct UserCustomizationsView: View {
                 .tint(Color.primary.opacity(0.7))
             }
 
-            .padding(.vertical, 10)
-            .frame(minHeight: 50)
 
             HStack {
                 SettingsEntryLabel(title: "Default Import Mode")
@@ -557,8 +548,6 @@ struct UserCustomizationsView: View {
                 .tint(Color.primary.opacity(0.7))
             }
 
-            .padding(.vertical, 10)
-            .frame(minHeight: 50)
 
             toggleRow(
                 title: "Confirm App Installation",
