@@ -51,7 +51,8 @@ class PillButton: UIButton
             self.progressView.observedProgress = self.progress
             
             let isUserInteractionEnabled = self.isUserInteractionEnabled
-            self.isIndicatingActivity = (self.progress != nil)
+            // Determinate circular progress replaces the rotating activity spinner.
+            self.isIndicatingActivity = false
             if self.progress != nil
             {
                 self.isUserInteractionEnabled = isUserInteractionEnabled

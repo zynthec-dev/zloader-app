@@ -838,6 +838,11 @@ private extension MyAppsViewController
         }
         
         self.refreshGroup = group
+        if self.isRefreshingAllApps,
+           let header = self.collectionView.supplementaryView(forElementKind: UICollectionView.elementKindSectionHeader,
+                at: IndexPath(item: 0, section: Section.activeApps.rawValue)) as? InstalledAppsCollectionHeaderView {
+            header.button.progress = group.progress
+        }
         
         if self.isRefreshingAllApps
         {
@@ -953,7 +958,7 @@ private extension MyAppsViewController
             
             self.isRefreshingAllApps = true
             if let activeAppsHeader = self.collectionView.supplementaryView(forElementKind: UICollectionView.elementKindSectionHeader, at: IndexPath(item: 0, section: Section.activeApps.rawValue)) as? InstalledAppsCollectionHeaderView {
-                activeAppsHeader.button.isIndicatingActivity = true
+                activeAppsHeader.button.isIndicatingActivity = false
                 activeAppsHeader.button.accessibilityLabel = NSLocalizedString("Refreshing", comment: "")
             }
             self.reconfigureVisibleCells()
@@ -963,6 +968,7 @@ private extension MyAppsViewController
                     self.isRefreshingAllApps = false
                     if let activeAppsHeader = self.collectionView.supplementaryView(forElementKind: UICollectionView.elementKindSectionHeader, at: IndexPath(item: 0, section: Section.activeApps.rawValue)) as? InstalledAppsCollectionHeaderView {
                         activeAppsHeader.button.isIndicatingActivity = false
+                        activeAppsHeader.button.progress = nil
                         activeAppsHeader.button.accessibilityLabel = nil
                     }
                     self.reconfigureVisibleCells()
@@ -1090,11 +1096,11 @@ private extension MyAppsViewController
     func sideloadApp(at url: URL, completion: @escaping (Result<Void, Error>) -> Void)
     {
         self.pendingImportURL = nil
-        self.navigationItem.leftBarButtonItem?.isIndicatingActivity = true
+        self.navigationItem.leftBarButtonItem?.isEnabled = false
         
         let group = AppManager.shared.install(.url(url), presentingViewController: self) { [weak self] result in
             Task { @MainActor in
-                self?.navigationItem.leftBarButtonItem?.isIndicatingActivity = false
+                self?.navigationItem.leftBarButtonItem?.isEnabled = true
                 self?.sideloadingProgressView.observedProgress = nil
                 self?.sideloadingProgressView.setHidden(true, animated: true)
                 
@@ -2096,7 +2102,7 @@ extension MyAppsViewController
                 headerView.button.isIndicatingActivity = false
                 headerView.button.activityIndicatorView.color = .altPrimary
                 headerView.showPendingInstallations(self.pendingInstallations)
-                headerView.button.progress = self.isRefreshingAllApps ? self.sideloadingProgress : nil
+                headerView.button.progress = self.isRefreshingAllApps ? self.refreshGroup?.progress : nil
                 headerView.button.setTitle(NSLocalizedString("Refresh All", comment: ""), for: .normal)
                 headerView.button.addTarget(self, action: #selector(MyAppsViewController.refreshAllApps(_:)), for: .primaryActionTriggered)
                 
@@ -2104,7 +2110,7 @@ extension MyAppsViewController
                 
                 if self.isRefreshingAllApps
                 {
-                    headerView.button.isIndicatingActivity = true
+                    headerView.button.isIndicatingActivity = false
                     headerView.button.accessibilityLabel = NSLocalizedString("Refreshing", comment: "")
                     headerView.button.accessibilityTraits.remove(.notEnabled)
                 }
