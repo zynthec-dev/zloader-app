@@ -51,6 +51,7 @@ struct ZLoaderAboutView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("About zynthec-dev")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
     }
 

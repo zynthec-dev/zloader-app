@@ -42,41 +42,41 @@ struct SignableCertificateRowView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(cert.machineName ?? cert.name)
-                    .font(.headline)
+                    .font(.body)
                     .foregroundColor(.primary)
                 
                 let certName = cert.name
                 if cert.machineName != nil {
-                    Text("\(Text("Name: ").font(.system(size: 10)))\(Text(certName).font(.system(size: 10)))")
+                    Text("\(Text("Name: ").font(.footnote))\(Text(certName).font(.footnote))")
                     .foregroundColor(Color(uiColor: .lightGray))
                 }
                 
-                Text("\(Text("Serial: ").font(.system(size: 11)))\(Text(cert.serialNumber).font(.system(size: 11, design: .monospaced)))")
+                Text("\(Text("Serial: ").font(.footnote))\(Text(cert.serialNumber).font(.system(.footnote, design: .monospaced)))")
                 .foregroundColor(Color(uiColor: .lightGray))
                 
                 if let ident = cert.identifier, !ident.isEmpty {
-                    Text("\(Text("ID: ").font(.system(size: 10)))\(Text(ident).font(.system(size: 10, design: .monospaced)))")
+                    Text("\(Text("ID: ").font(.footnote))\(Text(ident).font(.system(.footnote, design: .monospaced)))")
                     .foregroundColor(Color(uiColor: .lightGray))
                 }
                 
                 if let brief = briefInfo {
-                    Text("\(Text("Type: ").font(.system(size: 10)))\(Text(brief.type).font(.system(size: 10)))")
+                    Text("\(Text("Type: ").font(.footnote))\(Text(brief.type).font(.footnote))")
                     .foregroundColor(Color(uiColor: .lightGray))
                     
-                    Text("\(Text("Validity: ").font(.system(size: 10)))\(Text("\(brief.validFrom) - \(brief.validUntil)").font(.system(size: 10)))")
+                    Text("\(Text("Validity: ").font(.footnote))\(Text("\(brief.validFrom) - \(brief.validUntil)").font(.footnote))")
                     .foregroundColor(Color(uiColor: .lightGray))
                 }
                 
                 if let req = cert.requesterEmail, !req.isEmpty {
-                    Text("\(Text("Requester: ").font(.system(size: 10)))\(Text(req).font(.system(size: 10)))")
+                    Text("\(Text("Requester: ").font(.footnote))\(Text(req).font(.footnote))")
                     .foregroundColor(Color(uiColor: .lightGray))
                 }
                 
-                Text("\(Text("Keys: ").font(.system(size: 10)))\(Text("public + private").font(.system(size: 10)))")
+                Text("\(Text("Keys: ").font(.footnote))\(Text("public + private").font(.footnote))")
                 .foregroundColor(Color(uiColor: .lightGray))
                 
                 if let status = statusText {
-                    Text("\(Text("Status: ").font(.system(size: 10)))\(Text(status).font(.system(size: 10, weight: .bold)))")
+                    Text("\(Text("Status: ").font(.footnote))\(Text(status).font(.system(size: 10, weight: .bold)))")
                     .foregroundColor(isAppCert ? .green : .cyan)
                 }
             }

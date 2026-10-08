@@ -44,6 +44,7 @@ struct ThemePickerView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Appearance")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .onChange(of: selectedLanguage) { _, language in
             language.save()

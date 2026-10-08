@@ -165,6 +165,12 @@ struct ZLoaderThemedRoot<Content: View>: View {
             .environment(\.zLoaderUsesGlass, usesGlass)
             .environment(\.defaultMinListRowHeight, 44)
             .font(.body)
+            #if os(tvOS)
+            .listStyle(.grouped)
+            #else
+            .listStyle(.insetGrouped)
+            #endif
+            .formStyle(.grouped)
             .preferredColorScheme(theme.appearance.colorScheme)
             .scrollContentBackground(.hidden)
             .background(Color(uiColor: .settingsBackground))
@@ -360,8 +366,26 @@ struct SettingsEntryLabel: View {
                     .foregroundStyle(Color(uiColor: .settingsSymbol))
                     .frame(width: 24, height: 24)
             }
-            Text(LocalizedStringKey(title)).foregroundStyle(.primary)
+            Text(LocalizedStringKey(title))
         }
-        .font(.body)
+    }
+}
+
+/// Apply at each Settings destination, including separately presented sheets.
+/// A hosting root's background does not automatically cover a modal's surface.
+extension View {
+    func zLoaderSettingsPage() -> some View {
+        self
+            .environment(\.zLoaderUsesGlass, false)
+            .environment(\.defaultMinListRowHeight, 44)
+            .font(.body)
+            #if os(tvOS)
+            .listStyle(.grouped)
+            #else
+            .listStyle(.insetGrouped)
+            #endif
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
     }
 }

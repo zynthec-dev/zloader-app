@@ -108,7 +108,7 @@ struct WirelessPairView: View {
                     
                     if viewModel.serviceID == nil {
                         Text(viewModel.subStatusText)
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
@@ -123,7 +123,7 @@ struct WirelessPairView: View {
 
                     HStack(spacing: 8) {
                             Image(systemName: "wifi")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.accentColor)
                             if startsAsClient {
                                 Text("Both devices must be on the same Wi-Fi network.")
@@ -157,7 +157,7 @@ struct WirelessPairView: View {
                                 .transition(.scale.combined(with: .opacity))
                         }
                     }
-                    .font(.headline)
+                    .font(.body)
                     .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
@@ -173,6 +173,7 @@ struct WirelessPairView: View {
             }
         }
         .navigationTitle(selfPairing ? "Self-Pairing" : "Wireless Pairing")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -301,7 +302,7 @@ struct WirelessPairPinDialog: View {
                         .fontWeight(.bold)
                     
                     Text("Enter this 6-digit code on the connecting device to complete pairing.")
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
@@ -359,7 +360,7 @@ struct ConnectionDetailsCard: View {
                 Image(systemName: "network")
                     .foregroundColor(.accentColor)
                 Text("Connection Details")
-                    .font(.headline)
+                    .font(.body)
             }
             .padding(.horizontal, 16)
 
@@ -372,10 +373,10 @@ struct ConnectionDetailsCard: View {
                     VStack(alignment: .leading, spacing: 0) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(label)
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.secondary)
                             Text(value)
-                                .font(.subheadline)
+                                .font(.body)
                                 .fontWeight(.semibold)
                                 .lineLimit(1)
                         }
@@ -391,7 +392,7 @@ struct ConnectionDetailsCard: View {
                     #if !os(tvOS)
                     .background(Color(.secondarySystemBackground))
                     #else
-                    .background(Color.white.opacity(0.1))
+                    .background(Color(uiColor: .settingsField))
                     #endif
                     .clipShape(
                         RoundedCorner(

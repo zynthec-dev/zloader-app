@@ -101,6 +101,7 @@ struct CertificatesView: View {
                 }
             }
             .navigationTitle("Certificates")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
             .toolbar {
@@ -219,11 +220,12 @@ struct CertificatesView: View {
                 List {
                     ForEach(viewModel.failedImportsList, id: \.self) { failure in
                         Text(failure)
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.system(.footnote, design: .monospaced))
                             .foregroundColor(.red)
                     }
                 }
                 .navigationTitle("Import Failures")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
                 #if !os(tvOS)
@@ -400,7 +402,7 @@ private struct LoadingOverlay: View {
                 #if !os(tvOS)
                 .background(Color(.secondarySystemBackground))
                 #else
-                .background(Color.white.opacity(0.1))
+                .background(Color(uiColor: .settingsField))
                 #endif
                 .cornerRadius(10)
         }
@@ -444,6 +446,7 @@ private struct CreateCertificateSheetView: View {
                 }.listRowBackground(ZLoaderGlassBackground())
             }
             .navigationTitle("New Certificate")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
             .toolbar {
@@ -487,7 +490,7 @@ struct AccountCertificatesView: View {
                     NavigationLink {
                         CertificateDetailView(certificate: cert, viewModel: viewModel)
                     } label: { VStack(alignment: .leading, spacing: 8) {
-                        Text(cert.name).font(.headline)
+                        Text(cert.name).font(.body)
                         Text(cert.certificateTypeName ?? cert.certificateType ?? cert.serialNumber)
                             .font(.caption).foregroundStyle(.secondary)
 
@@ -524,6 +527,7 @@ struct AccountCertificatesView: View {
             SwiftUI.Button("Cancel", role: .cancel) {}
         } message: { Text("Are you sure you want to revoke this certificate? This will permanently delete the certificate on Apple's servers.") }
         .navigationTitle("Certificates from Account")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
         .task { await viewModel.downloadPortalCertificates() }

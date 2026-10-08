@@ -73,7 +73,7 @@ struct OperationsLoggingControlView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 // Pipeline Steps
@@ -92,7 +92,7 @@ struct OperationsLoggingControlView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 16)
@@ -101,6 +101,7 @@ struct OperationsLoggingControlView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Operations Logging")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)

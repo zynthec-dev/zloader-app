@@ -98,6 +98,7 @@ struct SideJITServerConfigView: View {
         .listStyle(.grouped)
         #endif
         .navigationTitle("SideJITServer")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .overlay(
             Group {
@@ -187,7 +188,7 @@ struct SideJITServerConfigView: View {
                 Text("Resolution Mode")
                 Spacer()
                 Text(customAddress.isEmpty ? "Auto (Bonjour mDNS)" : "Manual Override")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundColor(.secondary)
             }
         }.listRowBackground(ZLoaderGlassBackground())
@@ -324,7 +325,7 @@ struct SideJITServerConfigView: View {
                 #if !os(tvOS)
                 .background(Color(UIColor.settingsCard))
                 #else
-                .background(Color.white.opacity(0.1))
+                .background(Color(uiColor: .settingsField))
                 #endif
                 .cornerRadius(8)
                 .overlay(

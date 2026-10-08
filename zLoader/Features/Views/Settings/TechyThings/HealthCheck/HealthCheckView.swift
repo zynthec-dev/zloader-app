@@ -30,7 +30,7 @@ struct HealthCheckView: View {
                                  ? "All requirements met. Local device pairing & VPN tunnel active."
                                  : "All requirements met. Local device pairing & Remote server connection active."
                             )
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         case .failure(let err):
@@ -41,7 +41,7 @@ struct HealthCheckView: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                             Text(err.localizedDescription)
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
@@ -163,6 +163,7 @@ struct HealthCheckView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Health Check")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -132,6 +132,7 @@ struct WirelessIPAInstallerView: View {
             } header: { Text("Local Server") }
         }
         .navigationTitle("Wireless IPA Installer")
+        .zLoaderSettingsPage()
         .task { await model.prepareCertificate() }
         .onDisappear { model.stop() }
         .onChange(of: scenePhase) { _, phase in if phase == .background { model.stop() } }
@@ -147,6 +148,7 @@ struct WirelessIPAInstallerView: View {
                     if !library.isLoading && library.resignedApps.isEmpty { Text("No signed IPAs saved yet.") }
                 }
                 .navigationTitle("IPA Library")
+        .zLoaderSettingsPage()
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { SwiftUI.Button("Done") { selecting = false } } }
             }
         }

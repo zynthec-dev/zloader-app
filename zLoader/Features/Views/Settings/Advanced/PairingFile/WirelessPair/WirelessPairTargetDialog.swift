@@ -34,6 +34,7 @@ struct WirelessPairTargetDialog: View {
             #else
             .background(Color.black.ignoresSafeArea())
             .navigationTitle(viewModel.dialogMode == .client ? "Select Device To Pair" : "Select Server Interface")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
             #endif
             .toolbar {
@@ -137,7 +138,7 @@ struct WirelessPairTargetDialog: View {
                         .frame(width: 20)
                     
                     Text(iface.name)
-                        .font(.subheadline)
+                        .font(.body)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     
@@ -263,7 +264,7 @@ struct WirelessPairTargetDialog: View {
                 }
                 
                 Text(target.name)
-                    .font(.headline)
+                    .font(.body)
                     .foregroundColor(.primary)
                 
                 VStack(alignment: .leading, spacing: 3) {

@@ -41,6 +41,7 @@ struct ShortcutsSettingsView: View {
             #endif
         }
         .navigationTitle("Shortcuts")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if os(iOS)
         .sheet(isPresented: $addingRefresh) {

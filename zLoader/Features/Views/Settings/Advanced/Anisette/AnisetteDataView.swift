@@ -321,7 +321,7 @@ struct AnisetteDataView: View {
                             )
                         }
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                     
                     // SECTION 2: DEVICE & IDENTITY
@@ -364,7 +364,7 @@ struct AnisetteDataView: View {
                             )
                         }
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                     
                     // SECTION 3: ENVIRONMENT & LOCALIZATION
@@ -399,7 +399,7 @@ struct AnisetteDataView: View {
                             )
                         }
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                     
                     // SECTION 4: DYNAMIC TOKENS (INFORMATIONAL)
@@ -430,7 +430,7 @@ struct AnisetteDataView: View {
                             )
                         }
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                     
                     // SAVE OVERRIDES BUTTON
@@ -446,9 +446,9 @@ struct AnisetteDataView: View {
                                 .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                             Spacer()
                         }
-                        .frame(height: 50)
+                        .frame(minHeight: 44)
                         .background(Color.accentColor)
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                     .disabled(viewModel.clientInfo.isEmpty || viewModel.userAgent.isEmpty)
                 } else {
@@ -458,11 +458,11 @@ struct AnisetteDataView: View {
                         
                         VStack(spacing: 12) {
                             TextEditor(text: $viewModel.rawEditableJSON)
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundColor(.primary)
                                 .frame(minHeight: 320)
                                 .padding(8)
-                                .background(Color.white.opacity(0.06))
+                                .background(Color(uiColor: .settingsField))
                                 .cornerRadius(10)
                             
                             SwiftUI.Button {
@@ -477,7 +477,7 @@ struct AnisetteDataView: View {
                                         .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                                     Spacer()
                                 }
-                                .frame(height: 48)
+                                .frame(minHeight: 44)
                                 .background(Color.accentColor)
                                 .cornerRadius(12)
                             }
@@ -485,7 +485,7 @@ struct AnisetteDataView: View {
                         }
                         .padding(16)
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                 }
                 
@@ -522,7 +522,7 @@ struct AnisetteDataView: View {
                                     
                                     ScrollView(.horizontal, showsIndicators: true) {
                                         Text(viewModel.serverReturnedHeadersJSON)
-                                            .font(.system(size: 11, design: .monospaced))
+                                            .font(.system(.footnote, design: .monospaced))
                                             .foregroundColor(.primary)
                                             .padding(10)
                                             .background(Color.black.opacity(0.3))
@@ -537,7 +537,7 @@ struct AnisetteDataView: View {
                                         HStack {
                                             Spacer()
                                             SettingsEntryLabel(title: "Save as Overrides", systemImage: "square.and.arrow.down.on.square")
-                                                .font(.system(size: 15, weight: .bold))
+                                                .font(.body)
                                                 .foregroundColor(.primary)
                                             Spacer()
                                         }
@@ -568,7 +568,7 @@ struct AnisetteDataView: View {
                                         .foregroundColor(.accentColor)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 5)
-                                        .background(Color.white.opacity(0.1))
+                                        .background(Color(uiColor: .settingsField))
                                         .cornerRadius(8)
                                     }
                                     .buttonStyle(.borderless)
@@ -578,7 +578,7 @@ struct AnisetteDataView: View {
                             .padding(.vertical, 12)
                         }
                         .zLoaderGlassSurface()
-                        .cornerRadius(14)
+                        .cornerRadius(12)
                     }
                 }
                 
@@ -615,7 +615,7 @@ struct AnisetteDataView: View {
                                     .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -637,7 +637,7 @@ struct AnisetteDataView: View {
                                     .foregroundColor(Color.primary.opacity(0.4))
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -652,7 +652,7 @@ struct AnisetteDataView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         .alert("Reset to Defaults?", isPresented: $showingResetAlert) {
                             SwiftUI.Button("Reset", role: .destructive) {
@@ -666,7 +666,7 @@ struct AnisetteDataView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 16)
@@ -675,6 +675,7 @@ struct AnisetteDataView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Client Config")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -735,29 +736,29 @@ struct AnisetteDataView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(LocalizedStringKey(title))
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.body)
                     .foregroundColor(.primary)
                 Spacer()
                 Text(headerKey)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(.footnote, design: .monospaced))
                     .foregroundColor(Color.primary.opacity(0.45))
             }
             
             if isMultiline {
                 #if !os(tvOS)
                 TextEditor(text: text)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(.footnote, design: .monospaced))
                     .foregroundColor(.primary)
                     .frame(minHeight: 64)
                     .padding(6)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color(uiColor: .settingsField))
                     .cornerRadius(8)
                 #else
                 TextField(placeholder, text: text)
                     .font(.system(size: 13, design: .monospaced))
                     .foregroundColor(.primary)
                     .padding(8)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color(uiColor: .settingsField))
                     .cornerRadius(8)
                 #endif
             } else {
@@ -767,7 +768,7 @@ struct AnisetteDataView: View {
                     .autocapitalization(autocapitalization)
                     .disableAutocorrection(true)
                     .padding(8)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color(uiColor: .settingsField))
                     .cornerRadius(8)
             }
         }
@@ -780,15 +781,15 @@ struct AnisetteDataView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(LocalizedStringKey(title))
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
                     Text(headerKey)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(.footnote, design: .monospaced))
                         .foregroundColor(Color.primary.opacity(0.45))
                 }
                 Text(LocalizedStringKey(subtitle))
-                    .font(.system(size: 12))
+                    .font(.footnote)
                     .foregroundColor(Color.primary.opacity(0.55))
             }
         }

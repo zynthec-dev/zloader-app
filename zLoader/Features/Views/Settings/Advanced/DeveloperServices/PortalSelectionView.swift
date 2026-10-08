@@ -74,6 +74,7 @@ struct PortalSelectionView: View {
         }
         .environment(\.editMode, $editMode)
         .navigationTitle(LocalizedStringKey(kind.title))
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

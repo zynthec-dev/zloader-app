@@ -96,7 +96,7 @@ struct ProfilePortalDetailView: View {
                 if viewModel.certificates.isEmpty {
                     Text("No certificates found on this team.")
                         .foregroundColor(.secondary)
-                        .font(.subheadline)
+                        .font(.body)
                 } else {
                     ForEach(viewModel.certificates, id: \.serialNumber) { cert in
                         let certID = cert.identifier ?? cert.serialNumber
@@ -110,7 +110,7 @@ struct ProfilePortalDetailView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(cert.commonName ?? cert.name)
-                                        .font(.subheadline)
+                                        .font(.body)
                                         .foregroundColor(.primary)
                                     Text("Serial: \(cert.serialNumber)")
                                         .font(.caption2)
@@ -169,7 +169,7 @@ struct ProfilePortalDetailView: View {
                 if viewModel.devices.isEmpty {
                     Text("No registered devices found on this team.")
                         .foregroundColor(.secondary)
-                        .font(.subheadline)
+                        .font(.body)
                 } else {
                     ForEach(viewModel.devices, id: \.identifier) { device in
                         let devID = device.deviceID ?? device.identifier
@@ -185,7 +185,7 @@ struct ProfilePortalDetailView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(device.name)
-                                        .font(.subheadline)
+                                        .font(.body)
                                         .foregroundColor(.primary)
                                     Text(device.identifier)
                                         .font(.caption2)
@@ -299,6 +299,7 @@ struct ProfilePortalDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle(profile.name)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .refreshable {
             await viewModel.fetchProfiles(presentingViewController: presentingViewController, isPullToRefresh: true)

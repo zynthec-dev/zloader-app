@@ -38,6 +38,7 @@ struct SourceOrderView: View {
             }
             .environment(\.editMode, .constant(.active))
             .navigationTitle("Sort Sources")
+        .zLoaderSettingsPage()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SwiftUI.Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {

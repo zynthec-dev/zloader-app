@@ -173,7 +173,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 // Section: Widget Options
@@ -226,7 +226,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 // Section 2: Database Options
@@ -303,7 +303,7 @@ struct DeveloperOptionsView: View {
                         ))
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
@@ -338,7 +338,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 // Section: Device (TCP) Probe Timeout
@@ -393,7 +393,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 // Section: Connection Config
@@ -423,7 +423,7 @@ struct DeveloperOptionsView: View {
                         ))
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 #if DEBUG
@@ -472,7 +472,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 #endif
                 
@@ -504,7 +504,7 @@ struct DeveloperOptionsView: View {
                         .disabled(isDumpingProfiles)
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -556,7 +556,7 @@ struct DeveloperOptionsView: View {
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 16)
@@ -565,6 +565,7 @@ struct DeveloperOptionsView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Developer Options")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)

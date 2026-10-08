@@ -84,6 +84,7 @@ struct CertificatePortalDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle(certificate.name)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .refreshable {
             await viewModel.fetchCertificates(presentingViewController: presentingViewController, isPullToRefresh: true)

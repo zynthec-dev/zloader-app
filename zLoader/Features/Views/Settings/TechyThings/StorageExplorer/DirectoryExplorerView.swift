@@ -53,7 +53,7 @@ public struct DirectoryExplorerView: View {
                         .progressViewStyle(CircularProgressViewStyle())
                         .scaleEffect(1.2)
                     Text("Loading directory contents...")
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -73,7 +73,7 @@ public struct DirectoryExplorerView: View {
                             .foregroundColor(.primary)
                         
                         Text("No files or subfolders found in this directory.")
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -112,6 +112,7 @@ public struct DirectoryExplorerView: View {
             }
         }
         .navigationTitle(viewModel.currentURL.lastPathComponent)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -450,7 +451,7 @@ private struct BottomInformationBarView: View {
         #if !os(tvOS)
         .background(Color(UIColor.secondarySystemBackground))
         #else
-        .background(Color.white.opacity(0.1))
+        .background(Color(uiColor: .settingsField))
         #endif
         .onAppear {
             updateState()

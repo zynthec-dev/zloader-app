@@ -146,7 +146,7 @@ struct CertificateDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text("SHA-1 Fingerprint")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.primary)
                             Spacer()
                             
@@ -166,7 +166,7 @@ struct CertificateDetailView: View {
                             #endif
                         }
                         Text(details.fingerprintSHA1)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(.footnote, design: .monospaced))
                             .foregroundColor(.secondary)
                             #if !os(tvOS)
                             .textSelection(.enabled)
@@ -179,7 +179,7 @@ struct CertificateDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text("SHA-256 Fingerprint")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.primary)
                             Spacer()
                             
@@ -199,7 +199,7 @@ struct CertificateDetailView: View {
                             #endif
                         }
                         Text(details.fingerprintSHA256)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(.footnote, design: .monospaced))
                             .foregroundColor(.secondary)
                             #if !os(tvOS)
                             .textSelection(.enabled)
@@ -220,7 +220,7 @@ struct CertificateDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Private Key Data")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.primary)
                             Spacer()
                             
@@ -250,7 +250,7 @@ struct CertificateDetailView: View {
                         
                         if showPrivateKey {
                             Text(privateKey.base64EncodedString())
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 #if !os(tvOS)
                                 .textSelection(.enabled)
@@ -270,7 +270,7 @@ struct CertificateDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Certificate PEM Data")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundColor(.primary)
                             Spacer()
                             
@@ -292,7 +292,7 @@ struct CertificateDetailView: View {
                         
                         ScrollView(.horizontal, showsIndicators: true) {
                             Text(String(data: certData, encoding: .utf8) ?? certData.base64EncodedString())
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 #if !os(tvOS)
                                 .textSelection(.enabled)
@@ -307,6 +307,7 @@ struct CertificateDetailView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Certificate Details")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
         #if !os(tvOS)
@@ -340,11 +341,11 @@ struct CertificateDetailView: View {
     private func detailRow(title: String, value: String) -> some View {
         HStack {
             Text(LocalizedStringKey(title))
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.primary)
             Spacer()
             Text(value)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.trailing)
                 #if !os(tvOS)
@@ -356,11 +357,11 @@ struct CertificateDetailView: View {
     private func detailRowWithCopy(title: String, value: String, isCopied: Binding<Bool>) -> some View {
         HStack {
             Text(LocalizedStringKey(title))
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.primary)
             Spacer()
             Text(value)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.trailing)
                 #if !os(tvOS)

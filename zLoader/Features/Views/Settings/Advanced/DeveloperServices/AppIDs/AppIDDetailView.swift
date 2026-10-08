@@ -81,7 +81,7 @@ struct AppIDDetailView: View {
                 }
                 if currentAppID.features.isEmpty {
                     Text("No special features enabled for this App ID.")
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundColor(.secondary)
                 } else {
                     let sortedFeatures = currentAppID.features.sorted { $0.key.rawValue < $1.key.rawValue }
@@ -89,7 +89,7 @@ struct AppIDDetailView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(displayName(for: feature))
-                                    .font(.subheadline)
+                                    .font(.body)
                                 Text(feature.rawValue)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
@@ -106,7 +106,7 @@ struct AppIDDetailView: View {
             Section(header: Text("Associated App Groups"), footer: Text("The portal API does not return the current group assignments. No groups are preselected. Select the complete desired set before saving; this replaces the associations.")) {
                 if viewModel.appGroups.isEmpty {
                     Text("No App Groups available on this team. Create an App Group first.")
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(viewModel.appGroups, id: \.identifier) { group in
@@ -121,7 +121,7 @@ struct AppIDDetailView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(group.name)
-                                        .font(.subheadline)
+                                        .font(.body)
                                         .foregroundColor(.primary)
                                     Text(group.identifier)
                                         .font(.caption)
@@ -168,6 +168,7 @@ struct AppIDDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle(currentAppID.name.isEmpty ? "App ID Details" : currentAppID.name)
+        .zLoaderSettingsPage()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 SwiftUI.Button {
@@ -286,5 +287,6 @@ struct AppIDInfoView: View {
                 }
             }.listRowBackground(ZLoaderGlassBackground())
         }.navigationTitle("App ID Details").textSelection(.enabled)
+        .zLoaderSettingsPage()
     }
 }

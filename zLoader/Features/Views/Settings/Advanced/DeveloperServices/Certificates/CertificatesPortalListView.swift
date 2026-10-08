@@ -45,7 +45,7 @@ struct CertificatesPortalListView: View {
                     } else {
                         Text(searchText.isEmpty ? "No certificates found on Developer Portal." : "No matching certificates found.")
                             .foregroundColor(.secondary)
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 } else {
                     ForEach(filteredCertificates, id: \.serialNumber) { cert in
@@ -99,6 +99,7 @@ struct CertificatesPortalListView: View {
             SwiftUI.Button("Cancel", role: .cancel) {}
         } message: { Text("Deleting locally removes the certificate and private key from this device. It does not revoke the certificate in your Apple Account.") }
         .navigationTitle("Certificates")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .refreshable {
             await viewModel.fetchCertificates(presentingViewController: presentingViewController, isPullToRefresh: true)
@@ -139,7 +140,7 @@ private struct CertificatePortalRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(certificate.name)
-                    .font(.headline)
+                    .font(.body)
                 Spacer()
                 if isExpired {
                     Text("Expired")
@@ -178,7 +179,7 @@ private struct CertificatePortalRow: View {
 
             if let machine = certificate.machineName {
                 Text(machine)
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundColor(.secondary)
             }
 

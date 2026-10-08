@@ -224,7 +224,7 @@ private extension ErrorLogViewController
         let consoleLogView = ConsoleLogView(logURL: (UIApplication.shared.delegate as! AppDelegate).consoleLog.logFileURL)
         
         // Create the UIHostingController
-        let consoleLogController = ZLoaderHostingController(rootView: consoleLogView)
+        let consoleLogController = ZLoaderHostingController(rootView: consoleLogView, usesGlass: false)
         
         // Configure the bottom sheet presentation
         #if !os(tvOS)

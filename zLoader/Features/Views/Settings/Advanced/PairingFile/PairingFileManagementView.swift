@@ -34,6 +34,7 @@ struct PairingFileManagementView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Pairing File Management")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -133,7 +134,7 @@ struct PairingFileManagementView: View {
                     .background(Capsule().fill(Color.white.opacity(0.12)))
                 }
                 .padding(.horizontal, 16)
-                .frame(height: 50)
+                .frame(minHeight: 44)
 
                 Divider()
                     .background(Color.settingsDivider)
@@ -161,7 +162,7 @@ struct PairingFileManagementView: View {
                     .background(Capsule().fill(Color.white.opacity(0.12)))
                 }
                 .padding(.horizontal, 16)
-                .frame(height: 50)
+                .frame(minHeight: 44)
                 .contextMenu {
                     if viewModel.preferredProtocol != nil {
                         SwiftUI.Button(role: .destructive) {
@@ -173,7 +174,7 @@ struct PairingFileManagementView: View {
                 }
             }
             .zLoaderGlassSurface()
-            .cornerRadius(14)
+            .cornerRadius(12)
         }
     }
 
@@ -325,7 +326,7 @@ struct PairingFileManagementView: View {
             }
         }
         .zLoaderGlassSurface()
-        .cornerRadius(14)
+        .cornerRadius(12)
     }
 
     private func installedCardHeader(for proto: PairingProtocol, isValid: Bool) -> some View {
@@ -495,7 +496,7 @@ struct PairingFileManagementView: View {
                 }
             }
             .zLoaderGlassSurface()
-            .cornerRadius(14)
+            .cornerRadius(12)
         }
     }
 
@@ -520,14 +521,14 @@ struct PairingFileManagementView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 16)
-                    .frame(height: 50)
+                    .frame(minHeight: 44)
                 }
             }
             .zLoaderGlassSurface()
-            .cornerRadius(14)
+            .cornerRadius(12)
 
             Text("Resetting pairing files removes stored Lockdown and Remote Pairing credentials. You will need to re-pair or re-import a pairing file and restart zLoader.")
-                .font(.system(size: 12))
+                .font(.footnote)
                 .foregroundColor(Color.primary.opacity(0.5))
                 .padding(.horizontal, 4)
                 .padding(.top, 4)

@@ -53,7 +53,7 @@ struct AppGroupsListView: View {
                     } else {
                         Text(searchText.isEmpty ? "No App Groups found on Developer Portal." : "No matching App Groups found.")
                             .foregroundColor(.secondary)
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 } else {
                     ForEach(filteredGroups, id: \.identifier) { group in
@@ -64,7 +64,7 @@ struct AppGroupsListView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(group.name.isEmpty ? "App Group" : group.name)
-                                        .font(.headline)
+                                        .font(.body)
                                         .foregroundColor(.primary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
@@ -72,7 +72,7 @@ struct AppGroupsListView: View {
                                         .foregroundColor(.secondary)
                                 }
                                 Text(group.groupIdentifier)
-                                    .font(.subheadline)
+                                    .font(.body)
                                     .foregroundColor(.secondary)
                                 HStack {
                                     Text("Group ID: \(group.identifier)")
@@ -146,6 +146,7 @@ struct AppGroupsListView: View {
             }
         }
         .navigationTitle("App Groups")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -172,6 +173,7 @@ struct AppGroupsListView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Create App Group")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
@@ -222,6 +224,7 @@ struct AppGroupsListView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Edit Identifier Configuration")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
@@ -291,6 +294,7 @@ struct AppGroupsListView: View {
                         LabeledContent("Group ID", value: group.identifier)
                     }.listRowBackground(ZLoaderGlassBackground())
                 } }.navigationTitle("Info")
+                .zLoaderSettingsPage()
                 .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { showInfo = false } } }
             }
         }

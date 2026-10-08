@@ -91,10 +91,6 @@ final class EmbeddedTunnel {
             ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == providerID
         } ?? NETunnelProviderManager()
         manager = selected
-        if selected.localizedDescription != "zLoader Local Tunnel" {
-            selected.localizedDescription = "zLoader Local Tunnel"
-            try await selected.saveToPreferences()
-        }
         if selected.connection.status == .connected {
             // Restore the exact routed peer after relaunch or a network change.
             // A connected provider does not imply that the host's settings cache survived.
@@ -102,6 +98,10 @@ final class EmbeddedTunnel {
                   let peer = config.providerConfiguration?["peer"] as? String,
                   isPrivateTunnelIPv4(peer) else {
                 throw OperationError.invalidVPN(reason: "The connected internal tunnel has no valid device endpoint. Reconfigure it in Connection Settings.")
+            }
+            if selected.localizedDescription != "zLoader Local Tunnel" {
+                selected.localizedDescription = "zLoader Local Tunnel"
+                try await selected.saveToPreferences()
             }
             ConnectionConfig.shared.overrideTunnelPeerIp = peer
             return selected
@@ -117,6 +117,8 @@ final class EmbeddedTunnel {
         config.providerConfiguration = ["peer": peer, "interface": iface]
         ConnectionConfig.shared.overrideTunnelPeerIp = peer
         selected.protocolConfiguration = config
+        // The first save must include a complete provider protocol. Saving a
+        // newly created manager just to rename it produces NEVPNError 1.
         selected.localizedDescription = "zLoader Local Tunnel"
         selected.isEnabled = true
         selected.isOnDemandEnabled = false

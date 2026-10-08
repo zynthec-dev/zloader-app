@@ -50,7 +50,7 @@ struct AppIDsListView: View {
                     } else {
                         Text(searchText.isEmpty ? "No App IDs registered on Developer Portal." : "No matching App IDs found.")
                             .foregroundColor(.secondary)
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 } else {
                     ForEach(filteredAppIDs, id: \.identifier) { appID in
@@ -58,7 +58,7 @@ struct AppIDsListView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(appID.name.isEmpty ? "App ID" : appID.name)
-                                        .font(.headline)
+                                        .font(.body)
                                     Spacer()
                                     if !appID.features.isEmpty {
                                         Text("\(appID.features.count) features")
@@ -71,7 +71,7 @@ struct AppIDsListView: View {
                                     }
                                 }
                                 Text(appID.bundleIdentifier)
-                                    .font(.subheadline)
+                                    .font(.body)
                                     .foregroundColor(.secondary)
                                 HStack {
                                     Text("ID: \(appID.identifier)")
@@ -131,6 +131,7 @@ struct AppIDsListView: View {
             }
         }
         .navigationTitle("App IDs")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -155,6 +156,7 @@ struct AppIDsListView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Register App ID")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {

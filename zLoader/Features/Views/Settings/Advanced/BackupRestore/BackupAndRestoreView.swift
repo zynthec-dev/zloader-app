@@ -45,7 +45,7 @@ struct BackupAndRestoreView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -63,11 +63,11 @@ struct BackupAndRestoreView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 
                 #if DEBUG
@@ -92,7 +92,7 @@ struct BackupAndRestoreView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                         
                         divider
@@ -110,11 +110,11 @@ struct BackupAndRestoreView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
-                            .frame(height: 50)
+                            .frame(minHeight: 44)
                         }
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
                 #endif
             }
@@ -124,6 +124,7 @@ struct BackupAndRestoreView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Backup & Restore")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)

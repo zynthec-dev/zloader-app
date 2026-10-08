@@ -36,7 +36,7 @@ struct ExperimentalFeaturesView: View {
                         ))
                     }
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 16)
@@ -45,6 +45,7 @@ struct ExperimentalFeaturesView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Experimental Features")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)

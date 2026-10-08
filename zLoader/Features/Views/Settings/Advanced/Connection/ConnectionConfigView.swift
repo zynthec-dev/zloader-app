@@ -79,6 +79,7 @@ struct ConnectionConfigView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Connection Settings")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .sheet(isPresented: $showsTunnelSetup) {
             NavigationStack {
@@ -88,6 +89,7 @@ struct ConnectionConfigView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("zLoader Local Tunnel")
+        .zLoaderSettingsPage()
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -144,6 +146,7 @@ struct ConnectionConfigView: View {
                 Text("VPN configuration and the optional internal tunnel are available on iPhone and iPad.")
             }.listRowBackground(ZLoaderGlassBackground())
         }.navigationTitle("Connection")
+        .zLoaderSettingsPage()
     }
 }
 #endif

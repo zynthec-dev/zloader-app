@@ -59,6 +59,7 @@ public struct StorageExplorerView: View {
         .listStyle(.grouped)
         #endif
         .navigationTitle("Storage Explorer")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .onAppear {
             verboseLog("[StorageExplorerView] onAppear triggered")
@@ -246,7 +247,7 @@ private struct StorageLocationRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(location.name)
-                    .font(.headline)
+                    .font(.body)
                 Text(location.subtitle)
                     .font(.caption)
                     .foregroundColor(.secondary)

@@ -48,7 +48,7 @@ struct LocalKeyMaterialView: View {
             Section("Keys and Signing Requests") {
                 ForEach(items) { item in
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(item.name, systemImage: item.privateKey == nil ? "key" : "key.fill").font(.headline)
+                        Label(item.name, systemImage: item.privateKey == nil ? "key" : "key.fill").font(.body)
                         Text(item.privateKey == nil ? "Public key" : "Private + public key").foregroundStyle(.secondary)
                         Text(item.created, style: .date).font(.caption)
                         Text("SHA-256: " + item.fingerprint).font(.caption.monospaced()).textSelection(.enabled)
@@ -71,6 +71,7 @@ struct LocalKeyMaterialView: View {
             if let message { Section { Text(message).textSelection(.enabled) }.listRowBackground(ZLoaderGlassBackground()) }
         }
         .navigationTitle("Keys & Signing Requests")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
         .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { dismiss() } } }
@@ -89,6 +90,7 @@ struct LocalKeyMaterialView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Local Signing Request")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
                 .toolbar {

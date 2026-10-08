@@ -136,7 +136,7 @@ struct CreateManualProfileView: View {
                             } else {
                                 Text("No certificates found on this team.")
                                     .foregroundColor(.secondary)
-                                    .font(.subheadline)
+                                    .font(.body)
                             }
                         } else {
                             ForEach(viewModel.certificates, id: \.serialNumber) { cert in
@@ -151,7 +151,7 @@ struct CreateManualProfileView: View {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(cert.commonName ?? cert.name)
-                                                .font(.subheadline)
+                                                .font(.body)
                                                 .foregroundColor(.primary)
                                             Text("Serial: \(cert.serialNumber)")
                                                 .font(.caption2)
@@ -205,7 +205,7 @@ struct CreateManualProfileView: View {
                                 } else {
                                     Text("No registered \(selectedProfileType.displayName) devices found on this team.")
                                         .foregroundColor(.secondary)
-                                        .font(.subheadline)
+                                        .font(.body)
                                 }
                             } else {
                                 ForEach(filteredDevices, id: \.identifier) { device in
@@ -220,7 +220,7 @@ struct CreateManualProfileView: View {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(device.name)
-                                                    .font(.subheadline)
+                                                    .font(.body)
                                                 Text(device.identifier)
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
@@ -240,6 +240,7 @@ struct CreateManualProfileView: View {
                 }
             }
             .navigationTitle("New Profile")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
             .navigationBarItems(
                 leading: SwiftUI.Button("Cancel") {

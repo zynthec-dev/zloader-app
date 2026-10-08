@@ -64,7 +64,7 @@ struct DevicesListView: View {
                     } else {
                         Text(searchText.isEmpty ? "No devices registered on Developer Portal." : "No matching devices found.")
                             .foregroundColor(.secondary)
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 } else {
                     ForEach(filteredDevices, id: \.self) { device in
@@ -75,7 +75,7 @@ struct DevicesListView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(device.name.isEmpty ? "Device" : device.name)
-                                        .font(.headline)
+                                        .font(.body)
                                         .foregroundColor(.primary)
                                     Spacer()
                                     if device.status == "d" {
@@ -175,6 +175,7 @@ struct DevicesListView: View {
             }
         }
         .navigationTitle("Devices")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -270,6 +271,7 @@ struct DevicesListView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Register Device")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
@@ -344,6 +346,7 @@ struct DevicesListView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("Edit Device")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {

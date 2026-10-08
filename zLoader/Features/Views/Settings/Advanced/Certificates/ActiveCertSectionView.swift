@@ -24,7 +24,7 @@ struct ActiveCertSectionView: View {
                     
                     VStack(alignment: .leading) {
                         HStack(spacing: 6) {
-                            Text("Active Signing Certificate").font(.headline)
+                            Text("Active Signing Certificate").font(.body)
                             
                             #if !os(tvOS)
                             SwiftUI.Button {
@@ -92,18 +92,18 @@ struct ActiveCertSectionView: View {
                 }
             } else if let installed = viewModel.installationCertificate {
                 SettingsEntryLabel(title: "Installed zLoader Certificate", systemImage: "app.badge.checkmark")
-                    .font(.headline)
+                    .font(.body)
                 Text(installed.name)
                 Text(installed.expiryDate <= Date()
                      ? "The installed signing certificate has expired and cannot be activated automatically."
                      : "Installed signing identity detected. Its matching private key is missing. Import the corresponding .p12 from your installer or Mac; this certificate will then activate automatically.")
-                    .font(.subheadline).foregroundStyle(.secondary)
+                    .font(.body).foregroundStyle(.secondary)
             } else {
                 Text(viewModel.team == nil
                      ? "No active local certificate found.Import a .p12 file to sign your apps."
                      : "No active local certificate found.Create a new certificate or import a .p12 file to sign your apps.")
                     .foregroundColor(.secondary)
-                    .font(.subheadline)
+                    .font(.body)
             }
         }.listRowBackground(ZLoaderGlassBackground())
     }

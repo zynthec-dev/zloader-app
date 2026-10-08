@@ -73,47 +73,15 @@ struct ProfileManagementView: View {
                     }
                 }.listRowBackground(ZLoaderGlassBackground())
                 Section(header: Text("Overview")) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Total")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(viewModel.profiles.count)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                        }
-                        Spacer()
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Ready")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(viewModel.readyCount)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.green)
-                        }
-                        Spacer()
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Portal")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(viewModel.portalCount)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.blue)
-                        }
-                        Spacer()
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Missing Cert")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(viewModel.profiles.count - viewModel.readyCount)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(viewModel.profiles.count - viewModel.readyCount > 0 ? .orange : .secondary)
-                        }
+                    LabeledContent("Total", value: String(viewModel.profiles.count))
+                    LabeledContent("Ready") {
+                        Text(String(viewModel.readyCount)).foregroundStyle(.green)
                     }
-                    .padding(.vertical, 4)
+                    LabeledContent("Portal", value: String(viewModel.portalCount))
+                    LabeledContent("Missing Cert") {
+                        Text(String(viewModel.profiles.count - viewModel.readyCount))
+                            .foregroundStyle(viewModel.profiles.count - viewModel.readyCount > 0 ? .orange : .secondary)
+                    }
                 }.listRowBackground(ZLoaderGlassBackground())
 
                 Section(
@@ -131,7 +99,7 @@ struct ProfileManagementView: View {
                         } else {
                             Text(searchText.isEmpty ? "No provisioning profiles installed. Tap '+' to import or pull to refresh." : "No matching provisioning profiles found.")
                                 .foregroundColor(.secondary)
-                                .font(.subheadline)
+                                .font(.body)
                         }
                     } else {
                         ForEach(filteredProfiles, id: \.uuid) { profile in
@@ -215,6 +183,7 @@ struct ProfileManagementView: View {
             }
         }
         .navigationTitle("Profile Management")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -459,106 +428,25 @@ private struct ProfileManagementRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: profile.name).font(.body).foregroundStyle(.primary)
+            Text(verbatim: profile.bundleIdentifier).font(.footnote).foregroundStyle(.secondary)
             HStack {
-                Text(profile.name)
-                    .font(.headline)
+                Text(isRemote ? "Portal" : "Local")
                 Spacer()
-                if isRemote {
-                    HStack(spacing: 3) {
-                        Image(systemName: "cloud.fill")
-                            .font(.system(size: 8))
-                        Text("Portal")
-                            .fontWeight(.medium)
-                    }
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.15))
-                    .foregroundColor(.blue)
-                    .cornerRadius(6)
-                } else {
-                    HStack(spacing: 3) {
-                        Image(systemName: "internaldrive")
-                            .font(.system(size: 8))
-                        Text("Local")
-                            .fontWeight(.medium)
-                    }
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.15))
-                    .foregroundColor(.secondary)
-                    .cornerRadius(6)
-                }
-
-                if isExpired {
-                    Text("Expired")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red.opacity(0.15))
-                        .foregroundColor(.red)
-                        .cornerRadius(6)
-                } else if matchingCert != nil {
-                    Text("Ready")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.15))
-                        .foregroundColor(.green)
-                        .cornerRadius(6)
-                } else {
-                    Text("No Key")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.15))
-                        .foregroundColor(.orange)
-                        .cornerRadius(6)
-                }
                 Text("Expires: \(formatDate(profile.expirationDate))")
-                    .font(.caption)
-                    .foregroundColor(isExpired ? .red : .secondary)
-            }
-
-            HStack {
-                Text(profile.bundleIdentifier)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(profile.teamName)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
+            }.font(.footnote).foregroundStyle(.secondary)
+            Text(isExpired ? "Expired" : matchingCert != nil ? "Ready" : "No Key")
+                .font(.footnote)
+                .foregroundStyle(isExpired ? .red : matchingCert != nil ? .green : .orange)
             if let cert = matchingCert {
-                HStack(spacing: 4) {
-                    Image(systemName: "key.fill")
-                        .font(.system(size: 9))
-                        .foregroundColor(.secondary)
-                    Text("Signer: \(cert.name)")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                Text("Signer: \(cert.name)").font(.footnote).foregroundStyle(.secondary)
             }
-
             if !assignedApps.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "app.badge.checkmark")
-                        .font(.system(size: 9))
-                        .foregroundColor(.blue)
-                    Text("Assigned: \(assignedApps.joined(separator: ", "))")
-                        .font(.system(size: 10))
-                        .foregroundColor(.blue)
-                        .lineLimit(1)
-                }
+                Text("Assigned: \(assignedApps.joined(separator: ", "))")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

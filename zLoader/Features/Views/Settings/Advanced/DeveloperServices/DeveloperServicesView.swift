@@ -30,9 +30,9 @@ struct DeveloperServicesView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(team.name)
-                                    .font(.headline)
+                                    .font(.body)
                                 Text("Team ID: \(team.identifier)")
-                                    .font(.subheadline)
+                                    .font(.body)
                                     .foregroundColor(.secondary)
                             }
 
@@ -144,6 +144,7 @@ struct DeveloperServicesView: View {
             }
         }
         .navigationTitle("Apple Developer Portal")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .onAppear {
             if viewModel.appIDs.isEmpty && viewModel.profiles.isEmpty {
@@ -186,7 +187,7 @@ struct DeveloperServicesToastView: View {
             Spacer()
             if isShowing {
                 Text(message)
-                    .font(.subheadline)
+                    .font(.body)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(Color(UIColor.label).opacity(0.85))

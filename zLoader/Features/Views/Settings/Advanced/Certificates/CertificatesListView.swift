@@ -179,7 +179,7 @@ private struct CertGroupHeaderView: View {
                 viewModel.isSectionHideActive.toggle()
             } label: {
                 Image(systemName: viewModel.isSectionHideActive ? "eye.slash" : "eye")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundColor(viewModel.isGlobalHideActive ? .gray : .accentColor)
             }
             .buttonStyle(.plain)

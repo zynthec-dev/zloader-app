@@ -45,7 +45,7 @@ struct ProfilesListView: View {
                     } else {
                         Text(searchText.isEmpty ? "No Provisioning Profiles found on Developer Portal." : "No matching Provisioning Profiles found.")
                             .foregroundColor(.secondary)
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 } else {
                     ForEach(filteredProfiles, id: \.uuid) { profile in
@@ -104,6 +104,7 @@ struct ProfilesListView: View {
             }
         }
         .navigationTitle("Provisioning Profiles")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -167,7 +168,7 @@ private struct ProfileRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(profile.name)
-                    .font(.headline)
+                    .font(.body)
                 Spacer()
                 if isExpired {
                     Text("Expired")
@@ -187,7 +188,7 @@ private struct ProfileRow: View {
             HStack {
                 if let bundleID = profile.bundleIdentifier {
                     Text(bundleID)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundColor(.secondary)
                 }
                 Spacer()

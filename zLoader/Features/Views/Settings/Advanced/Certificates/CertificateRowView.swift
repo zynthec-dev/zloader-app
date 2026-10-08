@@ -28,14 +28,14 @@ struct CertificateRowView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text((cert.machineName ?? cert.name) + (isRemote ? " (R)" : ""))
-                    .font(.headline)
+                    .font(.body)
                 
                 let displaySerial = viewModel.displaySerial(for: cert)
-                Text("\(Text("Serial: ").font(.system(size: 11)))\(Text(displaySerial).font(.system(size: 11, design: .monospaced)))")
+                Text("\(Text("Serial: ").font(.footnote))\(Text(displaySerial).font(.system(.footnote, design: .monospaced)))")
                 .foregroundColor(.secondary)
                 
                 if let displayIdent = viewModel.displayIdentifier(for: cert) {
-                    Text("\(Text("ID: ").font(.system(size: 10)))\(Text(displayIdent).font(.system(size: 10, design: .monospaced)))")
+                    Text("\(Text("ID: ").font(.footnote))\(Text(displayIdent).font(.system(.footnote, design: .monospaced)))")
                     .foregroundColor(.gray)
                 }
                 
@@ -45,17 +45,17 @@ struct CertificateRowView: View {
                 
                 if let displayReq = viewModel.displayRequester(for: cert) {
                     let isHidden = displayReq.contains("•")
-                    Text("\(Text("Requester: ").font(.system(size: 10)))\(Text(displayReq).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
+                    Text("\(Text("Requester: ").font(.footnote))\(Text(displayReq).font(isHidden ? .system(.footnote, design: .monospaced) : .footnote))")
                     .foregroundColor(.secondary)
                 }
                 
                 if let createdBy = viewModel.displayCreatedBy(for: cert) {
                     let isHidden = createdBy.contains("•")
-                    Text("\(Text("Created By: ").font(.system(size: 10)))\(Text(createdBy).font(isHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
+                    Text("\(Text("Created By: ").font(.footnote))\(Text(createdBy).font(isHidden ? .system(.footnote, design: .monospaced) : .footnote))")
                     .foregroundColor(.secondary)
                 }
                 
-                Text("\(Text("Keys: ").font(.system(size: 10)))\(Text(hasPrivateKey ? "public + private" : "public").font(.system(size: 10)))")
+                Text("\(Text("Keys: ").font(.footnote))\(Text(hasPrivateKey ? "public + private" : "public").font(.footnote))")
                 .foregroundColor(.secondary)
             }
             
@@ -118,14 +118,14 @@ private struct CertBriefInfoView: View {
         let isTypeHidden     = displayType.contains("•")
         let isValidityHidden = displayValidity.contains("•")
         Group {
-            Text("\(Text("Type: ").font(.system(size: 10)))\(Text(displayType).font(isTypeHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
+            Text("\(Text("Type: ").font(.footnote))\(Text(displayType).font(isTypeHidden ? .system(.footnote, design: .monospaced) : .footnote))")
             .foregroundColor(.secondary)
             if let typeName = viewModel.displayCertificateTypeName(for: cert) {
                 let isTypeNameHidden = typeName.contains("•")
-                Text("\(Text("Type Name: ").font(.system(size: 10)))\(Text(typeName).font(isTypeNameHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
+                Text("\(Text("Type Name: ").font(.footnote))\(Text(typeName).font(isTypeNameHidden ? .system(.footnote, design: .monospaced) : .footnote))")
                 .foregroundColor(.secondary)
             }
-            Text("\(Text("Validity: ").font(.system(size: 10)))\(Text(displayValidity).font(isValidityHidden ? .system(size: 10, design: .monospaced) : .system(size: 10)))")
+            Text("\(Text("Validity: ").font(.footnote))\(Text(displayValidity).font(isValidityHidden ? .system(.footnote, design: .monospaced) : .footnote))")
             .foregroundColor(.secondary)
         }
     }

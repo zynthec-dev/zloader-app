@@ -36,7 +36,7 @@ struct ProfileRowItemView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(profile.name)
-                        .font(.headline)
+                        .font(.body)
                         .foregroundColor(.primary)
 
                     Text(profile.bundleIdentifier)
@@ -81,7 +81,7 @@ struct ProfileRowItemView: View {
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                     Text("Cert: \(cert.name)")
-                        .font(.system(size: 10))
+                        .font(.footnote)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }

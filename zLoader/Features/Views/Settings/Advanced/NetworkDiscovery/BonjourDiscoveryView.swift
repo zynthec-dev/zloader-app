@@ -41,6 +41,7 @@ struct BonjourDiscoveryView: View {
             }
         }
         .navigationTitle("Discovery")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -145,10 +146,10 @@ struct BonjourDiscoveryView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
             Text("No Domains Found")
-                .font(.headline)
+                .font(.body)
                 .foregroundColor(.secondary)
             Text("Make sure you're connected to a local network.")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -244,6 +245,7 @@ struct ServiceTypesView: View {
             }
         }
         .navigationTitle(domain)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -354,10 +356,10 @@ struct ServiceTypesView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
             Text("No Services Found")
-                .font(.headline)
+                .font(.body)
                 .foregroundColor(.secondary)
             Text("No Bonjour services are currently advertised in this domain.")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -491,6 +493,7 @@ struct ServiceInstancesView: View {
             }
         }
         .navigationTitle(friendlyName ?? serviceType)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -601,10 +604,10 @@ struct ServiceInstancesView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
             Text("No Instances Found")
-                .font(.headline)
+                .font(.body)
                 .foregroundColor(.secondary)
             Text("No devices are currently advertising this service.")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -723,6 +726,7 @@ struct ServiceDetailView: View {
             }
         }
         .navigationTitle("Service Details")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -814,7 +818,7 @@ struct ServiceDetailView: View {
             ProgressView()
                 .scaleEffect(1.2)
             Text("Resolving service…")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
         }
     }
@@ -825,10 +829,10 @@ struct ServiceDetailView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
             Text("Resolution Failed")
-                .font(.headline)
+                .font(.body)
                 .foregroundColor(.secondary)
             Text(message)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -867,7 +871,7 @@ struct ServiceDetailView: View {
                         .foregroundColor(.accentColor)
                     
                     Text(resolved.name)
-                        .font(.headline)
+                        .font(.body)
                         .multilineTextAlignment(.center)
                     
                     if let purpose = BonjourDiscoveryManager.friendlyName(for: resolved.type) {

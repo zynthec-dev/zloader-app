@@ -317,6 +317,7 @@ struct UserCustomizationsView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("User Customizations")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
             .navigationBarTitleDisplayMode(.large)

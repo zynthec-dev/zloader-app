@@ -96,6 +96,7 @@ struct CacheManagementView: View {
         .navigationTitle(signedIPAsOnly
                          ? NSLocalizedString("IPA Library", comment: "Signed IPA file library")
                          : NSLocalizedString("Cache Management", comment: ""))
+        .zLoaderSettingsPage()
         .refreshable { viewModel.loadCacheItems() }
         .onAppear {
             viewModel.loadCacheItems()
@@ -192,7 +193,7 @@ struct CacheItemRow: View {
             Spacer()
             
             Text(item.sizeString)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
@@ -254,6 +255,7 @@ struct SignedIPADetailView: View {
             } else if let error { Text(verbatim: error).foregroundStyle(.red) }
             else { ProgressView() }
         }.navigationTitle("Signing Details")
+        .zLoaderSettingsPage()
         .task {
             do { inspection = try await Task.detached { try SignedIPAInspection.read(url) }.value }
             catch { self.error = error.localizedDescription }

@@ -60,6 +60,7 @@ struct SignIPAView: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Sign App")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .disabled(isSigning)
         .onChange(of: identityID) { _, _ in preparation = nil; result = nil }

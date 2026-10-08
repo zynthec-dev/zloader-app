@@ -407,6 +407,7 @@ struct ProvisioningProfileDetailView: View {
         .listStyle(GroupedListStyle())
         #endif
         .navigationTitle("Profile Details")
+        .zLoaderSettingsPage()
         .interactiveDismissDisabled(true)
     }
     
@@ -458,16 +459,16 @@ struct AppIconView: View {
 struct InfoRow: View {
     let label: String
     let value: String
-    var valueColor: Color = .primary
+    var valueColor: Color = .secondary
     
     var body: some View {
         HStack {
             Text(LocalizedStringKey(label))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.body)
+                .foregroundColor(.primary)
             Spacer()
             Text(value)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(valueColor)
                 .multilineTextAlignment(.trailing)
         }
@@ -477,16 +478,16 @@ struct InfoRow: View {
 struct ProfileInfoRow: View {
     let label: String
     let value: String
-    var valueColor: Color = .primary
+    var valueColor: Color = .secondary
     
     var body: some View {
         HStack {
             Text(LocalizedStringKey(label))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.body)
+                .foregroundColor(.primary)
             Spacer()
             Text(value)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(valueColor)
                 .multilineTextAlignment(.trailing)
         }
@@ -509,14 +510,12 @@ struct EntitlementRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(key)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.secondary)
-                .bold()
             Text(formatValue(value))
-                .font(.subheadline)
+                .font(.body)
                 .foregroundColor(.primary)
         }
-        .padding(.vertical, 4)
         #if !os(tvOS)
         .contextMenu {
             SwiftUI.Button {
@@ -567,6 +566,7 @@ struct DeviceIDsView: View {
             }
         }
         .navigationTitle("Device IDs")
+        .zLoaderSettingsPage()
         .interactiveDismissDisabled(true)
     }
 }

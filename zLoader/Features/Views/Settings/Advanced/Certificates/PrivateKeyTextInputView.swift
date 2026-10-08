@@ -33,7 +33,7 @@ struct PrivateKeyTextInputView: View {
                 }
                 
                 Text("Paste your PEM-formatted private key below, or import it from a text file.")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
                     .padding(.top)
@@ -44,7 +44,7 @@ struct PrivateKeyTextInputView: View {
                     #if !os(tvOS)
                     .background(Color(.secondarySystemBackground))
                     #else
-                    .background(Color.white.opacity(0.1))
+                    .background(Color(uiColor: .settingsField))
                     #endif
                     .cornerRadius(8)
                     .padding(.horizontal)
@@ -103,6 +103,7 @@ struct PrivateKeyTextInputView: View {
                 .padding(.bottom)
             }
             .navigationTitle("Add Private Key")
+        .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .environment(\.settingsEntryIconsVisible, true)
             #if !os(tvOS)

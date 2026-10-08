@@ -88,6 +88,7 @@ struct PairingFileDetailView: View {
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle(titleText)
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -157,7 +158,7 @@ struct PairingFileDetailView: View {
                 }
             }
             .zLoaderGlassSurface()
-            .cornerRadius(14)
+            .cornerRadius(12)
         }
     }
 
@@ -171,7 +172,7 @@ struct PairingFileDetailView: View {
                 let displayed = isEditing ? editedContent : rawContent
                 if !displayed.isEmpty {
                     Text("\(displayed.count) bytes")
-                        .font(.system(size: 12))
+                        .font(.footnote)
                         .foregroundColor(Color.primary.opacity(0.4))
                 }
             }
@@ -202,7 +203,7 @@ struct PairingFileDetailView: View {
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .zLoaderGlassSurface()
-                    .cornerRadius(14)
+                    .cornerRadius(12)
             }
         }
     }

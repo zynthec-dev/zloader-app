@@ -72,6 +72,7 @@ struct SigningIdentitiesView: View {
             }
         }
         .navigationTitle("Signing Identities")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .alert("Signing Identity", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             SwiftUI.Button("OK", role: .cancel) { errorMessage = nil }
@@ -133,6 +134,7 @@ private struct SigningIdentityEditor: View {
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Signing Identity")
+        .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
