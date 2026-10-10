@@ -13732,7 +13732,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Refresh läuft"
+            "value": "Aktualisieren"
           }
         }
       }
@@ -26560,7 +26560,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird installiert"
+            "value": "Installieren"
           }
         }
       }
@@ -26609,6 +26609,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beim Öffnen über zLoader startet diese App mit JIT. Das Ändern dieser Einstellung startet die App nicht. Für Starts außerhalb von zLoader verwende eine Kurzbefehle-Automation."
+          }
+        }
+      }
+    },
+    "Loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laden"
+          }
+        }
+      }
+    },
+    "Signing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signieren"
+          }
+        }
+      }
+    },
+    "Checking…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird geprüft …"
+          }
+        }
+      }
+    },
+    "Automatically Open with JIT": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically Open with JIT"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch mit JIT starten"
           }
         }
       }

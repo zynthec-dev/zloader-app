@@ -189,9 +189,19 @@ final class ZLoaderHostingController<Content: View>: UIHostingController<ZLoader
         }
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .settingsBackground
         ThemeManager.shared.applyAppearance(to: view)
+    }
+
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        // Style newly materialized SwiftUI rows before the frame is displayed,
+        // rather than changing their surfaces after navigation completes.
+        UIView.performWithoutAnimation {
+            ThemeManager.shared.applyAppearance(to: view)
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {

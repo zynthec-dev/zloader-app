@@ -63,6 +63,9 @@ struct ConnectionConfigView: View {
     @ObservedObject private var provisioning = SelfProvisioning.shared
     @State private var showsTunnelSetup = false
     @State private var selectingMethod = false
+    @State private var checkingConnection = false
+    @State private var connectionError: String?
+    @Environment(\.scenePhase) private var scenePhase
     var body: some View {
         List {
             Section("Connection Method") {
@@ -72,10 +75,14 @@ struct ConnectionConfigView: View {
                 }.pickerStyle(.inline)
                     .disabled(selectingMethod || provisioning.busy)
             }.listRowBackground(ZLoaderGlassBackground())
-            Section("Tunnel Data") {
+            Section {
                 LabeledContent("Interface") { Text(verbatim: config.formattedTunnelIface ?? NSLocalizedString("Not Detected", comment: "")) }
                 LabeledContent("Peer") { Text(verbatim: config.formattedTunnelPeer ?? NSLocalizedString("Not Detected", comment: "")) }
-                LabeledContent("Endpoint") { Text(config.tunnelPeerActive == .yes ? "Reachable" : "Not Reachable") }
+                LabeledContent("Endpoint") { Text(checkingConnection ? "Checking…" : (config.tunnelPeerActive == .yes ? "Reachable" : "Not Reachable")) }
+            } header: {
+                Text("Tunnel Data")
+            } footer: {
+                if let connectionError { Text(verbatim: connectionError) }
             }.listRowBackground(ZLoaderGlassBackground())
         }
         .navigationTitle("Connection Settings")
@@ -89,7 +96,7 @@ struct ConnectionConfigView: View {
                     }.listRowBackground(ZLoaderGlassBackground())
                 }
                 .navigationTitle("zLoader Local Tunnel")
-        .zLoaderSettingsPage()
+                .zLoaderSettingsPage()
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -100,21 +107,42 @@ struct ConnectionConfigView: View {
             }
             .interactiveDismissDisabled(provisioning.busy)
         }
-        .task {
-            if EmbeddedTunnel.shared.unavailableReason != nil { useInternal = false }
+        .task(id: "\(useInternal)-\(scenePhase == .active)") {
+            guard scenePhase == .active else { return }
             config.useLocalVPN = true
             config.overrideTunnelPeerIp = useInternal ? peer : ""
-            await bindConnectionConfig()
-        }
-        .onChange(of: useInternal) { _, internalVPN in
-            config.useLocalVPN = true
-            config.overrideTunnelPeerIp = internalVPN ? peer : ""
-            Task {
-                if !internalVPN { await EmbeddedTunnel.shared.stop() }
-                syncMinimuxerBackendFromUserDefaults()
-                await bindConnectionConfig()
+            checkingConnection = true
+            connectionError = nil
+            do {
+                // Keep a lease while this screen is visible. A disconnected,
+                // on-demand tunnel cannot be tested before starting it.
+                if useInternal {
+                    try await ZLoaderTransport.withLease {
+                        await bindConnectionConfig()
+                        _ = try await fetchUDID(forceLive: true)
+                        checkingConnection = false
+                        while !Task.isCancelled {
+                            try await Task.sleep(for: .seconds(1))
+                        }
+                    }
+                } else {
+                    // External VPNs are owned by their app. Do not retain a
+                    // transport lease that would prevent starting the internal
+                    // provider when the user changes methods on this screen.
+                    syncMinimuxerBackendFromUserDefaults()
+                    await minimuxer.network.refreshEndpoint()
+                    await bindConnectionConfig()
+                    _ = try await fetchUDID(forceLive: true)
+                }
+            } catch is CancellationError {
+                // Leaving the screen releases this lease, without interrupting
+                // another operation that still owns the tunnel.
+            } catch {
+                connectionError = error.localizedDescription
             }
+            checkingConnection = false
         }
+
     }
 
     private func selectMethod(_ internalVPN: Bool) {

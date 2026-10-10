@@ -59,6 +59,13 @@ final class PipelineExecutor: @unchecked Sendable {
         permissionsMode: PermissionReviewMode,
         progress: Progress?
     ) async throws -> InstalledApp? {
+        // Publish the actual pipeline phase, independent of arbitrary percentages.
+        switch step {
+        case .downloadApp: progress?.localizedDescription = NSLocalizedString("Loading", comment: "Launcher operation")
+        case .fetchProvisioningProfiles, .resignApp: progress?.localizedDescription = NSLocalizedString("Signing", comment: "Launcher operation")
+        case .sendApp, .installApp: progress?.localizedDescription = NSLocalizedString("Installing", comment: "Launcher operation")
+        default: break
+        }
         var result: Any? = "()"
         var loggerType: any OperationLogging.Type
         

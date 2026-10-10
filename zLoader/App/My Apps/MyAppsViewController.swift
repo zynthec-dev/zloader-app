@@ -28,6 +28,7 @@ extension MyAppsViewController
         case noUpdates
         case updates
         case activeApps
+        case pendingApps
         case inactiveApps
     }
 }
@@ -43,6 +44,7 @@ class MyAppsViewController: UICollectionViewController
     private lazy var noUpdatesDataSource = self.makeNoUpdatesDataSource()
     private lazy var updatesDataSource = self.makeUpdatesDataSource()
     private lazy var activeAppsDataSource = self.makeActiveAppsDataSource()
+    private lazy var pendingAppsDataSource = self.makePendingAppsDataSource()
     private lazy var inactiveAppsDataSource = self.makeInactiveAppsDataSource()
     private lazy var unsupportedUpdates = Set<StoreApp>()
     
@@ -54,6 +56,7 @@ class MyAppsViewController: UICollectionViewController
     private var expandedAppUpdates = Set<String>()
     private var isRefreshingAllApps = false
     private var refreshGroup: RefreshGroup?
+    private var remainingDaysTimer: Timer?
     private var pendingInstallationsObservation: AnyCancellable?
     private var pendingInstallations: [AppManager.PendingInstallation] = []
     private var sideloadingProgress: Progress?
@@ -85,6 +88,7 @@ class MyAppsViewController: UICollectionViewController
     }
     
     deinit {
+        remainingDaysTimer?.invalidate()
         if !(minimuxerStatusCheckTask?.isCancelled == true) {
             minimuxerStatusCheckTask?.cancel()
         }
@@ -119,7 +123,7 @@ class MyAppsViewController: UICollectionViewController
                     !identifiers.contains($0.bundleIdentifier) && !$0.progress.isCancelled
                 }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
                 self.collectionView.collectionViewLayout.invalidateLayout()
-                self.collectionView.reloadSections(IndexSet(integer: Section.activeApps.rawValue))
+                self.collectionView.reloadSections(IndexSet(integer: Section.pendingApps.rawValue))
             }
 
         self.collectionView.dataSource = self.dataSource
@@ -170,6 +174,8 @@ class MyAppsViewController: UICollectionViewController
         #if !os(tvOS)
         #endif
         
+        NotificationCenter.default.addObserver(self, selector: #selector(refreshRemainingDays), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(refreshRemainingDays), name: UIApplication.significantTimeChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(MyAppsViewController.didChangeAppIcon(_:)), name: UIApplication.didChangeAppIconNotification, object: nil)
         
         if minimuxerStatusCheckTask == nil {
@@ -222,6 +228,10 @@ class MyAppsViewController: UICollectionViewController
         super.viewDidAppear(animated)
         
         _viewDidAppear = true
+        remainingDaysTimer?.invalidate()
+        remainingDaysTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.refreshRemainingDays()
+        }
         Task {
             let status = await isMinimuxerReady()
             await updateTransportStatus(status.mapError { $0 as Error })
@@ -236,6 +246,8 @@ class MyAppsViewController: UICollectionViewController
     override func viewWillDisappear(_ animated: Bool)
     {
         super.viewWillDisappear(animated)
+        remainingDaysTimer?.invalidate()
+        remainingDaysTimer = nil
         statusDotView?.removeFromSuperview()
         statusDotView = nil
     }
@@ -388,11 +400,43 @@ private extension MyAppsViewController
 {
     func makeDataSource() -> CompositeCollectionViewPrefetchingDataSource<InstalledApp, UIImage>
     {
-        let dataSource = CompositeCollectionViewPrefetchingDataSource<InstalledApp, UIImage>(dataSources: [self.noUpdatesDataSource, self.updatesDataSource, self.activeAppsDataSource, self.inactiveAppsDataSource])
+        let dataSource = CompositeCollectionViewPrefetchingDataSource<InstalledApp, UIImage>(dataSources: [self.noUpdatesDataSource, self.updatesDataSource, self.activeAppsDataSource, self.pendingAppsDataSource, self.inactiveAppsDataSource])
         dataSource.proxy = self
         return dataSource
     }
     
+    func makePendingAppsDataSource() -> DynamicCollectionViewDataSource<InstalledApp> {
+        let source = DynamicCollectionViewDataSource<InstalledApp>()
+        source.numberOfSectionsHandler = { 1 }
+        source.numberOfItemsHandler = { [weak self] _ in self?.pendingInstallations.count ?? 0 }
+        source.cellIdentifierHandler = { _ in "AppCell" }
+        source.dynamicCellConfigurationHandler = { [weak self] cell, indexPath in
+            guard let self, self.pendingInstallations.indices.contains(indexPath.item),
+                  let cell = cell as? InstalledAppCollectionViewCell else { return }
+            let pending = self.pendingInstallations[indexPath.item]
+            cell.bundleIdentifier = pending.bundleIdentifier
+            cell.layoutMargins = .zero
+            cell.bannerView.alpha = 1
+            cell.deactivateBadge?.isHidden = true
+            cell.bannerView.isLauncherCard = true
+            cell.bannerView.titleLabel.text = pending.name
+            cell.bannerView.subtitleLabel.text = nil
+            cell.bannerView.iconImageView.image = UIImage(systemName: "app.fill")
+            cell.bannerView.configureLauncherProgress(pending.progress)
+            cell.bannerView.accessibilityLabel = pending.name
+            if let url = pending.iconURL {
+                Task { @MainActor [weak cell] in
+                    guard let image = try? await ImagePipeline.shared.image(for: url),
+                          self.pendingInstallations.indices.contains(indexPath.item),
+                          self.pendingInstallations[indexPath.item].bundleIdentifier == pending.bundleIdentifier,
+                          self.collectionView.cellForItem(at: IndexPath(item: indexPath.item, section: Section.pendingApps.rawValue)) === cell else { return }
+                    cell?.bannerView.iconImageView.image = image
+                }
+            }
+        }
+        return source
+    }
+
     func makeNoUpdatesDataSource() -> DynamicCollectionViewDataSource<InstalledApp>
     {
         let dynamicDataSource = DynamicCollectionViewDataSource<InstalledApp>()
@@ -585,6 +629,7 @@ private extension MyAppsViewController
             expiryFormatter.calendar = expiryCalendar
             let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
             cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
+            cell.bannerView.configureLauncherProgress(AppManager.shared.refreshProgress(for: installedApp))
             cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")
             
             if cell.bundleIdentifier != installedApp.bundleIdentifier
@@ -621,7 +666,6 @@ private extension MyAppsViewController
             {
                 cell.bannerView.button.progress = progress
                 cell.bannerView.buttonLabel.isHidden = true
-                if AppManager.shared.installationProgress(for: installedApp) != nil { cell.bannerView.alpha = 0.75 }
             }
             else
             {
@@ -685,6 +729,7 @@ private extension MyAppsViewController
             expiryFormatter.calendar = expiryCalendar
             let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
             cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
+            cell.bannerView.configureLauncherProgress(AppManager.shared.refreshProgress(for: installedApp))
             cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")
             cell.layoutMargins = .zero
             
@@ -1204,6 +1249,11 @@ private extension MyAppsViewController
         cell.bannerView.iconImageView.isIndicatingActivity = false
     }
     
+    @objc private func refreshRemainingDays() {
+        guard isViewLoaded, view.window != nil else { return }
+        reconfigureVisibleCells()
+    }
+
     func reconfigureVisibleCells()
     {
         for indexPath in self.collectionView.indexPathsForVisibleItems
@@ -1264,9 +1314,9 @@ private extension MyAppsViewController
 
 private extension MyAppsViewController
 {
-    func open(_ installedApp: InstalledApp)
+    func open(_ installedApp: InstalledApp, usesAutomaticJIT: Bool = true)
     {
-        if UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) {
+        if usesAutomaticJIT && UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) {
             self.enableJIT(for: installedApp, launchBeforeAttaching: true)
             return
         }
@@ -1282,13 +1332,8 @@ private extension MyAppsViewController
             guard previousProgress == nil else { return }
             
             self.refresh([installedApp]) { (results) in
-                // If an error occured, reload the section so the progress bar is no longer visible.
-                if results.values.contains(where: { $0.error != nil })
-                {
-                    DispatchQueue.main.async {
-                        self.reconfigureVisibleCells()
-                    }
-                }
+                // Success also changes expiry and removes operation labels.
+                DispatchQueue.main.async { self.reconfigureVisibleCells() }
                 
                 debugLog("Finished refreshing with results: \(results.map { ($0, $1.error?.localizedDescription ?? "success") })")
             }
@@ -2079,6 +2124,7 @@ extension MyAppsViewController
         switch section
         {
         case .noUpdates: return UICollectionReusableView()
+        case .pendingApps where kind == UICollectionView.elementKindSectionHeader: return UICollectionReusableView()
         case .updates:
             let headerView = collectionView.dequeueReusableSupplementaryView(ofKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "UpdatesHeader", for: indexPath) as! UpdatesCollectionHeaderView
             
@@ -2123,7 +2169,7 @@ extension MyAppsViewController
                 
                 headerView.button.isIndicatingActivity = false
                 headerView.button.activityIndicatorView.color = .altPrimary
-                headerView.showPendingInstallations(self.pendingInstallations)
+                headerView.showPendingInstallations([])
                 headerView.button.progress = self.isRefreshingAllApps ? self.refreshGroup?.progress : nil
                 headerView.button.setTitle(NSLocalizedString("Refresh All", comment: ""), for: .normal)
                 headerView.button.addTarget(self, action: #selector(MyAppsViewController.refreshAllApps(_:)), for: .primaryActionTriggered)
@@ -2162,7 +2208,7 @@ extension MyAppsViewController
             
             return headerView
             
-        case .activeApps, .inactiveApps:
+        case .activeApps, .pendingApps, .inactiveApps:
             let footerView = collectionView.dequeueReusableSupplementaryView(ofKind: UICollectionView.elementKindSectionFooter, withReuseIdentifier: "InstalledAppsFooter", for: indexPath) as! InstalledAppsCollectionFooterView
             
             guard let team = self.activeTeam else { return footerView }
@@ -2220,14 +2266,28 @@ extension MyAppsViewController
     {
         var actions = [UIMenuElement]()
         
+        let isStore = installedApp.resignedBundleIdentifier.isZLoaderAppID
         let openAction = UIAction(title: NSLocalizedString("Open", comment: ""), image: UIImage(systemName: "arrow.up.forward.app")) { (action) in
-            self.open(installedApp)
+            self.open(installedApp, usesAutomaticJIT: false)
         }
-        
+
         let openWithJITAction = UIAction(title: NSLocalizedString("Open with JIT", comment: ""), image: UIImage(systemName: "bolt.fill")) { [weak self] _ in
             self?.enableJIT(for: installedApp, launchBeforeAttaching: true)
         }
-        let openMenu = UIMenu(title: "", options: .displayInline, children: [openAction, openWithJITAction])
+        let automaticJITAction = UIAction(title: NSLocalizedString("Automatically Open with JIT", comment: ""),
+            image: UIImage(systemName: "bolt.badge.clock"),
+            state: UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier) ? .on : .off) { _ in
+                let enabled = UserDefaults.standard.automaticJITEnabled(for: installedApp.bundleIdentifier)
+                UserDefaults.standard.setAutomaticJIT(!enabled, for: installedApp.bundleIdentifier)
+        }
+        if isStore {
+            // Relaunching/debugging our own running process cannot use the
+            // suspended-target JIT launch flow. Never pretend this is supported.
+            openWithJITAction.attributes.insert(.disabled)
+            automaticJITAction.attributes.insert(.disabled)
+        }
+        let openMenu = UIMenu(title: "", options: .displayInline,
+            children: [openAction, openWithJITAction, automaticJITAction])
         
         let refreshAction = UIAction(title: NSLocalizedString("Refresh", comment: ""), image: UIImage(systemName: "arrow.clockwise")) { (action) in
             self.refresh(installedApp)
@@ -2409,7 +2469,7 @@ extension MyAppsViewController
         
         if installedApp.resignedBundleIdentifier.isZLoaderAppID
         {
-            actions = [refreshAction, resignAction, reinstallMenu, profileMenu, changeIconMenu]
+            actions = [openMenu, refreshAction, resignAction, reinstallMenu, profileMenu, changeIconMenu]
         }
         else
         {
@@ -2538,7 +2598,7 @@ extension MyAppsViewController
         let section = Section(rawValue: indexPath.section)!
         switch section
         {
-        case .noUpdates: return nil
+        case .noUpdates, .pendingApps: return nil
         case .updates:
             guard let app = self.dataSource.item(at: indexPath).storeApp else { return nil }
             return UIContextMenuConfiguration(identifier: indexPath as NSIndexPath, previewProvider: { AppViewController.makeAppViewController(app: app) })
@@ -2612,12 +2672,12 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             self.cachedUpdateSizes[item.bundleIdentifier] = size
             return size
             
-        case .activeApps, .inactiveApps:
+        case .activeApps, .pendingApps, .inactiveApps:
             let available = collectionView.bounds.width - 32
             let columns: CGFloat = collectionView.traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? 1 : 4
             let width = floor((available - (columns - 1) * 12) / columns)
             let font = UIFont.preferredFont(forTextStyle: .footnote)
-            let name = self.dataSource.item(at: indexPath).name
+            let name = section == .pendingApps ? pendingInstallations[indexPath.item].name : self.dataSource.item(at: indexPath).name
             let nameHeight = (name as NSString).boundingRect(
                 with: CGSize(width: max(1, width - 4), height: .greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
@@ -2625,7 +2685,7 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
             ).height
             // Reserve the full name, rather than truncating after two lines.
             // Icons remain aligned at the top even when names wrap differently.
-            let height = AppBannerView.launcherIconSize(for: width) + 8 +
+            let height = AppBannerView.launcherIconSize(for: width) + 4 +
                 ceil(max(font.lineHeight * 2, nameHeight)) + 2 +
                 ceil(UIFont.preferredFont(forTextStyle: .caption2).lineHeight) + 16
             return CGSize(width: width, height: height)
@@ -2637,13 +2697,13 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
         let section = Section.allCases[section]
         switch section
         {
-        case .noUpdates: return .zero
+        case .noUpdates, .pendingApps: return .zero
         case .updates:
             let height: CGFloat = (self.updatesDataSource.fetchedResultsController.fetchedObjects?.count ?? 0 > maximumCollapsedUpdatesCount) ? 26 : 0
             return CGSize(width: collectionView.bounds.width, height: height)
             
         case .activeApps: return CGSize(width: collectionView.bounds.width,
-            height: (self.isRefreshingAllApps ? 54 : 29) + CGFloat(self.pendingInstallations.count) * 98)
+            height: self.isRefreshingAllApps ? 54 : 29)
         case .inactiveApps where self.inactiveAppsDataSource.itemCount == 0: return .zero
         case .inactiveApps: return CGSize(width: collectionView.bounds.width, height: 29)
         }
@@ -2673,9 +2733,10 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
         switch section
         {
         case .noUpdates: return .zero
+        case .pendingApps: return self.inactiveAppsDataSource.itemCount == 0 && !self.pendingInstallations.isEmpty ? appIDsFooterSize() : .zero
         case .updates: return .zero
             
-        case .activeApps where self.inactiveAppsDataSource.itemCount == 0: return appIDsFooterSize()
+        case .activeApps where self.inactiveAppsDataSource.itemCount == 0 && self.pendingInstallations.isEmpty: return appIDsFooterSize()
         case .activeApps: return .zero
             
         case .inactiveApps where self.inactiveAppsDataSource.itemCount == 0: return .zero
@@ -2688,7 +2749,7 @@ extension MyAppsViewController: UICollectionViewDelegateFlowLayout
         let section = Section.allCases[section]
         switch section
         {
-        case .activeApps, .inactiveApps: return UIEdgeInsets(top: 12, left: 16, bottom: 20, right: 16)
+        case .activeApps, .pendingApps, .inactiveApps: return UIEdgeInsets(top: 12, left: 16, bottom: 20, right: 16)
         case .noUpdates where self.updatesDataSource.itemCount != 0: return .zero
         case .updates where self.updatesDataSource.itemCount == 0: return .zero
         default: return UIEdgeInsets(top: 12, left: 0, bottom: 20, right: 0)
@@ -2953,6 +3014,7 @@ extension MyAppsViewController: NSFetchedResultsControllerDelegate
                         self.previousInactiveAppsCount = inactiveAppsCount
                     }
                     
+                    self.reconfigureVisibleCells()
                     if dataSource == self.activeAppsDataSource && self.didChangeActiveApps {
                         self.update()
                     }

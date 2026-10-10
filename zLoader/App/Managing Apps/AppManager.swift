@@ -814,13 +814,18 @@ extension AppManager: PipelineProgress, PipelineExecutionContext, PipelineErrorL
         if let app = operation.app as? NSManagedObject, let context = app.managedObjectContext {
             context.performAndWait {
                 pendingName = operation.app.name
-                pendingIconURL = operation.app.storeApp?.iconURL
+                pendingIconURL = operation.app.storeApp?.iconURL ?? (operation.app as? ALTApplication)?.iconURL
             }
         } else {
             pendingName = operation.app.name
-            pendingIconURL = operation.app.storeApp?.iconURL
+            pendingIconURL = operation.app.storeApp?.iconURL ?? (operation.app as? ALTApplication)?.iconURL
         }
 
+        if case .refresh = operation {
+            progress?.localizedDescription = NSLocalizedString("Refreshing", comment: "Launcher operation")
+        } else {
+            progress?.localizedDescription = NSLocalizedString("Loading", comment: "Launcher operation")
+        }
         self.progressLock.withLock {
             switch operation
             {

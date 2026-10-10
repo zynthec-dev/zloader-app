@@ -90,7 +90,7 @@ class InsetGroupTableViewCell: UITableViewCell
         self.addSubview(self.separatorView)
         
         self.insetView.layer.masksToBounds = true
-        self.insetView.layer.cornerRadius = 12
+        self.insetView.layer.cornerRadius = 28
         self.insetView.layer.cornerCurve = .continuous
         
         // Get the preferred background color from Interface Builder if set.

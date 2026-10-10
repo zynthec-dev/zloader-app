@@ -54,7 +54,7 @@ private struct ZLoaderGlassSurface: ViewModifier {
                 content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
             }
         } else {
-            content.background(prominent ? Color.accentColor : Color(uiColor: .settingsCard), in: RoundedRectangle(cornerRadius: usesGlass ? cornerRadius : 12))
+            content.background(prominent ? Color.accentColor : Color(uiColor: .settingsCard), in: RoundedRectangle(cornerRadius: usesGlass ? cornerRadius : 28))
         }
     }
 }

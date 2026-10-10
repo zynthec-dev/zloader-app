@@ -58,15 +58,20 @@ class AppBannerView: NibView
     
     var style: Style = .app
     private var hasLauncherProgressOverlay = false
+    private let launcherDimmingView = UIView()
+    private var launcherProgressObservations: [NSKeyValueObservation] = []
+    private var launcherProgress: Progress?
     private var launcherLabelsWidthConstraint: NSLayoutConstraint?
     var isLauncherCard = false {
         didSet {
             stackView.axis = isLauncherCard ? .vertical : .horizontal
-            stackView.spacing = isLauncherCard ? 8 : 11
+            stackView.spacing = isLauncherCard ? 4 : 11
             stackView.layoutMargins = isLauncherCard ? UIEdgeInsets(top: 8, left: 2, bottom: 8, right: 2) : layoutMargins
             stackView.preservesSuperviewLayoutMargins = !isLauncherCard
             if let labels = stackView.arrangedSubviews.dropFirst().first as? UIStackView {
                 labels.alignment = isLauncherCard ? .fill : .leading
+                labels.setContentHuggingPriority(.required, for: .vertical)
+                labels.setContentCompressionResistancePriority(.required, for: .vertical)
                 if launcherLabelsWidthConstraint == nil {
                     launcherLabelsWidthConstraint = labels.widthAnchor.constraint(equalTo: stackView.layoutMarginsGuide.widthAnchor)
                 }
@@ -87,6 +92,21 @@ class AppBannerView: NibView
                 // A hidden arranged button would conflict with its fixed nib
                 // height. Keep operation progress over the icon, outside the
                 // home-screen name/day stack.
+                launcherDimmingView.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+                launcherDimmingView.isUserInteractionEnabled = false
+                launcherDimmingView.translatesAutoresizingMaskIntoConstraints = false
+                iconImageView.addSubview(launcherDimmingView)
+                NSLayoutConstraint.activate([
+                    launcherDimmingView.leadingAnchor.constraint(equalTo: iconImageView.leadingAnchor),
+                    launcherDimmingView.trailingAnchor.constraint(equalTo: iconImageView.trailingAnchor),
+                    launcherDimmingView.topAnchor.constraint(equalTo: iconImageView.topAnchor),
+                    launcherDimmingView.bottomAnchor.constraint(equalTo: iconImageView.bottomAnchor)
+                ])
+                // Let the stack end at its intrinsic height instead of stretching
+                // the name/day labels to fill the tallest grid tile.
+                for constraint in constraints where constraint.secondItem as AnyObject? === stackView && constraint.firstAttribute == .bottom {
+                    constraint.isActive = false
+                }
                 stackView.removeArrangedSubview(button)
                 button.removeFromSuperview()
                 for constraint in constraints where
@@ -99,10 +119,12 @@ class AppBannerView: NibView
                     button.centerXAnchor.constraint(equalTo: iconImageView.centerXAnchor),
                     button.centerYAnchor.constraint(equalTo: iconImageView.centerYAnchor)
                 ])
+                button.usesIconProgress = true
                 button.isUserInteractionEnabled = false
                 hasLauncherProgressOverlay = true
             }
             button.isHidden = isLauncherCard && button.progress == nil
+            launcherDimmingView.isHidden = button.progress == nil
             backgroundEffectView.isHidden = isLauncherCard
             buttonLabel.isHidden = isLauncherCard
             update()
@@ -178,6 +200,29 @@ class AppBannerView: NibView
             iconImageViewHeightConstraint.constant = Self.launcherIconSize(for: bounds.width)
         }
         super.layoutSubviews()
+    }
+
+    func configureLauncherProgress(_ progress: Progress?) {
+        launcherProgressObservations.removeAll()
+        launcherProgress = progress
+        button.progress = progress
+        button.isHidden = progress == nil
+        launcherDimmingView.isHidden = progress == nil
+        guard let progress else { return }
+        let update: () -> Void = { [weak self, weak progress] in
+            guard let self, let progress, self.launcherProgress === progress else { return }
+            self.titleLabel.text = progress.localizedDescription
+            self.subtitleLabel.text = NumberFormatter.localizedString(
+                from: NSNumber(value: min(1, max(0, progress.fractionCompleted))), number: .percent)
+        }
+        launcherProgressObservations = [
+            progress.observe(\.fractionCompleted, options: [.initial, .new]) { _, _ in
+                DispatchQueue.main.async(execute: update)
+            },
+            progress.observe(\.localizedDescription, options: [.new]) { _, _ in
+                DispatchQueue.main.async(execute: update)
+            }
+        ]
     }
 
     static func launcherIconSize(for width: CGFloat) -> CGFloat {
@@ -388,7 +433,7 @@ extension AppBannerView
             self.layoutIfNeeded()
         }
         
-        if let progress = AppManager.shared.installationProgress(for: app), progress.fractionCompleted < 1.0
+        if let progress = AppManager.shared.refreshProgress(for: app), progress.fractionCompleted < 1.0
         {
             self.button.progress = progress
         }

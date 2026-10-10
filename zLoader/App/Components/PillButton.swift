@@ -41,6 +41,8 @@ class PillButton: UIButton
         set { super.accessibilityValue = newValue }
     }
     
+    var usesIconProgress = false { didSet { updateCircularProgress() } }
+
     var progress: Progress? {
         didSet {
             self.progressObservation?.invalidate()
@@ -255,11 +257,11 @@ class PillButton: UIButton
         let active = self.progress != nil
         self.progressTrack.isHidden = !active
         self.progressRing.isHidden = !active
-        self.percentageLabel.isHidden = !active
+        self.percentageLabel.isHidden = !active || usesIconProgress
         guard let progress = self.progress else { return }
         let fraction = min(1, max(0, progress.fractionCompleted))
-        let diameter: CGFloat = 30
-        let center = CGPoint(x: self.bounds.midX, y: 18)
+        let diameter: CGFloat = usesIconProgress ? 38 : 30
+        let center = CGPoint(x: self.bounds.midX, y: usesIconProgress ? self.bounds.midY : 18)
         let path = UIBezierPath(arcCenter: center, radius: diameter / 2,
             startAngle: -.pi / 2, endAngle: 3 * .pi / 2, clockwise: true).cgPath
         CATransaction.begin()
@@ -271,8 +273,8 @@ class PillButton: UIButton
             shape.lineWidth = 3.5
             shape.lineCap = .round
         }
-        self.progressTrack.strokeColor = UIColor.systemGray4.cgColor
-        self.progressRing.strokeColor = UIColor.altPrimary.cgColor
+        self.progressTrack.strokeColor = (usesIconProgress ? UIColor.white.withAlphaComponent(0.35) : UIColor.systemGray4).cgColor
+        self.progressRing.strokeColor = (usesIconProgress ? UIColor.white : UIColor.altPrimary).cgColor
         self.progressRing.strokeEnd = CGFloat(fraction)
         CATransaction.commit()
         self.percentageLabel.frame = CGRect(x: 0, y: 37, width: self.bounds.width, height: 14)
