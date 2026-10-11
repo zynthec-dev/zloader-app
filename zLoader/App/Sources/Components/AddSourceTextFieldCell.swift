@@ -20,7 +20,7 @@ class AddSourceTextFieldCell: UICollectionViewCell
     {
         self.textField = UITextField(frame: frame)
         self.textField.translatesAutoresizingMaskIntoConstraints = false
-        self.textField.placeholder = "https://zloader.zynthec.com"
+        self.textField.placeholder = Source.zLoaderSourceURL.absoluteString
         self.textField.tag = Self.sourceURLFieldTag
         self.textField.font = .preferredFont(forTextStyle: .body)
         self.textField.adjustsFontForContentSizeCategory = true

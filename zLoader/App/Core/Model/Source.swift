@@ -376,11 +376,14 @@ public extension Source
         if let current = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), Source.zLoaderIdentifier), in: context) {
             return current
         }
-        // Reuse the original fixed source so existing installs retain app links.
-        let legacyURL = URL(string: "https://altsource.zynthec.com")!
-        guard let legacyID = try? Source.sourceID(from: legacyURL) else { return nil }
-        let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), legacyID), in: context)
-        return source
+        // Migrate either former fixed URL in place, retaining app/news links.
+        for address in ["https://zloader.zynthec.com", "https://altsource.zynthec.com"] {
+            guard let url = URL(string: address), let identifier = try? Source.sourceID(from: url) else { continue }
+            if let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), identifier), in: context) {
+                return source
+            }
+        }
+        return nil
     }
     
     class func make(name: String, groupID: String, sourceURL: URL, context: NSManagedObjectContext) -> Source

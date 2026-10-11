@@ -15,7 +15,7 @@ controls have been removed from the app. No cellular-toggle Shortcuts or fixed
 operation-duration timers. Cellular-only behavior still requires iPhone validation.
 
 The fixed, non-removable default source is
-[zLoader Source](https://zloader.zynthec.com). zLoader self-updates use its own
+[zLoader Source](https://zynthec.com/zloader/source.json). zLoader self-updates use its own
 `com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
 
 Self-updates hand the staged package to iOS's installation service before

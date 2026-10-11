@@ -1,6 +1,6 @@
 # zLoader release delivery
 
-Every approved app update is built, locally committed and delivered through https://zloader.zynthec.com. Increment marketing/build versions so installed clients can detect the update.
+Every approved app update is built, locally committed and delivered through https://zynthec.com/zloader/source.json. Increment marketing/build versions so installed clients can detect the update.
 
 Publish one resignable IPA containing the embedded tunnel and recovery payload. Verify its bundle identity, hash, extension layout and version before updating the source. A matching corresponding-source archive is required with distribution; the source-code GitHub repository can remain private. Do not include signing identities, provisioning profiles, pairing records, anisette data or build caches in the archive.
 
