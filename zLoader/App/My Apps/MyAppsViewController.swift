@@ -77,7 +77,6 @@ class MyAppsViewController: UICollectionViewController
     private var previousInactiveAppsCount = 0
     private var statusDotView: UIView?
     private var tunnelStatusLabel: UILabel?
-    private var hasKnownPairingFailure = false
     
     private var _imagePickerInstalledApp: InstalledApp?
     private var _viewDidAppear = false
@@ -273,21 +272,36 @@ class MyAppsViewController: UICollectionViewController
     }
 
     private func updateTransportStatus(_ result: Result<Bool, Error>) async {
-        let ready = (try? result.get()) == true
-        if ready { hasKnownPairingFailure = false }
-        #if os(iOS)
-        if case .failure(let error) = result, let failure = error as? MinimuxerError {
+        var current = result
+        // Minimuxer's network publisher uses a Wi-Fi-only default check. Recheck
+        // readiness through our local-service path, which also supports cellular.
+        if case .failure(let error) = current,
+           let failure = error as? MinimuxerError, case .noConnection = failure {
+            current = await isMinimuxerReady().mapError { $0 as Error }
+        }
+        let ready = (try? current.get()) == true
+        var kind: TransportStatusPresentation.Failure?
+        if case .failure(let error) = current, let failure = error as? MinimuxerError {
             switch failure {
-            case .invalidPairing, .fetchUDID, .createLockdown, .xpcHandshake:
-                hasKnownPairingFailure = true
-            default: break
+            case .noVPN, .noDevice, .notReachable:
+                kind = .tunnel
+            case .invalidVPN(let reason):
+                kind = reason.localizedCaseInsensitiveContains("ipsec") || reason.localizedCaseInsensitiveContains("IKEv2")
+                    ? .incompatiblePairing : .tunnel
+            case .pairingNotLoaded: kind = .pairingRequired
+            case .invalidPairing, .fetchUDID, .createLockdown, .xpcHandshake: kind = .pairingFailed
+            case .notStarted: kind = .starting
+            default: kind = .device
             }
         }
-        #endif
-        updateStatusDot(isReady: ready, tunnelMissing: !ready && !hasKnownPairingFailure)
+        let hasInterface = minimuxer.network.isUTunAvailable
+        let peerReachable = await MainActor.run { ConnectionConfig.shared.tunnelPeerActive == .yes }
+        let presentation = TransportStatusPresentation.resolve(ready: ready, failure: kind,
+                                                              hasTunnelInterface: hasInterface, peerReachable: peerReachable)
+        updateStatusDot(isReady: presentation == .ready, message: presentation.messageKey)
     }
 
-    private func updateStatusDot(isReady: Bool, tunnelMissing: Bool)
+    private func updateStatusDot(isReady: Bool, message: String?)
     {
         DispatchQueue.main.async { [weak self] in
             guard let self = self, self.navigationController?.topViewController === self,
@@ -318,7 +332,8 @@ class MyAppsViewController: UICollectionViewController
             // If the dot is already created and attached to largeTitleView, just update color O(1)
             if let existingDot = self.statusDotView, existingDot.superview == largeTitleView {
                 updateColorClosure()
-                self.tunnelStatusLabel?.isHidden = !tunnelMissing
+                self.tunnelStatusLabel?.text = message.map { NSLocalizedString($0, comment: "") }
+                self.tunnelStatusLabel?.isHidden = message == nil
                 return
             }
             
@@ -347,12 +362,12 @@ class MyAppsViewController: UICollectionViewController
             
             let caption = UILabel()
             caption.translatesAutoresizingMaskIntoConstraints = false
-            caption.text = NSLocalizedString("Local Tunnel Missing", comment: "")
+            caption.text = message.map { NSLocalizedString($0, comment: "") }
             caption.font = UIFont.preferredFont(forTextStyle: .caption2)
             caption.adjustsFontForContentSizeCategory = true
             caption.numberOfLines = 2
             caption.textColor = .secondaryLabel
-            caption.isHidden = !tunnelMissing
+            caption.isHidden = message == nil
             largeTitleView.addSubview(caption)
             self.tunnelStatusLabel = caption
             NSLayoutConstraint.activate([

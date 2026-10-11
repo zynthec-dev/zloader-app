@@ -38,6 +38,7 @@ Requires macOS, Xcode and the pinned submodules:
 git submodule update --init --recursive
 sh zLoader/scripts/apply-dependency-patches.sh
 sh zLoader/scripts/test-transport.sh
+sh zLoader/scripts/test-transport-status.sh
 sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/test-context.sh
 sh zLoader/scripts/test-packet-tunnel-provisioning.sh

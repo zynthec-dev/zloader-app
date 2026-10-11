@@ -12497,7 +12497,6 @@
       }
     },
     "Pairing Required": {
-      "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -24422,6 +24421,12 @@
     },
     "Pairing Failed": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing Failed"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -26581,6 +26586,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "WireGuard benötigt ein kompatibles Pairing. Verwende ab iOS 26.4 Self-Pairing anstelle einer älteren Lockdown-Pairing-Datei."
+          }
+        }
+      }
+    },
+    "Local Tunnel Endpoint Unreachable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local Tunnel Endpoint Unreachable"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokaler Tunnel-Endpunkt nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Pairing Incompatible With Tunnel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing Incompatible With Tunnel"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing nicht mit Tunnel kompatibel"
+          }
+        }
+      }
+    },
+    "Device Service Starting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Service Starting"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerätedienst startet"
+          }
+        }
+      }
+    },
+    "Device Service Unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Service Unavailable"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerätedienst nicht verfügbar"
           }
         }
       }
