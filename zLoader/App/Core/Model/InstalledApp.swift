@@ -314,6 +314,14 @@ public extension InstalledApp
         self.expirationDate = provisioningProfile.expirationDate
     }
     
+    var effectiveExpirationDate: Date {
+        let certificateExpiry = certificateSerialNumber.flatMap {
+            CertificateManager.shared.getLocalX509Certificate(serialNumber: $0)?.expiryDate
+        }
+        return AppValidity.expiration(host: expirationDate,
+            extensions: appExtensions.map(\.expirationDate), certificate: certificateExpiry)
+    }
+
     func loadIcon() async throws -> UIImage?
     {
         if self.bundleIdentifier == StoreApp.zloaderAppID,

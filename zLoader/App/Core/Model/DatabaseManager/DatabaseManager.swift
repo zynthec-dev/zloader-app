@@ -304,6 +304,7 @@ public class DatabaseManager: @unchecked Sendable
                 }
             }
             
+            let isNewSelfBinary = installedApp.version != localAppBundle.version || installedApp.buildVersion != localAppBundle.buildVersion
             /* App Extensions */
             var installedExtensions = Set<InstalledExtension>()
             
@@ -323,8 +324,14 @@ public class DatabaseManager: @unchecked Sendable
                     installedExtension = try InstalledExtension(resignedAppExtensionBundle: appExtension, originalBundleIdentifier: originalBundleID, context: context)
                 }
                 
+                let previousRefresh = installedExtension.refreshedDate
+                let previousExpiry = installedExtension.expirationDate
                 installedExtension.update(resignedAppExtensionBundle: appExtension)
-                
+                if !isNewSelfBinary && installedExtension.refreshedDate < previousRefresh {
+                    installedExtension.refreshedDate = previousRefresh
+                    installedExtension.expirationDate = previousExpiry
+                }
+
                 installedExtensions.insert(installedExtension)
             }
             
@@ -361,7 +368,7 @@ public class DatabaseManager: @unchecked Sendable
             // Must go after comparing versions to see if we need to update our cached ZLoader app bundle.
             self.reconcileSelfFromSelfBinary(installedApp: installedApp, localAppBundle: localAppBundle, serialNumber: serialNumber)
             
-            if installedApp.refreshedDate < cachedRefreshedDate
+            if !isNewSelfBinary && installedApp.refreshedDate < cachedRefreshedDate
             {
                 // Embedded provisioning profile has a creation date older than our refreshed date.
                 // This most likely means we've refreshed the app since then, and profile is now outdated,

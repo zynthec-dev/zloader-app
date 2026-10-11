@@ -216,7 +216,10 @@ class PipelineOperationContext: OperationContext
 
 struct PendingProfileBatch {
     let bundleID: String
-    let profiles: [Data]
+    let keyedProfiles: [String: ALTProvisioningProfile]
+    let mainProfileIdentifier: String
+    let useMainProfile: Bool
+    var profiles: [Data] { keyedProfiles.values.map(\.data) }
     let app: InstalledApp?
     let certStatus: CertificateStatus?
 }

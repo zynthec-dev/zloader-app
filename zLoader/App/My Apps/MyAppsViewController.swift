@@ -627,7 +627,7 @@ private extension MyAppsViewController
             var expiryCalendar = Calendar.current
             expiryCalendar.locale = AppLanguage.launchLocale
             expiryFormatter.calendar = expiryCalendar
-            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
+            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.effectiveExpirationDate).day ?? 0)
             cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
             cell.bannerView.configureLauncherProgress(AppManager.shared.refreshProgress(for: installedApp))
             cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")
@@ -727,7 +727,7 @@ private extension MyAppsViewController
             var expiryCalendar = Calendar.current
             expiryCalendar.locale = AppLanguage.launchLocale
             expiryFormatter.calendar = expiryCalendar
-            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.expirationDate).day ?? 0)
+            let remainingDays = installedApp.certificateStatus == .revoked || installedApp.certificateStatus == .expired ? 0 : max(0, Calendar.current.dateComponents([.day], from: Date(), to: installedApp.effectiveExpirationDate).day ?? 0)
             cell.bannerView.subtitleLabel.text = expiryFormatter.string(from: DateComponents(day: remainingDays))
             cell.bannerView.configureLauncherProgress(AppManager.shared.refreshProgress(for: installedApp))
             cell.bannerView.accessibilityLabel = installedApp.name + "\n" + (cell.bannerView.subtitleLabel.text ?? "")

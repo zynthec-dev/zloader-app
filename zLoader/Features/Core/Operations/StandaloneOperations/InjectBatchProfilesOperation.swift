@@ -50,6 +50,17 @@ final class InjectBatchProfilesOperation: BaseStandaloneOperation<StandaloneOper
                 debugLog("[InjectBatchProfilesOperation] Updating database record for \(batch.bundleID)...")
                 let certStatus = batch.certStatus
                 try await dbContext.performWithObject(installedApp) { installedApp in
+                    guard let hostProfile = AppValidity.hostProfile(in: batch.keyedProfiles,
+                        identifiers: [batch.mainProfileIdentifier, installedApp.resignedBundleIdentifier, installedApp.bundleIdentifier],
+                        allowSingleProfile: batch.useMainProfile) else {
+                        throw OperationError.invalidParameters("The refreshed profiles do not contain the main app profile.")
+                    }
+                    installedApp.update(provisioningProfile: hostProfile)
+                    for extensionApp in installedApp.appExtensions {
+                        if let profile = batch.keyedProfiles[extensionApp.bundleIdentifier] ?? batch.keyedProfiles[extensionApp.resignedBundleIdentifier] {
+                            extensionApp.update(provisioningProfile: profile)
+                        }
+                    }
                     if let certStatus {
                         installedApp.certificateStatus = certStatus
                     }

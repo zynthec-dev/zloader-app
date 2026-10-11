@@ -34,7 +34,9 @@ final class RefreshAppOperation: BasePipelineOperation<InstallAppOperationContex
             debugLog("[RefreshAppOperation] Queueing \(self.context.bundleIdentifier) into batch profile injection (isCellularRefreshGroup = true)")
             self.context.sharedContext.addPendingProfileBatch(PendingProfileBatch(
                 bundleID: self.context.bundleIdentifier,
-                profiles: profiles.values.map { $0.data },
+                keyedProfiles: profiles,
+                mainProfileIdentifier: context.targetBundleIdentifier,
+                useMainProfile: context.useMainProfile,
                 app: self.context.installedApp,
                 certStatus: self.context.targetCertStatus
             ))
@@ -71,14 +73,19 @@ final class RefreshAppOperation: BasePipelineOperation<InstallAppOperationContex
               let installedApp = dbContext.object(with: mainApp.objectID) as? InstalledApp else {
             throw OperationError.invalidParameters("Could not find installed database record for '\(appBundle.name)'")
         }
-        installedApp.update(provisioningProfile: profiles.values.first!)
+        guard let hostProfile = AppValidity.hostProfile(in: profiles,
+            identifiers: [context.targetBundleIdentifier, installedApp.resignedBundleIdentifier, installedApp.bundleIdentifier],
+            allowSingleProfile: context.useMainProfile) else {
+            throw OperationError.invalidParameters("The refreshed profiles do not contain the main app profile.")
+        }
+        installedApp.update(provisioningProfile: hostProfile)
         
         if let certStatus = self.context.targetCertStatus {
             installedApp.certificateStatus = certStatus
         }
 
         for installedExtension in installedApp.appExtensions {
-            guard let provisioningProfile = profiles[installedExtension.bundleIdentifier] else { continue }
+            guard let provisioningProfile = profiles[installedExtension.bundleIdentifier] ?? profiles[installedExtension.resignedBundleIdentifier] else { continue }
             installedExtension.update(provisioningProfile: provisioningProfile)
         }
         return installedApp
