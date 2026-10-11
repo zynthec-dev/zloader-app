@@ -9640,23 +9640,6 @@
         }
       }
     },
-    "Internal Tunnel Addresses": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader Local Tunnel Addresses"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Interne Tunnel-Adressen"
-          }
-        }
-      }
-    },
     "Internal tunnel is ready.": {
       "extractionState": "manual",
       "localizations": {
@@ -17273,40 +17256,6 @@
         }
       }
     },
-    "The integrated tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The zLoader Local Tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der zLoader Local Tunnel verbindet sich nur, solange ein Gerätevorgang ihn benötigt. Apple muss Network Extensions in den Profilen der App und des Providers autorisieren."
-          }
-        }
-      }
-    },
-    "The internal tunnel stays disabled until self-signing succeeds. Leave your external tunnel enabled during this operation.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The zLoader Local Tunnel stays disabled until self-signing succeeds. Leave your external tunnel enabled during this operation."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der zLoader Local Tunnel bleibt deaktiviert, bis die Selbstsignierung erfolgreich ist. Lass deinen externen Tunnel während dieses Vorgangs aktiviert."
-          }
-        }
-      }
-    },
     "The logged-in Apple ID account has changed.": {
       "extractionState": "manual",
       "localizations": {
@@ -18888,23 +18837,6 @@
         }
       }
     },
-    "Use Internal Tunnel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use zLoader Local Tunnel"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader Local Tunnel verwenden"
-          }
-        }
-      }
-    },
     "Use a compatible external local VPN tunnel for on-device services. zLoader checks device reachability without opening or controlling a VPN app.": {
       "extractionState": "manual",
       "localizations": {
@@ -18918,40 +18850,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verwende einen kompatiblen externen lokalen VPN-Tunnel für Gerätedienste. zLoader prüft die Erreichbarkeit, ohne eine VPN-App zu öffnen oder zu steuern."
-          }
-        }
-      }
-    },
-    "Use a compatible external local VPN tunnel, or enable the optional integrated tunnel with an eligible paid Apple developer team. No specific external VPN app is required.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use a compatible external local VPN tunnel, or enable the optional zLoader Local Tunnel with an eligible paid Apple developer team. No specific external VPN app is required."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verwende einen kompatiblen externen lokalen VPN-Tunnel oder aktiviere den optionalen zLoader Local Tunnel mit einem geeigneten bezahlten Apple-Entwicklerteam. Eine bestimmte externe VPN-App ist nicht erforderlich."
-          }
-        }
-      }
-    },
-    "Use the Internal Tunnel?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use zLoader Local Tunnel?"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader Local Tunnel verwenden?"
           }
         }
       }
@@ -19020,23 +18918,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dienstprogramme"
-          }
-        }
-      }
-    },
-    "VPN configuration and the optional internal tunnel are available on iPhone and iPad.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VPN configuration and the optional zLoader Local Tunnel are available on iPhone and iPad."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VPN-Konfiguration und optionaler zLoader Local Tunnel sind auf iPhone und iPad verfügbar."
           }
         }
       }
@@ -20639,23 +20520,6 @@
         }
       }
     },
-    "zLoader connects its internal tunnel only while pairing, installation or refresh needs it. External tunnel shortcuts are disabled for this connection method.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader connects its zLoader Local Tunnel only while pairing, installation or refresh needs it. External tunnel shortcuts are disabled for this connection method."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader verbindet den zLoader Local Tunnel nur, solange Pairing, Installation oder Refresh ihn benötigt. Kurzbefehle für externe Tunnel sind bei dieser Verbindungsmethode deaktiviert."
-          }
-        }
-      }
-    },
     "zLoader does not have detailed information for these entitlements.": {
       "extractionState": "manual",
       "localizations": {
@@ -20669,23 +20533,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "zLoader hat keine detaillierten Informationen zu diesen Entitlements."
-          }
-        }
-      }
-    },
-    "zLoader requests the required capabilities and separate provisioning profiles for the app and its extensions from Apple. It then signs and reinstalls itself. Reopen the app afterwards. Your App ID and App Group stay the same. Once setup succeeds, device operations use the integrated tunnel instead of an external VPN.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader requests the required capabilities and separate provisioning profiles for the app and its extensions from Apple. It then signs and reinstalls itself. Reopen the app afterwards. Your App ID and App Group stay the same. Once setup succeeds, device operations use the zLoader Local Tunnel instead of an external VPN."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader beantragt bei Apple die benötigten Capabilities und separate Provisioning Profiles für App und Erweiterungen. Anschließend signiert und installiert sich die App neu. Öffne sie danach erneut. App-ID und App Group bleiben gleich. Nach erfolgreicher Einrichtung verwenden Gerätedienste den integrierten statt eines externen Tunnels."
           }
         }
       }
@@ -24243,16 +24090,6 @@
         }
       }
     },
-    "The connected internal tunnel has no valid device endpoint. Reconfigure it in Connection Settings.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der verbundene zLoader Local Tunnel hat keinen gültigen Geräte-Endpunkt. Konfiguriere ihn erneut in den Verbindungseinstellungen."
-          }
-        }
-      }
-    },
     "Select": {
       "localizations": {
         "de": {
@@ -25243,16 +25080,6 @@
         }
       }
     },
-    "Create a personal automation in Shortcuts: App → Is Opened → Run Immediately → Enable JIT. Select the same app in the JIT action. The integrated tunnel connects for activation and disconnects afterwards; JIT remains enabled until that app process ends. External tunnels must be connected separately. iOS decides whether background execution is available.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erstelle eine persönliche Automation in Kurzbefehle: App → Wird geöffnet → Sofort ausführen → JIT aktivieren. Wähle in der JIT-Aktion dieselbe App. Der zLoader Local Tunnel verbindet sich für die Aktivierung und trennt sich danach. JIT bleibt bis zum Ende dieses App-Prozesses aktiv. Externe Tunnel müssen separat verbunden werden. iOS entscheidet über die Ausführung im Hintergrund."
-          }
-        }
-      }
-    },
     "The profile does not authorize all selected registered devices.": {
       "localizations": {
         "de": {
@@ -25919,23 +25746,6 @@
         }
       }
     },
-    "Integrated zLoader Local Tunnel (Recommended)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Integrated VPN: zLoader Local Tunnel (Recommended)"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Integriertes VPN: zLoader Local Tunnel (empfohlen)"
-          }
-        }
-      }
-    },
     "Tunnel Data": {
       "extractionState": "manual",
       "localizations": {
@@ -26412,40 +26222,6 @@
         }
       }
     },
-    "Internal Tunnel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader Local Tunnel"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "zLoader Local Tunnel"
-          }
-        }
-      }
-    },
-    "Optional Internal Tunnel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Optional zLoader Local Tunnel"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Optionales zLoader Local Tunnel"
-          }
-        }
-      }
-    },
     "App ID Details": {
       "extractionState": "manual",
       "localizations": {
@@ -26677,6 +26453,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatisch mit JIT starten"
+          }
+        }
+      }
+    },
+    "Local Tunnel Missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local Tunnel Missing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokaler Tunnel fehlt"
+          }
+        }
+      }
+    },
+    "Use WireGuard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use WireGuard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard verwenden"
+          }
+        }
+      }
+    },
+    "Export WireGuard Configuration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export WireGuard Configuration"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard-Konfiguration exportieren"
+          }
+        }
+      }
+    },
+    "The WireGuard configuration could not be verified. Please try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The WireGuard configuration could not be verified. Please try again."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die WireGuard-Konfiguration konnte nicht überprüft werden. Bitte versuche es erneut."
+          }
+        }
+      }
+    },
+    "Import the exported configuration in WireGuard, enable it, then return to zLoader. Keep WireGuard enabled during device operations. Other compatible local VPN apps can also be used.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import the exported configuration in WireGuard, enable it, then return to zLoader. Keep WireGuard enabled during device operations. Other compatible local VPN apps can also be used."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiere die exportierte Konfiguration in WireGuard, aktiviere sie und kehre zu zLoader zurück. Lass WireGuard während der Geräteaktionen aktiviert. Andere kompatible lokale VPN-Apps können ebenfalls verwendet werden."
+          }
+        }
+      }
+    },
+    "Use a compatible external local VPN tunnel. Export a local tunnel configuration for WireGuard from onboarding or Connection Settings.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use a compatible external local VPN tunnel. Export a local tunnel configuration for WireGuard from onboarding or Connection Settings."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwende einen kompatiblen externen lokalen VPN-Tunnel. Eine WireGuard-Konfiguration lässt sich im Onboarding oder in den Verbindungseinstellungen exportieren."
+          }
+        }
+      }
+    },
+    "WireGuard runs the VPN in its own app. zLoader provides the local loopback peer while running; no integrated VPN extension is included.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard runs the VPN in its own app. zLoader provides the local loopback peer while running; no integrated VPN extension is included."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard betreibt das VPN in seiner eigenen App. zLoader stellt während der Ausführung die lokale Gegenstelle bereit; eine integrierte VPN-Erweiterung ist nicht enthalten."
+          }
+        }
+      }
+    },
+    "WireGuard requires compatible pairing. On iOS 26.4 or later, use Self-Pairing instead of a legacy Lockdown pairing file.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard requires compatible pairing. On iOS 26.4 or later, use Self-Pairing instead of a legacy Lockdown pairing file."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WireGuard benötigt ein kompatibles Pairing. Verwende ab iOS 26.4 Self-Pairing anstelle einer älteren Lockdown-Pairing-Datei."
           }
         }
       }

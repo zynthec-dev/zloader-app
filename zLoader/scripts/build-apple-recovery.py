@@ -71,14 +71,14 @@ def main():
         shutil.copytree(products / 'zLoader.app', app, symlinks=True)
         shutil.copytree(products / 'zLoaderBackup.app', backup, symlinks=True)
         suffixes = {'zLoader.app': '', 'zLoaderBackup.app': '.Backup',
-                    'zLoaderWidget.appex': '.Widget', 'zLoaderTunnel.appex': '.Tunnel'}
+                    'zLoaderWidget.appex': '.Widget'}
         for component in [app, *app.glob('PlugIns/*.appex'), backup]:
             info = plistlib.loads((component / 'Info.plist').read_bytes())
             checks['require'](info['CFBundleIdentifier'] == args.bundle_id + suffixes[component.name],
                               'Repair bundle identity differs from the requested installation')
             entitlements = checks['entitlements'](component)
             checks['check_profile'](component, entitlements)
-            if component.name in ('zLoader.app', 'zLoaderWidget.appex', 'zLoaderTunnel.appex'):
+            if component.name in ('zLoader.app', 'zLoaderWidget.appex'):
                 checks['require'](args.app_group in entitlements.get(checks['GROUPS'], []),
                                   'Repair would change the installed shared App Group')
         subprocess.run(['codesign', '--verify', '--deep', '--strict', '-R=anchor apple generic',

@@ -12,7 +12,6 @@ project = json.loads(subprocess.check_output([
 expected = {
     'zLoader': ('', 'zLoader/Host.entitlements'),
     'zLoaderWidget': ('.Widget', 'zLoader/Widget/zLoaderWidget.entitlements'),
-    'zLoaderTunnel': ('.Tunnel', 'zLoader/Tunnel/zLoaderTunnel.entitlements'),
     'zLoaderBackup': ('.Backup', 'zLoader/Backup/zLoaderBackup.entitlements'),
 }
 assert all(o.get('name') == 'Release' for o in project.values() if o.get('isa') == 'XCBuildConfiguration')
@@ -33,15 +32,13 @@ for target in project.values():
         assert settings['CODE_SIGN_STYLE'] == 'Automatic', name
         assert settings['CODE_SIGN_ENTITLEMENTS'] == entitlement_file, name
         assert settings['IPHONEOS_DEPLOYMENT_TARGET'] == '$(ZLOADER_MIN_IOS_VERSION)', name
-        if name == 'zLoaderTunnel':
-            assert settings['ENABLE_DEBUG_DYLIB'] == 'NO', name
         assert '-w' not in settings.get('OTHER_LDFLAGS', []), name
     entitlements = plistlib.loads((ROOT / entitlement_file).read_bytes())
-    assert ('com.apple.developer.networking.networkextension' in entitlements) == (name in ('zLoader', 'zLoaderTunnel'))
+    assert ('com.apple.developer.networking.networkextension' in entitlements) == False
     if name in ('zLoader', 'zLoaderWidget', 'zLoaderBackup'):
         assert entitlements['com.apple.security.application-groups'] == ['group.$(APP_GROUP_IDENTIFIER)']
 assert seen == set(expected)
-assert 'com.apple.developer.networking.networkextension' not in plistlib.loads((ROOT / 'zLoader/HostExternal.entitlements').read_bytes())
+assert not any(o.get('name') == 'zLoaderTunnel' for o in project.values())
 build = (ROOT / 'Build.xcconfig').read_text()
 assert build.count('#include? "CodeSigning.xcconfig"') == 1
 assert build.rfind('#include? "CodeSigning.xcconfig"') > build.rfind('#include "zLoader/Branding.xcconfig"')
@@ -52,4 +49,4 @@ assert re.search(r'^MAIN_BUNDLE_IDENTIFIER\s*=\s*\$\(BASE_BUNDLE_ID\)$', build, 
 for scheme in (ROOT / 'zLoader.xcodeproj/xcshareddata/xcschemes').glob('*.xcscheme'):
     assert 'buildConfiguration = \"Debug\"' not in scheme.read_text(), scheme.name
 assert 'MAIN_BUNDLE_IDENTIFIER=com.zynthec.zLoader' in (ROOT / 'zLoader/scripts/build-unsigned.sh').read_text()
-print('PASS all four targets and external bootstrap variant: stable parent/child IDs, automatic signing, team inheritance, required entitlements and canonical release isolation')
+print('PASS all three external-only targets: stable parent/child IDs, automatic signing, team inheritance, required entitlements and canonical release isolation')

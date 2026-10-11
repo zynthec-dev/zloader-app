@@ -8,11 +8,6 @@ struct PacketTunnelProvisioningTests {
         precondition(PacketTunnelProvisioning.appendingTeamOnce(to: "example.app.TEAM.TEAM", teamID: "TEAM") == "example.app.TEAM.TEAM")
         precondition(PacketTunnelProvisioning.appendingTeamOnce(to: "example.app.MYTEAM", teamID: "TEAM") == "example.app.MYTEAM.TEAM")
         print("PASS idempotent team suffix and existing installed identities retained")
-        for (missing, expired, expected) in [(true, false, "no embedded"), (false, true, "expired"), (false, false, "does not authorize")] {
-            let message = PacketTunnelProvisioning.installedProfileFailure(for: "example.app", missing: missing, expired: expired)
-            precondition(message.contains(expected) && message.contains("External Local VPN Tunnel"))
-        }
-        print("PASS installed profile failures distinguish missing, expired and unauthorized profiles")
         let tunnel: [String: Any] = ["NSExtension": ["NSExtensionPointIdentifier": PacketTunnelProvisioning.extensionPoint]]
         let widget: [String: Any] = ["NSExtension": ["NSExtensionPointIdentifier": "com.apple.widgetkit-extension"]]
         precondition(PacketTunnelProvisioning.requiresCapability(infoPlist: [:], extensions: [tunnel, widget]))

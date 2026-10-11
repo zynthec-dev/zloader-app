@@ -14,11 +14,9 @@ import subprocess
 from pathlib import Path
 import zipfile
 import struct
-import runpy
 
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--internal', action='store_true', help=argparse.SUPPRESS)
 parser.add_argument('--signed-ipa', type=Path, help='Keep all entitlements and profiles from a private Apple-signed IPA')
 args = parser.parse_args()
 if args.signed_ipa:
@@ -34,7 +32,10 @@ if staging.exists():
     shutil.rmtree(staging)
 app = staging / 'Payload/zLoader.app'
 shutil.copytree(source, app, symlinks=True)
-runpy.run_path(str(root / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](app, root, remove_provider=False)
+for stale in ['PlugIns/zLoaderTunnel.appex', 'zLoaderTunnelPayload.zip', 'zLoaderTunnelPayload.plist']:
+    path = app / stale
+    if path.is_dir(): shutil.rmtree(path)
+    elif path.exists(): path.unlink()
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
 # Installer-neutral input: no Apple profiles tied to a previous team/identity.
@@ -42,7 +43,6 @@ for profile in app.rglob('embedded.mobileprovision'):
     profile.unlink()
 group = 'group.' + info['CFBundleIdentifier']
 app_groups_key = 'com.apple.security.application-groups'
-ne_key = 'com.apple.developer.networking.networkextension'
 def requested_entitlements(relative_path):
     raw = (root / relative_path).read_text().replace('$(APP_GROUP_IDENTIFIER)', info['CFBundleIdentifier'])
     result = plistlib.loads(raw.encode('utf-8'))
@@ -53,7 +53,6 @@ expected = {
     app: requested_entitlements('zLoader/Host.entitlements'),
     app / 'PlugIns/zLoaderWidget.appex': requested_entitlements('zLoader/Widget/zLoaderWidget.entitlements'),
 }
-expected[app / 'PlugIns/zLoaderTunnel.appex'] = requested_entitlements('zLoader/Tunnel/zLoaderTunnel.entitlements')
 assert expected[app][app_groups_key] == [group]
 assert expected[app / 'PlugIns/zLoaderWidget.appex'][app_groups_key] == [group]
 
@@ -120,8 +119,8 @@ manifest = {
     'appGroup': group,
     'capabilitiesByBundle': {str(path.relative_to(staging / 'Payload')): requirements for path, requirements in expected.items()},
     'signing': 'ad-hoc capability metadata only; not authorized or directly installable on iOS',
-    'internalProviderInstalled': True, 'bootstrapPayloadIncluded': True,
-    'required': 'Matching Apple profiles for host and retained extensions. If the installer removes the tunnel, use an external local VPN tunnel.',
+    'internalProviderInstalled': False, 'bootstrapPayloadIncluded': False,
+    'required': 'Matching Apple profiles for host and widget. An external local VPN tunnel is required.',
 }
 ipa.with_suffix('.json').write_text(json.dumps(manifest, indent=2) + '\n')
 # No Apple signing identity is used. iLoader replaces these local metadata

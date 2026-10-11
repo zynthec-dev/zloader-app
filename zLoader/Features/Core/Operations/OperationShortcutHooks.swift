@@ -19,7 +19,6 @@ final class OperationShortcutHooks: ObservableObject {
     static let afterKey = "zLoader.shortcuts.afterOperation"
 
     func begin(apps: [String]) async throws -> Session? {
-        if UserDefaults.standard.bool(forKey: "zLoader.useInternalVPN") { return nil }
         let before = UserDefaults.standard.string(forKey: Self.beforeKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let after = UserDefaults.standard.string(forKey: Self.afterKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !apps.isEmpty, !before.isEmpty || !after.isEmpty else { return nil }

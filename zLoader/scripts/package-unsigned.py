@@ -6,18 +6,15 @@ import plistlib
 import shutil
 import zipfile
 import subprocess
-import runpy
 import argparse
 
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser()
-parser.add_argument('--internal', action='store_true', help=argparse.SUPPRESS)
 args = parser.parse_args()
 app = root / '.build/Device/Build/Products/Release-iphoneos/zLoader.app'
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleName'] == 'zLoader'
 assert info['CFBundleIdentifier'] == 'com.zynthec.zLoader'
-assert (app / 'PlugIns/zLoaderTunnel.appex').is_dir()
 for name in ['SideStore-License', 'LocalDevVPN-License', 'LocalDevVPN-License-old']:
     assert (app / (name + '.md')).stat().st_size > 100
 out = root / 'outputs'
@@ -26,7 +23,10 @@ staging = out / 'unsigned-staging'
 if staging.exists():
     shutil.rmtree(staging)
 shutil.copytree(app, staging / 'Payload/zLoader.app', symlinks=True)
-runpy.run_path(str(root / 'zLoader/scripts/tunnel-payload.py'))['prepare_bootstrap'](staging / 'Payload/zLoader.app', root, remove_provider=False)
+for stale in ['PlugIns/zLoaderTunnel.appex', 'zLoaderTunnelPayload.zip', 'zLoaderTunnelPayload.plist']:
+    path = (staging / 'Payload/zLoader.app') / stale
+    if path.is_dir(): shutil.rmtree(path)
+    elif path.exists(): path.unlink()
 # Remove inherited vendor signatures as well as host/extension signatures.
 # This is a fully unsigned artifact; no capability requests are fabricated.
 macho_magic = {bytes.fromhex(value) for value in
@@ -51,12 +51,12 @@ subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
                 str(staging / 'Payload'), str(ipa)], check=True)
 with zipfile.ZipFile(ipa) as archive:
     assert archive.testzip() is None
-    assert any('/zLoaderTunnel.appex/' in name for name in archive.namelist()) == True
-    assert 'Payload/zLoader.app/zLoaderTunnelPayload.zip' in archive.namelist()
+    assert any('/zLoaderTunnel.appex/' in name for name in archive.namelist()) == False
+    assert 'Payload/zLoader.app/zLoaderTunnelPayload.zip' not in archive.namelist()
 result = {'artifact': ipa.name, 'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
           'bundleIdentifier': info['CFBundleIdentifier'],
-          'signing': 'unsigned; Apple provisioning required', 'internalProviderInstalled': True,
-          'bootstrapPayloadIncluded': True}
+          'signing': 'unsigned; Apple provisioning required', 'internalProviderInstalled': False,
+          'bootstrapPayloadIncluded': False}
 ipa.with_suffix('.json').write_text(json.dumps(result, indent=2) + '\n')
 shutil.rmtree(staging)
 print(json.dumps(result, indent=2))

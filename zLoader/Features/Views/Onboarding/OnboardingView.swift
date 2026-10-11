@@ -13,9 +13,7 @@ import UniformTypeIdentifiers
 struct OnboardingView: View {
     var onFinish: (() -> Void)? = nil
     @AppStorage("zLoader.onboarding.currentStep") private var currentStep = 0
-    @AppStorage("zLoader.onboarding.eligibleForTunnel") private var eligibleForTunnel = false
-    @State private var membershipError: String?
-    private var totalSteps: Int { eligibleForTunnel ? 6 : 5 }
+    private let totalSteps = 5
 
     var body: some View {
         ZStack {
@@ -40,30 +38,11 @@ struct OnboardingView: View {
                     PairingFileStep(onNext: { currentStep += 1 })
                         .tag(2)
 
-                    AppleIDStep(onNext: {
-                        Task { @MainActor in
-                            guard AuthManager.shared.isAuthenticated else {
-                                eligibleForTunnel = false
-                                currentStep = 4
-                                return
-                            }
-                            do {
-                                eligibleForTunnel = try await AuthManager.shared.getAuthenticatedTeam().type.isPaid
-                                currentStep = 4
-                            } catch { membershipError = error.localizedDescription }
-                        }
-                    })
+                    AppleIDStep(onNext: { currentStep = 4 })
                         .tag(3)
 
-                    if eligibleForTunnel {
-                        Group {
-                            if currentStep == 4 {
-                                InternalTunnelStep(onNext: { currentStep = 5 })
-                            }
-                        }.tag(4)
-                    }
                     CompleteStep(onFinish: complete)
-                        .tag(eligibleForTunnel ? 5 : 4)
+                        .tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.25), value: currentStep)
@@ -81,15 +60,9 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            if UserDefaults.standard.bool(forKey: TunnelBootstrapPayload.pendingKey) {
-                eligibleForTunnel = true
-                currentStep = 4
-            }
+            // A previous six-step onboarding may have been left at the removed tunnel step.
+            currentStep = min(currentStep, totalSteps - 1)
         }
-        .alert("Could Not Verify Developer Team", isPresented: Binding(
-            get: { membershipError != nil }, set: { if !$0 { membershipError = nil } }
-        )) { SwiftUI.Button("OK", role: .cancel) {} }
-        message: { Text(membershipError ?? "") }
     }
 
 
@@ -126,7 +99,6 @@ struct OnboardingView: View {
     private func complete() {
         UserDefaults.standard.hasCompletedOnboarding = true
         currentStep = 0
-        eligibleForTunnel = false
         UserDefaults.standard.synchronize()
         onFinish?()
     }
@@ -395,7 +367,6 @@ private struct ExternalLocalTunnelStep: View {
     @State private var isConnected = false
     @State private var errorMessage: String? = nil
     @State private var checking = false
-    @State private var usingInternal = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -426,7 +397,7 @@ private struct ExternalLocalTunnelStep: View {
                     .animation(.easeInOut, value: isConnected)
 
                     VStack(spacing: 8) {
-                        Text(usingInternal ? NSLocalizedString("Connection", comment: "") : NSLocalizedString("External Local VPN Tunnel", comment: ""))
+                        Text(NSLocalizedString("External Local VPN Tunnel", comment: ""))
                             .font(.system(size: 28, weight: .bold))
 
                         Text(NSLocalizedString("An external local VPN tunnel is required for pairing, installation and refresh. Enable a compatible tunnel in your preferred VPN app. This status checks the device service at the tunnel IP; you can continue even when it is not reachable yet.", comment: ""))
@@ -451,6 +422,9 @@ private struct ExternalLocalTunnelStep: View {
                             .foregroundStyle(isConnected ? Color.green : Color.secondary)
                     }
                     .font(.footnote)
+
+                    WireGuardSetupView()
+                        .frame(maxWidth: 420).padding(.horizontal, 24)
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -479,7 +453,6 @@ private struct ExternalLocalTunnelStep: View {
             }
         }
         .onReceive(connection.$tunnelPeerReachable.combineLatest(connection.$overrideTunnelPeerReachable)) { discovered, override in
-            guard !usingInternal else { return }
             isConnected = connection.isEffectivePeerReachable(discovered: discovered, override: override)
             if isConnected { errorMessage = nil }
         }
@@ -493,22 +466,9 @@ private struct ExternalLocalTunnelStep: View {
         guard !checking else { return }
         checking = true
         defer { checking = false }
-        #if os(iOS)
-        usingInternal = UserDefaults.standard.bool(forKey: "zLoader.useInternalVPN")
-            && EmbeddedTunnel.shared.unavailableReason == nil
-        if usingInternal {
-            do {
-                try await ZLoaderTransport.withLease { _ = try await fetchUDID(forceLive: true) }
-                isConnected = true
-                errorMessage = nil
-            } catch {
-                isConnected = false
-                errorMessage = error.localizedDescription
-            }
-            return
-        }
-        #endif
         connection.useLocalVPN = true
+        do { try await WireGuardLocalTunnel.shared.prepare() }
+        catch { errorMessage = error.localizedDescription }
         syncMinimuxerBackendFromUserDefaults()
         await bindConnectionConfig()
         await minimuxer.network.refreshEndpoint()
@@ -517,37 +477,6 @@ private struct ExternalLocalTunnelStep: View {
     }
 
 
-}
-
-private struct InternalTunnelStep: View {
-    #if os(iOS)
-    @ObservedObject private var provisioning = SelfProvisioning.shared
-    #endif
-    let onNext: () -> Void
-    @State private var ready = false
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Image(systemName: "network.badge.shield.half.filled")
-                    .font(.system(size: 64)).foregroundStyle(Color.accentColor)
-                Text("Use the Internal Tunnel?").font(.system(size: 28, weight: .bold)).multilineTextAlignment(.center)
-                #if os(iOS)
-                SelfProvisioningView(onReady: { ready = true },
-                                     automaticallyVerify: UserDefaults.standard.bool(forKey: TunnelBootstrapPayload.pendingKey))
-                #endif
-                if ready {
-                    SwiftUI.Button("Continue", action: onNext).buttonStyle(OnboardingPrimaryButtonStyle())
-                } else {
-                    SwiftUI.Button("Use External Local VPN Tunnel", action: onNext)
-                        .buttonStyle(OnboardingPrimaryButtonStyle(secondary: true))
-                        #if os(iOS)
-                        .disabled(provisioning.busy)
-                        #endif
-                }
-            }.padding(32).frame(maxWidth: 480).frame(maxWidth: .infinity)
-        }
-    }
 }
 
 private struct AppleIDStep: View {

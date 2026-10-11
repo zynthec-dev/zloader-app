@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ZLoaderBrand {
     static let maintainer = "zynthec-dev"
-    static let repositoryURL = URL(string: "https://github.com/zynthec-dev/zLoader-ios")!
+    static let repositoryURL = URL(string: "https://github.com/zynthec-dev/zloader-app")!
     static let upstreamURL = URL(string: "https://github.com/SideStore/SideStore")!
 }
 
@@ -24,8 +24,8 @@ struct ZLoaderAboutView: View {
                 }
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Local Device Transport") {
-                Text("Use a compatible external local VPN tunnel, or enable the optional integrated tunnel with an eligible paid Apple developer team. No specific external VPN app is required.")
-                Text("The integrated tunnel connects only while a device operation needs it. Apple must authorize Network Extensions in the host and provider profiles.")
+                Text("Use a compatible external local VPN tunnel. Export a local tunnel configuration for WireGuard from onboarding or Connection Settings.")
+                Text("WireGuard runs the VPN in its own app. zLoader provides the local loopback peer while running; no integrated VPN extension is included.")
                     .font(.footnote).foregroundStyle(.secondary)
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Original Authors & Licenses") {

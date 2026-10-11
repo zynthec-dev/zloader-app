@@ -35,12 +35,12 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         }
         if requiresTunnel {
             guard !self.context.useMainProfile else {
-                throw OperationError.invalidParameters("zLoader's tunnel requires its own provisioning profile; using the main app profile for extensions is unsupported.")
+                throw OperationError.invalidParameters("This app's VPN extension requires its own provisioning profile; using the main app profile for extensions is unsupported.")
             }
             if self.context.overrideProvisioningProfile == nil {
                 let team = try await AuthManager.shared.getAuthenticatedTeam()
                 guard team.type != .free else {
-                    throw OperationError.invalidParameters("A free Apple account cannot provision the Network Extension required by this zLoader IPA. Use an eligible paid developer team and profiles authorizing packet-tunnel-provider. The entitlement will not be stripped or bypassed.")
+                    throw OperationError.invalidParameters("A free Apple account cannot provision the Network Extension required by this IPA. Use an eligible paid developer team and profiles authorizing packet-tunnel-provider. The entitlement will not be stripped or bypassed.")
                 }
             }
         }

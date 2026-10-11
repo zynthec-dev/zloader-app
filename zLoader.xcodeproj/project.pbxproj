@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5A570000000000000000000B /* zLoaderTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5A5700000000000000000002 /* zLoaderTunnel.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		5A570000000000000000000A /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A5700000000000000000003 /* PacketTunnelProvider.swift */; };
 		5A5700000000000000000022 /* zLoader/Features/Resources/Credits/SideStore-License.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A5700000000000000000021 /* zLoader/Features/Resources/Credits/SideStore-License.md */; };
 		5A5700000000000000000024 /* zLoader/Features/Resources/Credits/LocalDevVPN-License.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A5700000000000000000023 /* zLoader/Features/Resources/Credits/LocalDevVPN-License.md */; };
 		5A5700000000000000000026 /* zLoader/Features/Resources/Credits/LocalDevVPN-License-old.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A5700000000000000000025 /* zLoader/Features/Resources/Credits/LocalDevVPN-License-old.md */; };
@@ -48,13 +46,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		5A570000000000000000000D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFD247622284B9A500981D42 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5A5700000000000000000001;
-			remoteInfo = zLoaderTunnel;
-		};
 		0ED4AEC82E6DDB2A0039E2C0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = BFD247622284B9A500981D42 /* Project object */;
@@ -88,7 +79,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				5A570000000000000000000B /* zLoaderTunnel.appex in Embed Foundation Extensions */,
 				BF989177250AABF4002ACF50 /* zLoaderWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -97,10 +87,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5A5700000000000000000005 /* zLoaderTunnel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = zLoaderTunnel.entitlements; sourceTree = "<group>"; };
-		5A5700000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		5A5700000000000000000003 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
-		5A5700000000000000000002 /* zLoaderTunnel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = zLoaderTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A5700000000000000000021 /* zLoader/Features/Resources/Credits/SideStore-License.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "zLoader/Features/Resources/Credits/SideStore-License.md"; sourceTree = SOURCE_ROOT; };
 		5A5700000000000000000023 /* zLoader/Features/Resources/Credits/LocalDevVPN-License.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "zLoader/Features/Resources/Credits/LocalDevVPN-License.md"; sourceTree = SOURCE_ROOT; };
 		5A5700000000000000000025 /* zLoader/Features/Resources/Credits/LocalDevVPN-License-old.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "zLoader/Features/Resources/Credits/LocalDevVPN-License-old.md"; sourceTree = SOURCE_ROOT; };
@@ -435,13 +421,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		5A5700000000000000000008 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		BF580478246A28F7008AE704 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -476,16 +455,6 @@
 
 /* Begin PBXGroup section */
 		D1C29840468717D574433399 = {isa = PBXGroup; children = (321D46E1A9CD8E25F23D0315, B632C352C709C2FA7F19D12B, 778F4D5357E7C7E214C862FF, 09DB5B0D28909772B229CF12, 8469A75E86EC5693FFF37122, A01E77616E8E03E2752D5036, 7B390A89D8BB382FD5F6819E, 687F1FD00B40117C603F3987, 99B95E92956D259E73914E35, 097D98D6E55D03056B9FA35B, AF078486065BFFB695EE66E1, C52C8E8514AB6052390ADD0C, 32954ED54E9E898E0DD6F1CB, 73892667DB10BB88CC20AC63, 711353D0CF14EFB90E53D0C1, 84C6AF06839805A66A842E4D, AE58AF4A582D10C4B65340CF, 7F26AA1F75AC5410DF3D7385, 6EEEE73C9FC8AE01E1F264E3, 06D22220EE12762E01F9FF40, C80F7302E52DB1DAFA7449EF, 79B20165AD62DD382F35CF1C, B9EDAE454D271E475B01F5D9,); name = "Localized Layouts"; sourceTree = "<group>"; };
-		5A5700000000000000000006 /* zLoaderTunnel */ = {
-			isa = PBXGroup;
-			children = (
-				5A5700000000000000000003 /* PacketTunnelProvider.swift */,
-				5A5700000000000000000004 /* Info.plist */,
-				5A5700000000000000000005 /* zLoaderTunnel.entitlements */,
-			);
-			path = "zLoader/Tunnel";
-			sourceTree = "<group>";
-		};
 		98A3811330742B92000653B1 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
@@ -507,7 +476,6 @@
 			isa = PBXGroup;
 			children = (
 				D1C29840468717D574433399,
-				5A5700000000000000000006 /* Tunnel */,
 				A8EEC8412F4B146A00F2436D /* zLoader/App */,
 				A8EEC3B92F4B0EFC00F2436D /* zLoader/Widget */,
 				A8EEC3482F4B0D8600F2436D /* zLoader/Shared */,
@@ -530,7 +498,6 @@
 		BFD2476B2284B9A500981D42 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5A5700000000000000000002 /* zLoaderTunnel.appex */,
 				BFD2476A2284B9A500981D42 /* zLoader.app */,
 				BF58047B246A28F7008AE704 /* zLoaderBackup.app */,
 				BF989167250AABF3002ACF50 /* zLoaderWidget.appex */,
@@ -541,23 +508,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		5A5700000000000000000001 /* zLoaderTunnel */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 5A570000000000000000000E /* Build configuration list for PBXNativeTarget "zLoaderTunnel" */;
-			buildPhases = (
-				5A5700000000000000000007 /* Sources */,
-				5A5700000000000000000008 /* Frameworks */,
-				5A5700000000000000000009 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = zLoaderTunnel;
-			productName = zLoaderTunnel;
-			productReference = 5A5700000000000000000002 /* zLoaderTunnel.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		BF58047A246A28F7008AE704 /* zLoaderBackup */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = BF58048E246A28F9008AE704 /* Build configuration list for PBXNativeTarget "zLoaderBackup" */;
@@ -613,7 +563,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				5A570000000000000000000C /* PBXTargetDependency */,
 				0ED4AEC92E6DDB2A0039E2C0 /* PBXTargetDependency */,
 				BF989176250AABF4002ACF50 /* PBXTargetDependency */,
 			);
@@ -692,7 +641,6 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				5A5700000000000000000001 /* zLoaderTunnel */,
 				BFD247692284B9A500981D42 /* zLoader */,
 				BF58047A246A28F7008AE704 /* zLoaderBackup */,
 				BF989166250AABF3002ACF50 /* zLoaderWidget */,
@@ -701,13 +649,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		5A5700000000000000000009 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		BF580479246A28F7008AE704 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -780,14 +721,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		5A5700000000000000000007 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5A570000000000000000000A /* PacketTunnelProvider.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		BF580477246A28F7008AE704 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -812,12 +745,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		5A570000000000000000000C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			platformFilter = ios;
-			target = 5A5700000000000000000001 /* zLoaderTunnel */;
-			targetProxy = 5A570000000000000000000D /* PBXContainerItemProxy */;
-		};
 		0ED4AEC92E6DDB2A0039E2C0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = BF58047A246A28F7008AE704 /* zLoaderBackup */;
@@ -858,29 +785,6 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		5A5700000000000000000010 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = B3C39607284F4C8400DA9E2F /* Build.xcconfig */;
-			buildSettings = {
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				ENABLE_DEBUG_DYLIB = NO;
-				CODE_SIGN_STYLE = Automatic;
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = zLoader/Tunnel/zLoaderTunnel.entitlements;
-				DEVELOPMENT_TEAM = "$(inherited)";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = zLoader/Tunnel/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = "$(ZLOADER_MIN_IOS_VERSION)";
-				PRODUCT_BUNDLE_IDENTIFIER = "$(MAIN_BUNDLE_IDENTIFIER).Tunnel";
-				PRODUCT_NAME = zLoaderTunnel;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		BF58048D246A28F9008AE704 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = A8EEC71D2F4B10D900F2436D /* xcconfigs */;
@@ -1084,14 +988,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		5A570000000000000000000E /* Build configuration list for PBXNativeTarget "zLoaderTunnel" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5A5700000000000000000010 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		BF58048E246A28F9008AE704 /* Build configuration list for PBXNativeTarget "zLoaderBackup" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -244,6 +244,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication)
     {
+        Task {
+            do {
+                try await WireGuardLocalTunnel.shared.prepare()
+                await minimuxer.network.refreshEndpoint()
+            } catch { debugLog("Local WireGuard peer: \(error.localizedDescription)") }
+        }
         // Flush any .ipa import that arrived before the app was active (cold launch).
         guard let url = self.pendingImportIPAURL else { return }
         self.pendingImportIPAURL = nil

@@ -42,19 +42,9 @@ enum PacketTunnelProvisioning {
         (entitlements[entitlement] as? [String])?.contains(provider) == true
     }
 
-    static func installedProfileFailure(for bundleID: String, missing: Bool, expired: Bool) -> String {
-        let problem = missing ? "has no embedded provisioning profile" :
-            expired ? "has an expired provisioning profile" :
-            "has a provisioning profile that does not authorize packet-tunnel-provider"
-        return "The installed bundle \(bundleID) \(problem). " +
-            "Use External Local VPN Tunnel for device access, then sign zLoader again with an eligible Apple team. " +
-            "zLoader requests Network Extensions for the host and tunnel and validates Apple's returned profiles. " +
-            "Keep the same app identity and App Group; do not delete the app."
-    }
-
     static func failureMessage(for bundleID: String) -> String {
         "Apple's provisioning profile for \(bundleID) does not authorize packet-tunnel-provider. " +
         "zLoader requested the capability, but Apple did not return the required authorization. " +
-        "Check the selected paid team and its permissions. External Local VPN Tunnel remains available; no required entitlement was removed."
+        "Check the selected paid team and its permissions. This app requires an authorized VPN extension profile; no required entitlement was removed."
     }
 }

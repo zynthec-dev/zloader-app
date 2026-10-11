@@ -76,6 +76,7 @@ class MyAppsViewController: UICollectionViewController
     private var didChangeActiveApps = false
     private var previousInactiveAppsCount = 0
     private var statusDotView: UIView?
+    private var tunnelStatusLabel: UILabel?
     private var hasKnownPairingFailure = false
     
     private var _imagePickerInstalledApp: InstalledApp?
@@ -255,6 +256,8 @@ class MyAppsViewController: UICollectionViewController
         remainingDaysTimer = nil
         statusDotView?.removeFromSuperview()
         statusDotView = nil
+        tunnelStatusLabel?.removeFromSuperview()
+        tunnelStatusLabel = nil
     }
     
     private func findView(in view: UIView, where predicate: (UIView) -> Bool) -> UIView? {
@@ -270,7 +273,7 @@ class MyAppsViewController: UICollectionViewController
     }
 
     private func updateTransportStatus(_ result: Result<Bool, Error>) async {
-        var ready = (try? result.get()) == true
+        let ready = (try? result.get()) == true
         if ready { hasKnownPairingFailure = false }
         #if os(iOS)
         if case .failure(let error) = result, let failure = error as? MinimuxerError {
@@ -279,21 +282,12 @@ class MyAppsViewController: UICollectionViewController
                 hasKnownPairingFailure = true
             default: break
             }
-            switch failure {
-            case .noVPN, .noDevice, .invalidVPN, .notReachable:
-                if UserDefaults.standard.bool(forKey: "zLoader.useInternalVPN"),
-                   !hasKnownPairingFailure, PairingFileManager.shared.hasPairingFile(),
-                   minimuxerPairingProtocol() != .unknown {
-                    ready = await EmbeddedTunnel.shared.isConfiguredAndIdle()
-                }
-            default: break
-            }
         }
         #endif
-        updateStatusDot(isReady: ready)
+        updateStatusDot(isReady: ready, tunnelMissing: !ready && !hasKnownPairingFailure)
     }
 
-    private func updateStatusDot(isReady: Bool)
+    private func updateStatusDot(isReady: Bool, tunnelMissing: Bool)
     {
         DispatchQueue.main.async { [weak self] in
             guard let self = self, self.navigationController?.topViewController === self,
@@ -324,10 +318,12 @@ class MyAppsViewController: UICollectionViewController
             // If the dot is already created and attached to largeTitleView, just update color O(1)
             if let existingDot = self.statusDotView, existingDot.superview == largeTitleView {
                 updateColorClosure()
+                self.tunnelStatusLabel?.isHidden = !tunnelMissing
                 return
             }
             
             self.statusDotView?.removeFromSuperview()
+            self.tunnelStatusLabel?.removeFromSuperview()
             
             let titleText = NSLocalizedString("My Apps", comment: "")
             let font = UIFont.systemFont(ofSize: 34, weight: .bold)
@@ -349,6 +345,22 @@ class MyAppsViewController: UICollectionViewController
                 dot.heightAnchor.constraint(equalToConstant: 7)
             ])
             
+            let caption = UILabel()
+            caption.translatesAutoresizingMaskIntoConstraints = false
+            caption.text = NSLocalizedString("Local Tunnel Missing", comment: "")
+            caption.font = UIFont.preferredFont(forTextStyle: .caption2)
+            caption.adjustsFontForContentSizeCategory = true
+            caption.numberOfLines = 2
+            caption.textColor = .secondaryLabel
+            caption.isHidden = !tunnelMissing
+            largeTitleView.addSubview(caption)
+            self.tunnelStatusLabel = caption
+            NSLayoutConstraint.activate([
+                caption.leadingAnchor.constraint(equalTo: dot.trailingAnchor, constant: 5),
+                caption.centerYAnchor.constraint(equalTo: dot.centerYAnchor),
+                caption.trailingAnchor.constraint(lessThanOrEqualTo: largeTitleView.trailingAnchor, constant: -16)
+            ])
+
             let animateEntranceClosure: () -> Void = {
                 dot.backgroundColor = targetColor
                 UIView.animate(withDuration: 0.35, delay: 0.1, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.8, options: [], animations: {

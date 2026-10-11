@@ -6,13 +6,15 @@ Maintained by [zynthec-dev](https://github.com/zynthec-dev) in
 This is an independently maintained SideStore fork with its own development and releases.
 It is not endorsed by the SideStore team; the corresponding source is available in this repository.
 
-zLoader installs and refreshes apps on-device. First setup uses LocalDevVPN.
-After Apple-account login, paid developer teams may opt into on-device self-signing
-with an internal tunnel; free accounts continue with LocalDevVPN. zLoader requests
-required capabilities and separate profiles for host/extensions from Apple and
-validates the returned permissions before signing. Xcode/SSH hosts and EMProxy
-controls have been removed from the app. No cellular-toggle Shortcuts or fixed
-operation-duration timers. Cellular-only behavior still requires iPhone validation.
+zLoader installs and refreshes apps on-device using an external local VPN tunnel.
+Onboarding and Connection Settings can export a WireGuard configuration matching
+EMProxy 0.9.3. Import it into the external WireGuard app and enable it before device
+operations. zLoader runs the loopback peer at 127.0.0.1:51820 while its process is
+running; the device route is 10.7.0.1/32. Configuration export needs internet once,
+then uses a validated local cache. No internet routes or DNS settings are replaced.
+The integrated Network Extension and its automatic provisioning/recovery flow
+have been removed completely. Other compatible external local VPN apps remain
+supported. Cellular-only and iOS suspension behavior need physical iPhone testing.
 
 The fixed, non-removable default source is
 [zLoader Source](https://zynthec.com/zloader/source.json). zLoader self-updates use its own
@@ -47,7 +49,7 @@ sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
 sh zLoader/scripts/test-portal-app-id.sh
-sh zLoader/scripts/test-tunnel-payload.sh
+sh zLoader/scripts/test-wireguard-config.sh
 sh zLoader/scripts/test-lan-installer.sh
 sh zLoader/scripts/build-unsigned.sh
 python3 zLoader/scripts/test-bootstrap-package.py
@@ -63,17 +65,10 @@ applied before a direct Xcode build. It is tracked separately, idempotent and
 leaves the original dependency gitlinks intact.
 
 The single sideloading release is `outputs/zLoader-resignable.ipa` (also aliased as
-`zLoader-iLoader.ipa`). It always includes the embedded tunnel extension and its
-capability metadata, plus a recovery payload if an installer removes the extension.
-An eligible Apple team and matching profiles are required to retain and use the
-internal tunnel. An installer may remove that extension; zLoader then uses an
-external local VPN tunnel and can optionally provision the internal tunnel later.
-Keeping an unauthorized extension can make iOS reject installation; inactive VPN
-configuration alone does not waive Apple's signing requirements.
-
-`zLoader-unsigned.ipa` has the same extension layout with all signatures removed,
-for tools that supply their own entitlement and provisioning requirements. There
-is no separate external/internal release variant.
+`zLoader-iLoader.ipa`). It contains the host, widget and App Group entitlement
+metadata, with no embedded VPN provider or recovery payload. The external
+WireGuard app owns the VPN extension and profile. `zLoader-unsigned.ipa` has the
+same bundle layout with signatures removed. There is one sideloading release.
 Read [on-device setup and limits](docs/zloader/ON-DEVICE-SETUP-0.7.17.md).
 Profile-preserving inputs must not be fed to tools that append another team suffix.
 
