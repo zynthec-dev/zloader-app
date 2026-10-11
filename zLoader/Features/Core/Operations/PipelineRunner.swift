@@ -262,26 +262,20 @@ final class PipelineRunner: Sendable
         }
         do {
             let result = try await self.performPipeline(for: operation, handler: handler, group: group, operationsCount: operationsCount)
-            if operationsCount <= 1 {
-                progress.set(nil, for: operation)
-                debugLog("[AppManager] performOperation: completed successfully. progress was reset for installedApp: \(result.bundleIdentifier)")
-            }
-            
-            // persist the result
+            // Persist before removing the transient launcher tile or reporting success.
+            // A save failure is an operation failure, not a successful invisible app.
             let bundleID = result.bundleIdentifier
             let dbContext = group.dbContext
-            do {
-                try await dbContext.perform {
-                    let hasChanges = dbContext.hasChanges
-                    if hasChanges {
-                        try dbContext.save()
-                    }
-                    debugLog("[AppManager] performOperation: Context changes were saved for installedApp: \(bundleID)")
-                }
-            } catch {
-                debugLog("[AppManager] perform(): Failed to save InstalledApp to database. \(error.localizedDescription)")
+            try await dbContext.perform {
+                if dbContext.hasChanges { try dbContext.save() }
             }
-            
+            await MainActor.run {
+                DatabaseManager.shared.viewContext.processPendingChanges()
+            }
+            if operationsCount <= 1 {
+                progress.set(nil, for: operation)
+            }
+
             group.set(.success(result), forAppWithBundleIdentifier: bundleID)
             debugLog("[AppManager] performOperation: Execution SUCCESS for app: \(operation.bundleIdentifier)")
             

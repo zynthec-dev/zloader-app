@@ -189,7 +189,14 @@ open class CompositeDataSource<ContentType, CellType: UIView & CellContentCell, 
     }
 
     public func dataSource(_ dataSource: AnyObject, localIndexPathForGlobalIndexPath globalIndexPath: IndexPath) -> IndexPath? {
-        guard let resolved = resolve(globalIndexPath), resolved.dataSource === dataSource else { return nil }
+        let localIndexPath: IndexPath
+        if let parentTranslator = self.indexPathTranslator {
+            guard let translated = parentTranslator.dataSource(self, localIndexPathForGlobalIndexPath: globalIndexPath) else { return nil }
+            localIndexPath = translated
+        } else {
+            localIndexPath = globalIndexPath
+        }
+        guard let resolved = resolve(localIndexPath), resolved.dataSource === dataSource else { return nil }
         return resolved.indexPath
     }
 }

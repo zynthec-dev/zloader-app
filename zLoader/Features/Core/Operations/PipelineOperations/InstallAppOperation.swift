@@ -215,8 +215,9 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         
         // Phase 3: Post-install CoreData write — update refreshedDate
         if !isDifferentZLoader && !isSelfReinstall && !isZLoaderBackup {
-            await backgroundContext.performWithObject(installedApp) { installedApp in
+            try await backgroundContext.performWithObject(installedApp) { installedApp in
                 installedApp.refreshedDate = Date()
+                if backgroundContext.hasChanges { try backgroundContext.save() }
             }
         }
         
