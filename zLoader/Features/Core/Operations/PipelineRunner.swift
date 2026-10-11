@@ -103,6 +103,22 @@ final class PipelineRunner: Sendable
                  handler: PipelineExecutionHandler,
                  group: RefreshGroup) async throws -> RefreshGroup
     {
+        let operations = operations.filter { progress.progress(for: $0) == nil || progress.progress(for: $0)?.isCancelled == true }
+        guard !operations.isEmpty else { throw OperationError.cancelled }
+
+        // Publish launcher tiles before hooks, tunnel startup or endpoint checks.
+        group.progress.totalUnitCount = Int64(operations.count * 100)
+        group.progress.completedUnitCount = 1
+        for operation in operations {
+            let operationProgress = Progress.discreteProgress(totalUnitCount: 100)
+            self.progress.set(operationProgress, for: operation)
+            group.progress.addChild(operationProgress, withPendingUnitCount: 100)
+        }
+        defer {
+            // Also clear tiles if acquiring the transport or starting a hook fails.
+            for operation in operations { progress.set(nil, for: operation) }
+        }
+
         let apps = operations.compactMap { operation -> String? in
             switch operation {
             case .install, .update, .reinstall, .refresh, .resign: return operation.bundleIdentifier
@@ -128,9 +144,6 @@ final class PipelineRunner: Sendable
                                       handler: PipelineExecutionHandler,
                                       group: RefreshGroup) async throws -> RefreshGroup
     {
-        let operations = operations.filter { progress.progress(for: $0) == nil || progress.progress(for: $0)?.isCancelled == true }
-        guard !operations.isEmpty else { throw OperationError.cancelled }
-        
         let backgroundTask = await MainActor.run {
             BackgroundOperationTask(name: "com.zynthec.zLoader.operation")
         }
@@ -143,9 +156,6 @@ final class PipelineRunner: Sendable
         }
         
         defer {
-            for operation in operations {                   // Clean up progress for all operations
-                progress.set(nil, for: operation)
-            }
             if let error = group.error {            // Mark error as-is
                 for operation in operations {
                     group.set(.failure(error), forAppWithBundleIdentifier: operation.bundleIdentifier)
@@ -173,17 +183,6 @@ final class PipelineRunner: Sendable
             }
             throw opError
         }
-        
-        group.progress.totalUnitCount = Int64(operations.count * 100)
-        group.progress.completedUnitCount = 1
-        
-        for operation in operations
-        {
-            let progress = Progress.discreteProgress(totalUnitCount: 100)
-            self.progress.set(progress, for: operation)
-            group.progress.addChild(progress, withPendingUnitCount: 100)
-        }
-        
         
         /* Preflight ZLoader specific validations */
         let unhandledOperations = operations.filter { operation in

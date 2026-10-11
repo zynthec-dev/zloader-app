@@ -69,6 +69,7 @@ class MyAppsViewController: UICollectionViewController
     private var remainingDaysTimer: Timer?
     private var pendingInstallationsObservation: AnyCancellable?
     private var pendingInstallations: [AppManager.PendingInstallation] = []
+    private var pendingInstallationSnapshot: [String: AppManager.PendingInstallation] = [:]
     private var sideloadingProgress: Progress?
     private var dropDestinationIndexPath: IndexPath?
     private var isCheckingForUpdates = false
@@ -123,9 +124,10 @@ class MyAppsViewController: UICollectionViewController
         self.inactiveAppsDataSource.fetchedResultsController.delegate = self
         
         self.pendingInstallationsObservation = AppManager.shared.$pendingInstallations
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] pending in
                 guard let self else { return }
+                self.pendingInstallationSnapshot = pending
                 self.scheduleLauncherReload()
             }
 
@@ -1266,7 +1268,7 @@ private extension MyAppsViewController
             let installed = (self.activeAppsDataSource.fetchedResultsController.fetchedObjects ?? []) +
                 (self.inactiveAppsDataSource.fetchedResultsController.fetchedObjects ?? [])
             let identifiers = Set(installed.map(\.bundleIdentifier))
-            self.pendingInstallations = AppManager.shared.pendingInstallations.values.filter {
+            self.pendingInstallations = self.pendingInstallationSnapshot.values.filter {
                 !identifiers.contains($0.bundleIdentifier) && !$0.progress.isCancelled
             }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
             self.collectionView.collectionViewLayout.invalidateLayout()
