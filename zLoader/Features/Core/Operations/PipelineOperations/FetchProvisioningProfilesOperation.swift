@@ -154,6 +154,14 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         let parentID: String
         if let resolvedParentID {
             parentID = resolvedParentID
+        } else if parentAppBundle == nil, let assigned = context.overrideProvisioningProfile {
+            guard assigned.bundleIdentifier == context.targetBundleIdentifier,
+                  assigned.teamIdentifier == team.identifier else {
+                throw OperationError.invalidParameters("The assigned profile must match this app's bundle ID and selected developer team.")
+            }
+            // An assignment fixes app identity, but its UUID still needs the
+            // same fresh portal resolution as any automatically chosen profile.
+            parentID = context.targetBundleIdentifier
         } else if parentAppBundle == nil, targetAppBundle.isZLoaderApp,
                   let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL),
                   let identity = PacketTunnelProvisioning.preservedHostIdentity(
@@ -366,8 +374,7 @@ private extension FetchProvisioningProfilesOperation{
             }.compactMap { item in
                 guard let identifier = item.identifier else { return nil }
                 return PortalProfileResolver.Candidate(identifier: identifier,
-                    mayRenew: ManagedProfileNaming.isOwned(item.name, base: managedName) &&
-                        item.bundleIdentifier == appID.bundleIdentifier)
+                    mayRenew: ManagedProfileNaming.isOwned(item.name, base: managedName))
             }
         }, download: { identifier in
             try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)

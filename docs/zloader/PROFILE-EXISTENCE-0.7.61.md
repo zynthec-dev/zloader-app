@@ -12,7 +12,8 @@ list profiles freshly, download and validate relevant candidates, reuse a
 compatible remote profile, renew an incompatible owned profile, or create a
 new certificate/device-bound profile when no usable remote profile exists.
 Assigned UUIDs are preferences within that live inventory, never proof of
-existence. Replacement assignments are persisted after installation. Local and
+existence. The assigned host bundle ID and selected team remain fixed when a
+deleted profile is replaced. Replacement assignments are persisted after installation. Local and
 installed copies cannot bypass portal resolution. Free teams retain Apple's
 on-demand Xcode profile download/generation on each operation.
 
