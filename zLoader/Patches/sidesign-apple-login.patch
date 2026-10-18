@@ -1,0 +1,166 @@
+diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPortal/Authentication.swift
+--- a/Sources/DeveloperPortal/Authentication.swift
++++ b/Sources/DeveloperPortal/Authentication.swift
+@@ -185,40 +185,45 @@
+         }
+ 
+         verboseLog("[SideSign] Parse complete. dsid: \(dsid), token: \(idmsToken)")
+-        
++
+         // 2FA auth type
+         let statusDictionary = completeResponseDictionary["Status"] as? [String: any Sendable]
+-        let authType = (statusDictionary?["au"] as? String)
+-           ?? (completeResponseDictionary["au"] as? String)
++        let authType = AppleLoginCompatibility.authenticationType(response: completeResponseDictionary, status: statusDictionary)
+         verboseLog("[SideSign] Authentication status type: \(authType ?? "nil")")
+ 
+         let twoFactorAuthContext = TwoFactorAuthContext(
+-            dsid: dsid, 
+-            idmsToken: idmsToken, 
+-            anisetteData: anisetteData, 
++            dsid: dsid,
++            idmsToken: idmsToken,
++            anisetteData: anisetteData,
+             xcodeVersion: xcodeVersion
+         )
+ 
+         switch authType {
+-            case "trustedDeviceSecondaryAuth", "trustedDevice", "secondaryAuth", "sms", "voice", "phone":
+-                let isTrustedDevice = (authType == "trustedDeviceSecondaryAuth" || authType == "trustedDevice")
++            case "trustedDeviceSecondaryAuth", "trustedDevice", "secondaryAuth", "sms", "voice", "phone", "pushedCode":
++                let pushedCode = authType == "pushedCode"
++                guard !pushedCode || !AppleLoginCompatibility.pushedCodeHandled else {
++                    throw DeveloperPortalError.requiresTwoFactorAuthentication
++                }
++                let isTrustedDevice = pushedCode || authType == "trustedDeviceSecondaryAuth" || authType == "trustedDevice"
+                 try await handle2FARequest(
+                     isTrustedDevice: isTrustedDevice,
+                     completeResponseDictionary: completeResponseDictionary,
+                     statusDictionary: statusDictionary,
+                     context: twoFactorAuthContext,
+-                    verificationHandler: verificationHandler
++                    verificationHandler: verificationHandler,
++                    codeAlreadySent: pushedCode
+                 )
+-                // recur coz we just solved 2FA above and this invocation shouldn't come to this case
+-                return try await authenticate(
+-                    appleID: unsanitizedAppleID, 
+-                    password: password, 
+-                    anisetteData: anisetteData, 
+-                    xcodeVersion: xcodeVersion, 
+-                    machinePassword: machinePassword, 
+-                    accountRepairHandler: accountRepairHandler, 
+-                    verificationHandler: verificationHandler
+-                )
++                return try await AppleLoginCompatibility.$pushedCodeHandled.withValue(AppleLoginCompatibility.pushedCodeHandled || pushedCode) {
++                    try await authenticate(
++                        appleID: unsanitizedAppleID,
++                        password: password,
++                        anisetteData: anisetteData,
++                        xcodeVersion: xcodeVersion,
++                        machinePassword: machinePassword,
++                        accountRepairHandler: accountRepairHandler,
++                        verificationHandler: verificationHandler
++                    )
++                }
+ 
+             case "repair":
+                 let directRepairURL = completeResponseDictionary["repairUrl"] as? String
+@@ -308,7 +313,7 @@
+ 
+         let headers: [String: String] = [
+             "Content-Type": "text/x-xml-plist",
+-            "X-MMe-Client-Info": anisetteData.clientInfo,
++            "X-MMe-Client-Info": AppleLoginCompatibility.clientInfo(for: requestURL, anisetteClientInfo: anisetteData.clientInfo),
+             "Accept": "*/*",
+             "User-Agent": h.grandSlam.userAgent,
+             "Connection": "close"
+@@ -572,7 +577,8 @@
+                             completeResponseDictionary: [String: any Sendable],
+                             statusDictionary: [String: any Sendable]?,
+                             context: TwoFactorAuthContext,
+-                            verificationHandler: VerificationHandler?) async throws 
++                            verificationHandler: VerificationHandler?,
++                            codeAlreadySent: Bool = false) async throws
+     {
+         guard let verificationHandler else {
+             debugLog("[SideSign] 2FA required but no verificationHandler provided")
+@@ -586,11 +592,10 @@
+ 
+         let preferredMode: TwoFactorDeliveryMode = isTrustedDevice ? .trustedDevice : .sms
+ 
+-        var currentRequest: TwoFactorRequest = .selectDeliveryMethod(
+-            preferredMode: preferredMode,
+-            phoneNumbers: phoneNumbers
+-        )
+-        var activeChannel: TwoFactorAuthChannel? = nil
++        var currentRequest: TwoFactorRequest = codeAlreadySent
++            ? .trustedDevice(error: nil)
++            : .selectDeliveryMethod(preferredMode: preferredMode, phoneNumbers: phoneNumbers)
++        var activeChannel: TwoFactorAuthChannel? = codeAlreadySent ? .trustedDevice : nil
+ 
+         while true {
+             debugLog("[SideSign] Prompting user with 2FA request (\(currentRequest))...")
+@@ -720,9 +725,9 @@
+         let errorMsg = (responseDict?["em"] as? String)
+                    ?? ((responseDict?["Status"] as? [String: any Sendable])?["em"] as? String)
+ 
+-        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts 
+-            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested 
+-            || errorCode == GrandSlamAuthErrorCodes.rateLimited 
++        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts
++            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested
++            || errorCode == GrandSlamAuthErrorCodes.rateLimited
+             || statusCode == HTTPStatusCodes.tooManyRequests
+         {
+             let msg = errorMsg ?? "Verification codes cannot be sent to this phone number at this time. Please try again later."
+@@ -839,9 +844,9 @@
+                     ?? xmluiMessage
+                     ?? xmluiTitle
+ 
+-        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts 
+-            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested 
+-            || errorCode == GrandSlamAuthErrorCodes.rateLimited 
++        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts
++            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested
++            || errorCode == GrandSlamAuthErrorCodes.rateLimited
+             || statusCode == HTTPStatusCodes.tooManyRequests
+         {
+             let msg = errorMsg ?? "Too many verification code attempts. Please try again later."
+@@ -900,7 +905,7 @@
+             "X-Apple-I-MD": a.oneTimePassword,
+             "X-Apple-I-MD-M": a.machineID,
+             "X-Mme-Device-Id": a.deviceID,
+-            "X-MMe-Client-Info": a.clientInfo,
++            "X-MMe-Client-Info": AppleLoginCompatibility.clientInfo(for: url, anisetteClientInfo: a.clientInfo),
+             "X-Apple-I-MD-LU": a.localUserID,
+             "X-Apple-I-MD-RINFO": a.routingInfo,
+             "X-Apple-I-SRL-NO": a.serialNumber,
+diff --git a/Sources/DeveloperPortal/AppleLoginCompatibility.swift b/Sources/DeveloperPortal/AppleLoginCompatibility.swift
+new file mode 100644
+--- /dev/null
++++ b/Sources/DeveloperPortal/AppleLoginCompatibility.swift
+@@ -0,0 +1,23 @@
++import Foundation
++
++// Adapted from SideStore/SideSign PR #5 (NiceAesth) and SideStore commit
++// 34f61f2. Keep the Android ADI identity scoped to GrandSlam endpoints;
++// Apple's /auth/verify endpoints still require the original anisette identity.
++enum AppleLoginCompatibility {
++    @TaskLocal static var pushedCodeHandled = false
++
++    private static let androidClientInfo = "<Pixel 7> <Android;14;UQ1A.240205.002> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
++
++    static func clientInfo(for url: URL, anisetteClientInfo: String) -> String {
++        if url.scheme == "https", url.host == "gsa.apple.com", url.path.hasPrefix("/grandslam/") {
++            return androidClientInfo
++        }
++        return anisetteClientInfo
++    }
++
++    static func authenticationType(response: [String: any Sendable], status: [String: any Sendable]?) -> String? {
++        (status?["au"] as? String)
++            ?? (response["au"] as? String)
++            ?? ((status?["hsc"] as? Int) == 409 ? "pushedCode" : nil)
++    }
++}

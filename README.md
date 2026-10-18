@@ -49,6 +49,7 @@ python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
+sh zLoader/scripts/test-apple-login.sh
 sh zLoader/scripts/test-portal-app-id.sh
 sh zLoader/scripts/test-wireguard-config.sh
 sh zLoader/scripts/test-lan-installer.sh
