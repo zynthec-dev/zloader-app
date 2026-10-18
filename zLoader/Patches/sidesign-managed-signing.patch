@@ -115,10 +115,28 @@ index efb5c44..65701c7 100644
          let response: AppIDResponse = try await sendRequest(url: Constants.URLs.updateAppID, additionalParameters: parameters, session: session, team: team)
  
 diff --git a/Sources/DeveloperPortal/Certificates.swift b/Sources/DeveloperPortal/Certificates.swift
-index 6127e16..4adc43b 100644
+index 6127e16..e1caa37 100644
 --- a/Sources/DeveloperPortal/Certificates.swift
 +++ b/Sources/DeveloperPortal/Certificates.swift
-@@ -58,55 +58,29 @@ public extension DeveloperPortal {
+@@ -16,7 +16,17 @@ public extension DeveloperPortal {
+         verboseLog("[SideSign] Team: \(team.name) (\(team.identifier)), Type: \(team.type)")
+ 
+         let endpoint: X509Certificate.CertificateEndpoint = (team.type != .free) ? .developerPortal : .developerServices2
++        do {
++            return try await fetchCertificates(from: endpoint, team: team, session: session)
++        } catch ServerError.underlyingError(code: 421, message: _) where endpoint == .developerPortal {
++            // A web-portal route may reject an otherwise valid Xcode session.
++            // Retry only this read through Apple's Xcode service, not arbitrary hosts.
++            return try await fetchCertificates(from: .developerServices2, team: team, session: session)
++        }
++    }
+ 
++    private func fetchCertificates(from endpoint: X509Certificate.CertificateEndpoint,
++                                   team: Team, session: Session) async throws -> [X509Certificate] {
+         var request = URLRequest(url: endpoint.url)
+         request.httpMethod = "GET"
+ 
+@@ -58,55 +68,29 @@ public extension DeveloperPortal {
  
          let csrString = String(decoding: certRequest.csrData, as: UTF8.self)
  
@@ -195,7 +213,7 @@ index 6127e16..4adc43b 100644
  
          debugLog("[SideSign] addCertificate succeeded")
          verboseLog("[SideSign] SerialNumber: \(cert.serialNumber)")
-@@ -114,12 +88,19 @@ public extension DeveloperPortal {
+@@ -114,24 +98,59 @@ public extension DeveloperPortal {
      }
  
      func revokeCertificate(_ certificate: X509Certificate, for team: Team, session: Session) async throws -> Bool {
@@ -217,11 +235,31 @@ index 6127e16..4adc43b 100644
              endpoint = source
          } else {
              endpoint = (team.type != .free) ? .developerPortal : .developerServices2
-@@ -130,8 +111,16 @@ public extension DeveloperPortal {
-         request.httpMethod = "DELETE"
+         }
  
-         let _: EmptyResponse = try await sendServicesRequest(request, additionalParameters: nil, session: session, team: team)
-+        let remaining = try await fetchCertificates(for: team, session: session)
+-        let url = endpoint.url.appendingPathComponent(certIdentifier)
+-        var request = URLRequest(url: url)
+-        request.httpMethod = "DELETE"
+-
+-        let _: EmptyResponse = try await sendServicesRequest(request, additionalParameters: nil, session: session, team: team)
++        let verificationEndpoint: X509Certificate.CertificateEndpoint
++        do {
++            try await deleteCertificate(identifier: certIdentifier, endpoint: endpoint, team: team, session: session)
++            verificationEndpoint = endpoint
++        } catch ServerError.underlyingError(code: 421, message: _) where endpoint == .developerPortal {
++            // Resource IDs need not be shared between portal APIs. Resolve the
++            // selected certificate again before sending the single fallback DELETE.
++            let xcodeCertificates = try await fetchCertificates(from: .developerServices2, team: team, session: session)
++            guard let matched = xcodeCertificates.first(where: {
++                $0.serialNumber.caseInsensitiveCompare(certificate.serialNumber) == .orderedSame &&
++                $0.data == registered.data
++            }), let identifier = matched.identifier else {
++                throw DeveloperPortalError.invalidParameters(cause: "The selected certificate could not be resolved on Apple's Xcode service. No other certificate was revoked.")
++            }
++            try await deleteCertificate(identifier: identifier, endpoint: .developerServices2, team: team, session: session)
++            verificationEndpoint = .developerServices2
++        }
++        let remaining = try await fetchCertificates(from: verificationEndpoint, team: team, session: session)
 +        guard !remaining.contains(where: { $0.serialNumber.caseInsensitiveCompare(certificate.serialNumber) == .orderedSame }) else {
 +            throw DeveloperPortalError.invalidParameters(cause: "Apple still lists the certificate after revocation. Refresh the portal and retry; the local certificate has been preserved.")
 +        }
@@ -229,11 +267,19 @@ index 6127e16..4adc43b 100644
          verboseLog("[SideSign] Revoked Certificate: \(certIdentifier)")
          return true
      }
- }
++
++    private func deleteCertificate(identifier: String, endpoint: X509Certificate.CertificateEndpoint,
++                                   team: Team, session: Session) async throws {
++        var request = URLRequest(url: endpoint.url.appendingPathComponent(identifier))
++        request.httpMethod = "DELETE"
++        let _: EmptyResponse = try await sendServicesRequest(request, additionalParameters: nil, session: session, team: team)
++    }
++
++}
 +
 +private struct CreatedCertificateResponse: Decodable {
 +    let data: CertificatesResponseDeveloperPortal.Item
-+}
+ }
 diff --git a/Sources/DeveloperPortal/DeveloperPortalAPI.swift b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
 index dfea7cc..e999075 100644
 --- a/Sources/DeveloperPortal/DeveloperPortalAPI.swift
