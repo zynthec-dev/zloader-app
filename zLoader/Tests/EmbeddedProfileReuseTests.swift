@@ -89,6 +89,17 @@ struct EmbeddedProfileReuseTests {
         precondition(!EmbeddedProfileReuse.matchesBundleID("example.*", target: "example"))
         precondition(EmbeddedProfileReuse.accepts(profile(bundle: "example.*"), for: target, now: now))
         print("PASS reusable wildcard profiles with bundle-prefix boundaries")
+        let wildcard = profile(bundle: "example.*", entitlements: ["keychain-access-groups": ["test-team.*"]])
+        for id in ["example.first", "example.second", "example.first.widget"] {
+            let request = ProfileReuseRequirements(bundleID: id, teamID: target.teamID,
+                certificate: original, deviceID: target.deviceID,
+                entitlements: ["keychain-access-groups": ["OLD." + id]])
+            precondition(EmbeddedProfileReuse.accepts(wildcard, for: request, now: now))
+            let requiresPush = ProfileReuseRequirements(bundleID: id, teamID: target.teamID,
+                certificate: original, deviceID: target.deviceID, entitlements: ["aps-environment": "development"])
+            precondition(!EmbeddedProfileReuse.accepts(wildcard, for: requiresPush, now: now))
+        }
+        print("PASS one imported wildcard authorizes multiple concrete app/extension IDs but cannot grant missing capabilities")
         let general: [String: Any] = ["com.apple.developer.associated-domains": ["applinks:example.test"],
                                       "com.apple.developer.siri": true,
                                       "aps-environment": "development",

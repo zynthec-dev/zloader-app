@@ -30,6 +30,36 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             throw OperationError.invalidParameters("FetchProvisioningProfilesOperation: context.targetAppBundle is nil")
         }
 
+        if let material = context.sharedContext.importedSigningMaterial {
+            let deviceID = try await safeFetchUDID()
+            var selected: [String: ALTProvisioningProfile] = [:]
+            for component in [targetAppBundle] + targetAppBundle.appExtensions {
+                let targetID = component.bundleIdentifier == targetAppBundle.bundleIdentifier ? context.targetBundleIdentifier :
+                    component.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: context.targetBundleIdentifier)
+                let requested = requestedEntitlements(for: component, team: material.team)
+                var candidates = material.profiles.sorted { $0.bundleIdentifier.count > $1.bundleIdentifier.count }
+                if component.bundleIdentifier == targetAppBundle.bundleIdentifier, let override = context.overrideProvisioningProfile {
+                    candidates = candidates.filter { $0.uuid == override.uuid }
+                }
+                guard let profile = candidates.first(where: { profile in
+                    let snapshot = EmbeddedProfileSnapshot(bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
+                        expiresAt: profile.expirationDate, certificates: profile.certificates.map(\.rawDER),
+                        devices: profile.deviceIDs, entitlements: profile.entitlements)
+                    let requirements = ProfileReuseRequirements(bundleID: targetID, teamID: material.team.identifier,
+                        certificate: material.certificate.certificate.rawDER, deviceID: deviceID, entitlements: requested)
+                    return EmbeddedProfileReuse.accepts(snapshot, for: requirements) &&
+                        (try? SigningEntitlements.prepare(application: requested, profile: profile.entitlements,
+                            teamID: material.team.identifier, bundleIdentifier: targetID)) != nil
+                }) else {
+                    throw OperationError.invalidParameters(String(format: NSLocalizedString("No imported profile authorizes %@, this device, the certificate and all required entitlements. Import a compatible valid profile.", comment: ""), targetID))
+                }
+                selected[targetID] = profile
+            }
+            context.useMainProfile = false
+            self.setProgress(100)
+            return selected
+        }
+
         let requiresTunnel = targetAppBundle.appExtensions.contains {
             ($0.infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String == "com.apple.networkextension.packet-tunnel"
         }

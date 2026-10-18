@@ -14,6 +14,17 @@ struct SignIPAView: View {
     @State private var result: URL?
     @State private var errorMessage: String?
 
+    private var canUseSigningMethod: Bool {
+        if let identityID { return identities.identities.contains { $0.id == identityID } }
+        return AuthManager.shared.isAuthenticated
+    }
+
+    private func selectOfflineIdentityIfNeeded() {
+        if identityID == nil && !AuthManager.shared.isAuthenticated {
+            identityID = identities.identities.first?.id
+        }
+    }
+
     var body: some View {
         Form {
             Section("IPA") {
@@ -30,24 +41,28 @@ struct SignIPAView: View {
                         Text(LocalizedStringKey(option.displayName)).tag(option)
                     }
                 }
-                SwiftUI.Button("Edit App") { Task { await editApp() } }.disabled(ipa == nil)
+                SwiftUI.Button("Edit App") { Task { await editApp() } }.disabled(ipa == nil || !canUseSigningMethod)
                 if preparation != nil { Text("Changes ready for signing").foregroundStyle(.secondary) }
             }.listRowBackground(ZLoaderGlassBackground())
             Section("Sign With") {
                 Picker("Signing Method", selection: $identityID) {
-                    Text("Apple Account").tag(nil as UUID?)
+                    Text("Apple Account").tag(nil as UUID?).disabled(!AuthManager.shared.isAuthenticated)
                     ForEach(identities.identities) { identity in
                         Text(verbatim: identity.name).tag(Optional(identity.id))
                     }
                 }
                 NavigationLink("Signing Identities") { SigningIdentitiesView() }
+                if !AuthManager.shared.isAuthenticated {
+                    Text("No Apple Account is required when you use an imported certificate with its private key and matching profiles.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 if identityID != nil {
                     SwiftUI.Button("Import Additional Profiles") { importingProfiles = true }
                 }
             }.listRowBackground(ZLoaderGlassBackground())
             Section {
                 SwiftUI.Button("Sign App") { Task { await sign() } }
-                    .disabled(ipa == nil || isSigning)
+                    .disabled(ipa == nil || isSigning || !canUseSigningMethod)
                 if isSigning { ProgressView("Signing…") }
                 if let result {
                     ShareLink("Share Signed IPA", item: result)
@@ -63,6 +78,8 @@ struct SignIPAView: View {
         .zLoaderSettingsPage()
         .labelStyle(.titleOnly)
         .disabled(isSigning)
+        .onAppear { selectOfflineIdentityIfNeeded() }
+        .onChange(of: identities.identities) { _, _ in selectOfflineIdentityIfNeeded() }
         .onChange(of: identityID) { _, _ in preparation = nil; result = nil }
         .fileImporter(isPresented: $importingIPA, allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data]) { selection in
             do { ipa = try selection.get(); result = nil; preparation = nil } catch { errorMessage = error.localizedDescription }

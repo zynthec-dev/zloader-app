@@ -14,6 +14,19 @@ struct SigningIdentitiesView: View {
 
     var body: some View {
         List {
+            Section {
+                Picker("Install & Refresh", selection: Binding(get: { store.pipelineIdentityID }, set: { store.selectForAppOperations($0) })) {
+                    Text("Apple Account").tag(nil as UUID?)
+                    ForEach(store.identities) { identity in
+                        Text(verbatim: identity.name).tag(Optional(identity.id))
+                    }
+                    if let selected = store.pipelineIdentityID, !store.identities.contains(where: { $0.id == selected }) {
+                        Text("Unavailable Identity").tag(Optional(selected))
+                    }
+                }
+            } footer: {
+                Text("An imported identity supports signing, installation and refresh without Apple login. Its profiles must authorize this device, the app and every extension. Refresh cannot extend their expiry dates.")
+            }.listRowBackground(ZLoaderGlassBackground())
             ActiveCertSectionView(viewModel: certificates, hasCopiedActiveSerial: $copiedActive,
                 onDeactivate: { deactivate = true })
             Section("Certificates & Keys") {

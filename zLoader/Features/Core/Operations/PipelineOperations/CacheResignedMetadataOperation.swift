@@ -47,11 +47,11 @@ final class CacheResignedMetadataOperation: BasePipelineOperation<InstallAppOper
         let profilesDirectory = app.directoryURL.appendingPathComponent("ProvisioningProfiles")
         try FileManager.default.createDirectory(at: profilesDirectory, withIntermediateDirectories: true, attributes: nil)
         
-        let validProfileIDs = Set(profiles.values.map { $0.bundleIdentifier })
+        let validProfileIDs = Set(profiles.map { $0.value.bundleIdentifier.contains("*") ? $0.key : $0.value.bundleIdentifier })
         cleanupStaleFiles(in: profilesDirectory, matchingExtension: "mobileprovision", validIDs: validProfileIDs, description: "profile")
         
-        for (_, profile) in profiles {
-            let targetID = profile.bundleIdentifier
+        for (bundleID, profile) in profiles {
+            let targetID = profile.bundleIdentifier.contains("*") ? bundleID : profile.bundleIdentifier
             let fileURL = profilesDirectory.appendingPathComponent("\(targetID).mobileprovision")
             try profile.data.write(to: fileURL, options: .atomic)
             debugLog("[CacheResignedMetadataOperation] Cached provisioning profile for \(targetID) to \(fileURL.path)")
@@ -83,11 +83,11 @@ final class CacheResignedMetadataOperation: BasePipelineOperation<InstallAppOper
         let entitlementsDirectory = app.directoryURL.appendingPathComponent("Entitlements")
         try FileManager.default.createDirectory(at: entitlementsDirectory, withIntermediateDirectories: true, attributes: nil)
         
-        let validEntitlementIDs = Set(profiles.values.map { $0.bundleIdentifier })
+        let validEntitlementIDs = Set(profiles.map { $0.value.bundleIdentifier.contains("*") ? $0.key : $0.value.bundleIdentifier })
         cleanupStaleFiles(in: entitlementsDirectory, matchingExtension: "plist", validIDs: validEntitlementIDs, description: "Entitlements")
         
-        for (_, profile) in profiles {
-            let resignedID = profile.bundleIdentifier
+        for (bundleID, profile) in profiles {
+            let resignedID = profile.bundleIdentifier.contains("*") ? bundleID : profile.bundleIdentifier
             let fileURL = entitlementsDirectory.appendingPathComponent("\(resignedID).plist")
             let entitlements = self.context.customEntitlementsByBundleID[resignedID] ?? profile.entitlements
             

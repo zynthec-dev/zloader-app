@@ -22,6 +22,8 @@ final class AppViewController: UIViewController
     
     private var contentSizeObservation: NSKeyValueObservation?
     private var downloadButtonWidthConstraint: NSLayoutConstraint?
+    private let navigationBarIPAButton = UIButton(type: .system)
+    private lazy var navigationBarActions = UIStackView(arrangedSubviews: [navigationBarDownloadButton!, navigationBarIPAButton])
     
     @IBOutlet private var scrollView: UIScrollView!
     @IBOutlet private var contentView: UIView!
@@ -77,6 +79,17 @@ final class AppViewController: UIViewController
         self.navigationBarDownloadButton.setContentHuggingPriority(.required, for: .horizontal)
         self.navigationBarDownloadButton.addTarget(self, action: #selector(AppViewController.performAppAction(_:)), for: .primaryActionTriggered)
                         
+        navigationBarActions.spacing = 8
+        navigationBarActions.alignment = .center
+        var ipaConfiguration = UIButton.Configuration.tinted()
+        ipaConfiguration.image = UIImage(systemName: "arrow.down")
+        ipaConfiguration.cornerStyle = .capsule
+        navigationBarIPAButton.configuration = ipaConfiguration
+        navigationBarIPAButton.accessibilityLabel = NSLocalizedString("Download IPA to Files", comment: "")
+        navigationBarIPAButton.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        navigationBarIPAButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        navigationBarIPAButton.addTarget(self, action: #selector(exportSourceIPA), for: .primaryActionTriggered)
+
         self.navigationBarTitleView.sizeToFit()
         self.navigationItem.titleView = self.navigationBarTitleView
         
@@ -121,6 +134,7 @@ final class AppViewController: UIViewController
         self.backButtonContainerView.isHidden = true
         
         self.navigationBarDownloadButton.tintColor = self.app.tintColor
+        self.navigationBarIPAButton.tintColor = self.app.tintColor
         self.navigationBarAppNameLabel.text = self.app.name
         self.navigationBarAppIconImageView.tintColor = self.app.tintColor
         
@@ -449,6 +463,9 @@ private extension AppViewController
         self.navigationBarDownloadButton.setTitle(title, for: .normal)
         self.navigationBarDownloadButton.progress = self.bannerView.button.progress
         self.navigationBarDownloadButton.countdownDate = self.bannerView.button.countdownDate
+        self.navigationBarDownloadButton.isSourceActionAllowed = self.bannerView.button.isSourceActionAllowed
+        self.navigationBarDownloadButton.isEnabled = self.bannerView.button.isEnabled
+        self.navigationBarDownloadButton.alpha = self.bannerView.button.alpha
         
         let currentSizeWidth = max(PillButton.minimumSize.width, self.navigationBarDownloadButton.intrinsicContentSize.width)
         let targetWidth = currentSizeWidth + 2
@@ -475,7 +492,7 @@ private extension AppViewController
         {
             if self.navigationItem.rightBarButtonItem == nil
             {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.navigationBarDownloadButton)
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.navigationBarActions)
             }
             else
             {
@@ -484,7 +501,7 @@ private extension AppViewController
                 self.navigationItem.rightBarButtonItem = nil
                 self.navigationItem.rightBarButtonItem = barButtonItem
             }
-            self.navigationBarDownloadButton.alpha = self.navigationBarAnimator?.fractionComplete ?? 1.0
+            self.navigationBarDownloadButton.alpha = (self.navigationBarAnimator?.fractionComplete ?? 1.0) * (self.bannerView.button.isSourceActionAllowed ? 1.0 : 0.4)
         }
     }
     
@@ -496,7 +513,7 @@ private extension AppViewController
         self.navigationBarAppNameLabel.alpha = 1.0
         self.navigationBarDownloadButton.alpha = 1.0
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.navigationBarDownloadButton)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.navigationBarActions)
         
         self.updateNavigationBarAppearance(isHidden: false)
         
@@ -622,8 +639,15 @@ extension AppViewController
         self.navigationController?.popViewController(animated: true)
     }
     
+    @objc func exportSourceIPA() {
+        bannerView.ipaDownloadButton.sendActions(for: .primaryActionTriggered)
+    }
+
     @IBAction func performAppAction(_ sender: PillButton)
     {
+        if self.app.installedApp == nil || self.app.installedApp?.hasUpdate == true {
+            guard SourceAppAccess.requireSource(self.app, from: self) else { return }
+        }
         if let installedApp = self.app.installedApp
         {
             if let latestVersion = self.app.latestAvailableVersion, installedApp.hasUpdate

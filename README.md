@@ -53,6 +53,7 @@ sh zLoader/scripts/test-apple-login.sh
 sh zLoader/scripts/test-certificate-revocation.sh
 sh zLoader/scripts/test-portal-profile-resolver.sh
 sh zLoader/scripts/test-account-certificate-policy.sh
+sh zLoader/scripts/test-source-ipa-file.sh
 sh zLoader/scripts/test-portal-app-id.sh
 sh zLoader/scripts/test-wireguard-config.sh
 sh zLoader/scripts/test-lan-installer.sh
@@ -100,3 +101,5 @@ Latest changes: [installation certificate recovery and Signed IPAs, 0.7.18](docs
 Appearance and connection corrections for 0.7.20: [validation and remaining device checks](docs/zloader/UI-TUNNEL-0.7.20.md).
 
 Sources overview and local HTTPS IPA sharing in 0.7.28: [implementation and validation](docs/zloader/LAN-INSTALLER-0.7.28.md).
+
+Imported signing identities, account-free install/refresh and source IPA downloads in 0.7.63: [behavior and validation](docs/zloader/IMPORTED-IDENTITIES-0.7.63.md).

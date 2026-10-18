@@ -11,10 +11,12 @@ import Foundation
 import SideSign
 
 final class PreflightChecksOperation: BasePipelineOperation<StandaloneOperationContext, Bool>, @unchecked Sendable {
+    private let signingTeam: ALTTeam?
     let operations: [AppOperation]
     let handler: PreflightChecksHandler?
 
-    init(operations: [AppOperation], handler: PreflightChecksHandler?, context: StandaloneOperationContext) throws {
+    init(operations: [AppOperation], handler: PreflightChecksHandler?, context: StandaloneOperationContext, signingTeam: ALTTeam? = nil) throws {
+        self.signingTeam = signingTeam
         self.operations = operations
         self.handler = handler
         try super.init(context: context)
@@ -35,7 +37,9 @@ final class PreflightChecksOperation: BasePipelineOperation<StandaloneOperationC
             self.setProgress(100)
             return true
         }
-        let currentTeam = try await AuthManager.shared.getAuthenticatedTeam()
+        let currentTeam: ALTTeam
+        if let signingTeam { currentTeam = signingTeam }
+        else { currentTeam = try await AuthManager.shared.getAuthenticatedTeam() }
         let currentTeamID = currentTeam.identifier
 
         let startProgress = self.progress.completedUnitCount

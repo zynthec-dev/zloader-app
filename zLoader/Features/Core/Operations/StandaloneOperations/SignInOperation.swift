@@ -81,6 +81,8 @@ final class SignInOperation: BaseStandaloneOperation<StandaloneOperationContext,
                 self?.setProgress(progress)
             }
             
+            // A successful explicit account login restores the usual managed workflow.
+            await MainActor.run { SigningIdentityStore.shared.selectForAppOperations(nil) }
             try await self.finalizeAuthentication(result: .success(authResult))
             self.setProgress(100)
             return authResult

@@ -28,11 +28,15 @@ final class PipelineHandler: PipelineExecutionHandler,
     let isResignActive: Bool
     private let presenterProvider: PresenterProvider?
     
+    private let signingTeamID: String?
+
     init(
         isResignActive: Bool = false,
+        signingTeamID: String? = nil,
         presenterProvider: PresenterProvider? = nil
     ) {
         self.isResignActive = isResignActive
+        self.signingTeamID = signingTeamID
         self.presenterProvider = presenterProvider
     }
 
@@ -352,9 +356,10 @@ final class PipelineHandler: PipelineExecutionHandler,
             preferredStyle: .alert
         )
         
-        let team = try await AuthManager.shared.getAuthenticatedTeam()
-        debugLog("[PipelineHandler] resolveBundleIDOverride: initialBundleID='\(initialBundleID)', teamID='\(team.identifier)', isAuthenticated=\(AuthManager.shared.isAuthenticated)")
-        let teamID = team.identifier
+        let teamID: String
+        if let signingTeamID { teamID = signingTeamID }
+        else if let selected = try SigningIdentityStore.shared.selectedMaterial() { teamID = selected.team.identifier }
+        else { teamID = try await AuthManager.shared.getAuthenticatedTeam().identifier }
         guard !teamID.isEmpty else {
             debugLog("[PipelineHandler] resolveBundleIDOverride FAILED: teamID is empty")
             throw OperationError.invalidParameters("Active developer team identifier is empty.")

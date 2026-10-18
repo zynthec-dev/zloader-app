@@ -184,6 +184,12 @@ final class PipelineRunner: Sendable
             throw opError
         }
         
+        if operations.contains(where: { PipelineStepDefinition.steps(for: $0).contains { $0.step == .verifyCertificate } }) {
+            group.sharedContext.importedSigningMaterial = try await MainActor.run {
+                try SigningIdentityStore.shared.selectedMaterial()
+            }
+        }
+
         /* Preflight ZLoader specific validations */
         let unhandledOperations = operations.filter { operation in
             let isZLoader = (operation.app as? ALTApplication)?.isZLoaderApp == true ||
@@ -200,7 +206,7 @@ final class PipelineRunner: Sendable
             let validateOp = try PreflightChecksOperation(
                 operations: unhandledOperations,
                 handler: handler.preflightChecksHandler,
-                context: preflightContext
+                context: preflightContext, signingTeam: group.sharedContext.importedSigningMaterial?.team
             )
             try await validateOp.execute()
         } catch {
@@ -327,12 +333,19 @@ final class PipelineRunner: Sendable
             let isStore = operation.bundleIdentifier == StoreApp.zloaderAppID || operation.bundleIdentifier == Bundle.main.bundleIdentifier
             if isStore {
                 let dbContext = group.dbContext
-                let authorized = await dbContext.perform { SelfRefreshPolicy.canRefresh(in: dbContext) }
+                let authorized = await dbContext.perform { SelfRefreshPolicy.canRefresh(in: dbContext, signingTeamID: group.sharedContext.importedSigningMaterial?.team.identifier) }
                 guard authorized else { throw OperationError.invalidParameters(SelfRefreshPolicy.protectedMessage) }
             }
         default: break
         }
-        let pipelineSteps = PipelineStepDefinition.steps(for: operation)
+        let material = group.sharedContext.importedSigningMaterial
+        let pipelineSteps: [PipelineExecutionStep]
+        if material != nil, PipelineStepDefinition.steps(for: operation).contains(where: { $0.step == .refreshApp }) {
+            // Re-sign the binary too: a profile alone cannot switch its signing identity.
+            pipelineSteps = PipelineStepDefinition.resign
+        } else {
+            pipelineSteps = PipelineStepDefinition.steps(for: operation)
+        }
         let context = InstallAppOperationContext(
             pipelineSteps: pipelineSteps,
             bundleIdentifier: operation.bundleIdentifier,
@@ -371,6 +384,17 @@ final class PipelineRunner: Sendable
             }
         }
         
+        if let material {
+            context.signingTeamOverride = material.team
+            context.overrideSigningCertificate = material.certificate
+            context.appendTeamID = false
+            context.embedSigningCertificate = false
+            context.useMainProfile = false
+            if let installed = operation.app as? InstalledApp {
+                context.customBundleIdentifier = installed.resignedBundleIdentifier
+            }
+        }
+
         context.beginInstallationHandler = { (installedApp) in
             group.beginInstallationHandler?(installedApp)
         }

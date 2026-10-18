@@ -29,6 +29,16 @@ final class VerifyCertificateOperation: BasePipelineOperation<InstallAppOperatio
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         self.setProgress(10)
         
+        if let material = context.sharedContext.importedSigningMaterial {
+            guard material.certificate.expiryDate > Date(), let data = material.certificate.data else {
+                throw OperationError.certificateExpired(appName: context.targetBundleIdentifier)
+            }
+            try PortablePKCS12.validate(certificate: data, key: material.certificate.privateKey)
+            // Local validation cannot establish portal revocation status.
+            context.targetCertStatus = nil
+            self.setProgress(100)
+            return
+        }
         let team = try await AuthManager.shared.getAuthenticatedTeam()
         
         let bundleID = self.context.targetBundleIdentifier

@@ -80,7 +80,7 @@ final class PipelineExecutor: @unchecked Sendable {
                 let handler = context.handler.preflightChecksHandler
                 let step = try PreflightChecksOperation(operations: [appOperation],
                                                         handler: handler,
-                                                        context: group.context)
+                                                        context: group.context, signingTeam: context.signingTeamOverride)
                 result = try await step.execute(parentProgress: progress)
                 return nil
                 
@@ -262,7 +262,7 @@ final class PipelineExecutor: @unchecked Sendable {
             case .verifyCertificate:
                 loggerType = VerifyCertificateOperation.self
                 var willResign = true
-                if case .refresh = appOperation { willResign = false }
+                if case .refresh = appOperation { willResign = context.sharedContext.importedSigningMaterial != nil }
                 let step = try VerifyCertificateOperation(context: context, willResign: willResign)
                 result = try await step.execute(parentProgress: progress)
                 return nil

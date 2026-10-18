@@ -155,6 +155,10 @@ public enum InstallAppDialog {
         onConfirm: @escaping () -> Void,
         onCancel: @escaping () -> Void = {}
     ) {
+        guard SourceAppAccess.requireSource(storeApp, from: presentingViewController ?? UIApplication.shared.topViewController()) else {
+            onCancel()
+            return
+        }
         let message = String(format: NSLocalizedString("Do you want to continue? This will install \"%@\".", comment: ""), storeApp.name)
         self.presentConfirmation(
             message: message,

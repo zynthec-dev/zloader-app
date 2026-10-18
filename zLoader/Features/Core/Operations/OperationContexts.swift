@@ -227,6 +227,11 @@ struct PendingProfileBatch {
 final class SharedPipelineContext: @unchecked Sendable
 {
     private let lock = NSLock()
+    private var rawImportedSigningMaterial: ImportedSigningMaterial?
+    var importedSigningMaterial: ImportedSigningMaterial? {
+        get { lock.withLock { rawImportedSigningMaterial } }
+        set { lock.withLock { rawImportedSigningMaterial = newValue } }
+    }
     private var rawAppIDs: [ALTAppID]?
     private var rawAppGroups: [ALTAppGroup]?
 

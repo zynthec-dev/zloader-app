@@ -56,6 +56,10 @@ class AppBannerView: NibView
         set { self.accessibilityView?.accessibilityTraits = newValue }
     }
     
+    let ipaDownloadButton = UIButton(type: .system)
+    private var downloadApp: StoreApp?
+    private var isDownloadingIPA = false
+
     var style: Style = .app
     private var hasLauncherProgressOverlay = false
     private let launcherDimmingView = UIView()
@@ -126,6 +130,7 @@ class AppBannerView: NibView
             button.isHidden = isLauncherCard && button.progress == nil
             launcherDimmingView.isHidden = button.progress == nil
             backgroundEffectView.isHidden = isLauncherCard
+            ipaDownloadButton.isHidden = isLauncherCard || downloadApp == nil
             buttonLabel.isHidden = isLauncherCard
             update()
         }
@@ -175,6 +180,21 @@ class AppBannerView: NibView
         self.sourceIconImageView.style = .circular
         self.sourceIconImageView.isHidden = true
         
+        var downloadConfiguration = UIButton.Configuration.tinted()
+        downloadConfiguration.image = UIImage(systemName: "arrow.down")
+        downloadConfiguration.cornerStyle = .capsule
+        ipaDownloadButton.configuration = downloadConfiguration
+        ipaDownloadButton.isHidden = true
+        ipaDownloadButton.accessibilityLabel = NSLocalizedString("Download IPA to Files", comment: "")
+        ipaDownloadButton.translatesAutoresizingMaskIntoConstraints = false
+        let width = ipaDownloadButton.widthAnchor.constraint(equalToConstant: 44)
+        let height = ipaDownloadButton.heightAnchor.constraint(equalToConstant: 44)
+        width.priority = .init(999); height.priority = .init(999)
+        NSLayoutConstraint.activate([width, height])
+        stackView.addArrangedSubview(ipaDownloadButton)
+        ipaDownloadButton.addTarget(self, action: #selector(exportIPA), for: .primaryActionTriggered)
+        accessibilityElements = [accessibilityView, button, ipaDownloadButton].compactMap { $0 }
+
         self.layoutMargins = self.stackView.layoutMargins
         self.insetsLayoutMarginsFromSafeArea = false
         
@@ -182,6 +202,25 @@ class AppBannerView: NibView
         self.stackView.preservesSuperviewLayoutMargins = true
     }
     
+    @objc private func exportIPA() {
+        guard let app = downloadApp, !isDownloadingIPA else { return }
+        var responder: UIResponder? = self
+        while let next = responder, !(next is UIViewController) { responder = next.next }
+        guard let presenter = responder as? UIViewController else { return }
+        isDownloadingIPA = true
+        ipaDownloadButton.isEnabled = false
+        ipaDownloadButton.configuration?.showsActivityIndicator = true
+        Task { @MainActor [weak self] in
+            defer {
+                self?.isDownloadingIPA = false
+                self?.ipaDownloadButton.isEnabled = true
+                self?.ipaDownloadButton.configuration?.showsActivityIndicator = false
+            }
+            do { try await SourceIPAExporter.shared.export(app, from: presenter) }
+            catch { ToastView(error: error).show(in: presenter) }
+        }
+    }
+
     override func tintColorDidChange()
     {
         super.tintColorDidChange()
@@ -271,6 +310,12 @@ extension AppBannerView
         }
         
         self.style = .app
+        downloadApp = app as? StoreApp
+        ipaDownloadButton.isHidden = isLauncherCard || downloadApp == nil
+        ipaDownloadButton.tintColor = app.storeApp?.tintColor
+        ipaDownloadButton.isEnabled = !isDownloadingIPA
+        button.isSourceActionAllowed = true
+        button.alpha = 1
 
         let values = AppValues(app: app)
         self.titleLabel.text = app.name // Don't use values.name since that already includes "beta".
@@ -429,6 +474,16 @@ extension AppBannerView
                 }
             }
             
+            switch buttonAction {
+            case .install, .update:
+                let allowed = app.storeApp.map { SourceAppAccess.canInstall($0) } ?? false
+                self.button.isSourceActionAllowed = allowed
+                self.button.alpha = allowed ? 1 : 0.4
+                self.button.accessibilityHint = allowed ? nil : NSLocalizedString("Add this source to install its apps.", comment: "")
+            case .open, .custom:
+                self.button.accessibilityHint = nil
+            }
+
             // Ensure PillButton is correct size before assigning progress.
             self.layoutIfNeeded()
         }
@@ -446,6 +501,10 @@ extension AppBannerView
     func configure(for source: Source)
     {
         self.style = .source
+        downloadApp = nil
+        ipaDownloadButton.isHidden = true
+        button.isSourceActionAllowed = true
+        button.alpha = 1
         
         let subtitle: String
         if let text = source.subtitle

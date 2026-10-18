@@ -82,9 +82,13 @@ class PillButton: UIButton
         }
     }
     
+    var isSourceActionAllowed = true {
+        didSet { isEnabled = isSourceActionAllowed && (countdownDate == nil || countdownDate! <= Date()) }
+    }
+
     var countdownDate: Date? {
         didSet {
-            self.isEnabled = (self.countdownDate == nil)
+            self.isEnabled = self.isSourceActionAllowed && (self.countdownDate == nil)
             self.displayLink.isPaused = (self.countdownDate == nil)
             
             if self.countdownDate == nil
@@ -459,7 +463,7 @@ private extension PillButton
         
         let interval = endDate.timeIntervalSince(startDate)
         guard interval > 0 else {
-            self.isEnabled = true
+            self.isEnabled = self.isSourceActionAllowed
             return
         }
         
@@ -498,7 +502,7 @@ private extension PillButton
         }
         else
         {
-            self.isEnabled = true
+            self.isEnabled = self.isSourceActionAllowed
         }
     }
 }

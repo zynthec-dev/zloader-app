@@ -27,23 +27,14 @@ enum SignIPAService {
         let profiles: [ALTProvisioningProfile]?
         let team: ALTTeam
         if let identity {
-            (certificate, profiles) = try await MainActor.run {
-                guard let key = CertificateManager.shared.getLocalCertificate(serialNumber: identity.certificateSerial) else {
-                    throw OperationError.invalidParameters(NSLocalizedString("The imported certificate or its private key is missing.", comment: ""))
-                }
-                let values = try identity.profileIDs.map { id in
-                    guard let profile = ProfileManager.shared.getProfile(uuid: id) else {
-                        throw OperationError.invalidParameters(NSLocalizedString("An assigned provisioning profile is missing. Import it again.", comment: ""))
-                    }
-                    return profile
-                }
-                return (key, values)
-            }
-            guard let first = profiles?.first else {
-                throw OperationError.invalidParameters(NSLocalizedString("Import at least one provisioning profile.", comment: ""))
-            }
-            team = ALTTeam(identifier: first.teamIdentifier, name: first.teamName, type: first.isFreeProvisioningProfile ? .free : .individual)
+            let material = try await ImportedSigningMaterial.load(identity)
+            certificate = material.certificate
+            profiles = material.profiles
+            team = material.team
         } else {
+            guard AuthManager.shared.isAuthenticated else {
+                throw OperationError.invalidParameters(NSLocalizedString("Choose an imported signing identity or sign in to an Apple Account.", comment: ""))
+            }
             team = try await AuthManager.shared.getAuthenticatedTeam()
             guard let active = await MainActor.run(body: { CertificateManager.shared.activeCertificate?.certificate }) else {
                 throw OperationError.invalidParameters(NSLocalizedString("Select an active signing certificate for your Apple Account first.", comment: ""))
@@ -63,7 +54,7 @@ enum SignIPAService {
         guard let app = ALTApplication(fileURL: appURL) else {
             throw OperationError.invalidApp(reason: NSLocalizedString("The IPA does not contain a readable app bundle.", comment: ""))
         }
-        let handler = PipelineHandler(presenterProvider: { UIApplication.shared.topViewController() })
+        let handler = PipelineHandler(signingTeamID: team.identifier, presenterProvider: { UIApplication.shared.topViewController() })
         let context = InstallAppOperationContext(pipelineSteps: [], bundleIdentifier: app.bundleIdentifier,
             dbBackgroundContext: DatabaseManager.shared.persistentContainer.newBackgroundContext(),
             sharedContext: SharedPipelineContext(), handler: handler, activeSigningCertificate: certificate)

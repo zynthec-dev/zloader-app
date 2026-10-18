@@ -500,7 +500,7 @@ private struct AppleIDStep: View {
                 Text(NSLocalizedString("Apple ID", comment: ""))
                     .font(.system(size: 28, weight: .bold))
 
-                Text(NSLocalizedString("zLoader requires an Apple ID to create development certificates and provisioning profiles for signing apps.", comment: ""))
+                Text(NSLocalizedString("An Apple Account is optional. You can browse sources, download IPAs and sign apps using an imported certificate with its private key and matching provisioning profiles.", comment: ""))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -572,7 +572,7 @@ private struct AppleIDStep: View {
 
             VStack(spacing: 12) {
                 SwiftUI.Button(action: onNext) {
-                    Text(NSLocalizedString("Continue", comment: ""))
+                    Text(NSLocalizedString(isAuthenticated ? "Continue" : "Continue Without Apple Account", comment: ""))
                         .font(.headline)
                         .foregroundColor(Color(uiColor: UIColor.altPrimary.contrastingText))
                         .frame(maxWidth: .infinity)
@@ -580,7 +580,7 @@ private struct AppleIDStep: View {
                         .zLoaderGlassSurface(cornerRadius: 14, interactive: true, prominent: true)
                         .cornerRadius(14)
                 }
-                .disabled(!isAuthenticated && !isSigningIn)
+                .disabled(isSigningIn)
 
                 SwiftUI.Button(action: onNext) {
                     Text(NSLocalizedString("Set Up Later", comment: ""))

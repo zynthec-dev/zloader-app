@@ -1,6 +1,330 @@
 {
   "sourceLanguage": "en",
   "strings": {
+"Install & Refresh": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Install & Refresh"
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Installieren & Refresh"
+        }
+      }
+    }
+  },
+  "Unavailable Identity": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Unavailable Identity"
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Identität nicht verfügbar"
+        }
+      }
+    }
+  },
+  "An imported identity supports signing, installation and refresh without Apple login. Its profiles must authorize this device, the app and every extension. Refresh cannot extend their expiry dates.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "An imported identity supports signing, installation and refresh without Apple login. Its profiles must authorize this device, the app and every extension. Refresh cannot extend their expiry dates."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Eine importierte Identität ermöglicht Signieren, Installation und Refresh ohne Apple-Anmeldung. Ihre Profiles müssen dieses Gerät, die App und jede Erweiterung autorisieren. Refresh verlängert ihre Gültigkeit nicht."
+        }
+      }
+    }
+  },
+  "The selected signing identity is missing. Choose an identity in Signing Identities.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "The selected signing identity is missing. Choose an identity in Signing Identities."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Die ausgewählte Signieridentität fehlt. Wähle unter Signieridentitäten eine Identität aus."
+        }
+      }
+    }
+  },
+  "The imported certificate or private key is missing or expired.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "The imported certificate or private key is missing or expired."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Das importierte Zertifikat oder der private Schlüssel fehlt oder ist abgelaufen."
+        }
+      }
+    }
+  },
+  "Every selected profile must belong to the same team and authorize this certificate.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Every selected profile must belong to the same team and authorize this certificate."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Alle ausgewählten Profiles müssen zum selben Team gehören und dieses Zertifikat autorisieren."
+        }
+      }
+    }
+  },
+  "No imported profile authorizes %@, this device, the certificate and all required entitlements. Import a compatible valid profile.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "No imported profile authorizes %@, this device, the certificate and all required entitlements. Import a compatible valid profile."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Kein importiertes Profile autorisiert %@, dieses Gerät, das Zertifikat und alle erforderlichen Berechtigungen. Importiere ein passendes gültiges Profile."
+        }
+      }
+    }
+  },
+
+    "Finish the current IPA export first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish the current IPA export first."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließe zuerst den laufenden IPA-Export ab."
+          }
+        }
+      }
+    },
+    "Download IPA to Files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download IPA to Files"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPA in Dateien speichern"
+          }
+        }
+      }
+    },
+    "Add Source First": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Source First"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuerst Source hinzufügen"
+          }
+        }
+      }
+    },
+    "Add this source to install its apps.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add this source to install its apps."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge diese Source hinzu, um ihre Apps zu installieren."
+          }
+        }
+      }
+    },
+    "Add this source to install its apps. You can download the IPA without adding the source.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add this source to install its apps. You can download the IPA without adding the source."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge diese Source hinzu, um ihre Apps zu installieren. Die IPA kannst du auch ohne Hinzufügen der Source herunterladen."
+          }
+        }
+      }
+    },
+    "IPA download failed (HTTP %d).": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPA download failed (HTTP %d)."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPA-Download fehlgeschlagen (HTTP %d)."
+          }
+        }
+      }
+    },
+    "The server did not return an IPA archive.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server did not return an IPA archive."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server hat kein IPA-Archiv zurückgegeben."
+          }
+        }
+      }
+    },
+    "The downloaded IPA does not match the source checksum.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded IPA does not match the source checksum."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die heruntergeladene IPA stimmt nicht mit der Prüfsumme der Source überein."
+          }
+        }
+      }
+    },
+    "No Apple Account is required when you use an imported certificate with its private key and matching profiles.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Apple Account is required when you use an imported certificate with its private key and matching profiles."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem importierten Zertifikat samt privatem Schlüssel und passenden Profiles benötigst du keinen Apple-Account."
+          }
+        }
+      }
+    },
+    "Choose an imported signing identity or sign in to an Apple Account.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an imported signing identity or sign in to an Apple Account."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine importierte Signieridentität aus oder melde dich mit einem Apple-Account an."
+          }
+        }
+      }
+    },
+    "An Apple Account is optional. You can browse sources, download IPAs and sign apps using an imported certificate with its private key and matching provisioning profiles.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Apple Account is optional. You can browse sources, download IPAs and sign apps using an imported certificate with its private key and matching provisioning profiles."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Apple-Account ist optional. Du kannst Sources durchsuchen, IPAs herunterladen und Apps mit einem importierten Zertifikat samt privatem Schlüssel und passenden Provisioning Profiles signieren."
+          }
+        }
+      }
+    },
+    "Continue Without Apple Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue Without Apple Account"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Apple-Account fortfahren"
+          }
+        }
+      }
+    },
     "#%@": {
       "extractionState": "manual",
       "localizations": {
