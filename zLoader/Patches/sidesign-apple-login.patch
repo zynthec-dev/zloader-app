@@ -10,7 +10,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
 +        do {
 +            initResponse = try await sendAuthenticationRequest(parameters: initParameters, anisetteData: anisetteData)
 +        } catch {
-+            return try await AppleLoginCompatibility.retryInitial503(after: error) {
++            return try await AppleLoginCompatibility.retryHandshake503(after: error) {
 +                try await authenticate(appleID: unsanitizedAppleID, password: password,
 +                    anisetteData: anisetteData, xcodeVersion: xcodeVersion,
 +                    machinePassword: machinePassword, accountRepairHandler: accountRepairHandler,
@@ -20,7 +20,28 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
  
          guard let c = initResponse["c"] as? String,
                let salt = initResponse["s"] as? Data,
-@@ -185,40 +195,45 @@
+@@ -123,7 +133,19 @@
+             "u": sanitizedAppleID
+         ]
+ 
+-        let completeResponseDictionary = try await sendAuthenticationRequest(parameters: completeParameters, anisetteData: anisetteData)
++        let completeResponseDictionary: [String: any Sendable]
++        do {
++            completeResponseDictionary = try await sendAuthenticationRequest(parameters: completeParameters, anisetteData: anisetteData)
++        } catch {
++            // Start a fresh SRP exchange: the old public key, challenge and proof
++            // must not be replayed when changing the client identity.
++            return try await AppleLoginCompatibility.retryHandshake503(after: error) {
++                try await authenticate(appleID: unsanitizedAppleID, password: password,
++                    anisetteData: anisetteData, xcodeVersion: xcodeVersion,
++                    machinePassword: machinePassword, accountRepairHandler: accountRepairHandler,
++                    verificationHandler: verificationHandler)
++            }
++        }
+         debugLog("[SideSign] SRP complete step finished.")
+ 
+         guard let encryptedData = completeResponseDictionary["spd"] as? Data else {
+@@ -185,40 +207,45 @@
          }
  
          verboseLog("[SideSign] Parse complete. dsid: \(dsid), token: \(idmsToken)")
@@ -85,7 +106,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
  
              case "repair":
                  let directRepairURL = completeResponseDictionary["repairUrl"] as? String
-@@ -308,7 +323,7 @@
+@@ -308,7 +335,7 @@
  
          let headers: [String: String] = [
              "Content-Type": "text/x-xml-plist",
@@ -94,7 +115,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
              "Accept": "*/*",
              "User-Agent": h.grandSlam.userAgent,
              "Connection": "close"
-@@ -329,13 +344,18 @@
+@@ -329,13 +356,18 @@
  
          let httpResponse = response as? HTTPURLResponse
          let statusCode = httpResponse?.statusCode ?? 0
@@ -113,7 +134,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
              let rawStr = String(data: data, encoding: .utf8) ?? data.hexEncodedString()
              debugLog("[SideSign] Auth endpoint returned invalid response format: \(rawStr)")
              throw ServerError.invalidResponseFormat(rawPayload: rawStr)
-@@ -572,7 +592,8 @@
+@@ -572,7 +604,8 @@
                              completeResponseDictionary: [String: any Sendable],
                              statusDictionary: [String: any Sendable]?,
                              context: TwoFactorAuthContext,
@@ -123,7 +144,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
      {
          guard let verificationHandler else {
              debugLog("[SideSign] 2FA required but no verificationHandler provided")
-@@ -586,11 +607,10 @@
+@@ -586,11 +619,10 @@
  
          let preferredMode: TwoFactorDeliveryMode = isTrustedDevice ? .trustedDevice : .sms
  
@@ -139,7 +160,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
  
          while true {
              debugLog("[SideSign] Prompting user with 2FA request (\(currentRequest))...")
-@@ -720,9 +740,9 @@
+@@ -720,9 +752,9 @@
          let errorMsg = (responseDict?["em"] as? String)
                     ?? ((responseDict?["Status"] as? [String: any Sendable])?["em"] as? String)
  
@@ -152,7 +173,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
              || statusCode == HTTPStatusCodes.tooManyRequests
          {
              let msg = errorMsg ?? "Verification codes cannot be sent to this phone number at this time. Please try again later."
-@@ -839,9 +859,9 @@
+@@ -839,9 +871,9 @@
                      ?? xmluiMessage
                      ?? xmluiTitle
  
@@ -165,7 +186,7 @@ diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPor
              || statusCode == HTTPStatusCodes.tooManyRequests
          {
              let msg = errorMsg ?? "Too many verification code attempts. Please try again later."
-@@ -900,7 +920,7 @@
+@@ -900,7 +932,7 @@
              "X-Apple-I-MD": a.oneTimePassword,
              "X-Apple-I-MD-M": a.machineID,
              "X-Mme-Device-Id": a.deviceID,
@@ -213,12 +234,12 @@ new file mode 100644
 +    }
 +
 +    // One fresh SRP attempt, scoped to this login, only after an HTTP 503
-+    // at initialization. Never replay a password proof or a verification code.
-+    static func retryInitial503<Result: Sendable>(after error: any Error,
++    // at initialization or proof. Never replay a proof or a verification code.
++    static func retryHandshake503<Result: Sendable>(after error: any Error,
 +                                       pause: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) },
 +                                       attempt: @Sendable () async throws -> Result) async throws -> Result {
 +        guard let failure = error as? HTTPFailure, failure.statusCode == 503,
-+              failure.phase == .initialization, !useWindowsIdentity else { throw error }
++              (failure.phase == .initialization || failure.phase == .proof), !useWindowsIdentity else { throw error }
 +        if let retryAfter = failure.retryAfter,
 +           !retryAfter.isFinite || retryAfter < 0 || retryAfter > 30 { throw error }
 +        let seconds = max(5, failure.retryAfter ?? 5)
