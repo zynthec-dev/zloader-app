@@ -52,31 +52,6 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             throw OperationError.invalidParameters("Each extension requires a separate app ID and provisioning profile.")
         }
 
-        if let overrideProfile = self.context.overrideProvisioningProfile {
-            self.debugLog("[FetchProvisioningProfiles] Using override provisioning profile '\(overrideProfile.name)' (\(overrideProfile.uuid)) for \(effectiveBundleId)")
-            var profiles = [effectiveBundleId: overrideProfile]
-            guard !context.useMainProfile || appExtensions.isEmpty else {
-                throw OperationError.invalidParameters("Each extension requires its own profile and app ID. A host profile cannot authorize an extension.")
-            }
-            let team = try await AuthManager.shared.getAuthenticatedTeam()
-            guard overrideProfile.bundleIdentifier == effectiveBundleId,
-                  let validated = await reusableEmbeddedProfile(for: targetAppBundle, parentAppBundle: nil,
-                                                               bundleID: effectiveBundleId, team: team), validated.uuid == overrideProfile.uuid else {
-                throw OperationError.invalidParameters("The selected profile must authorize this app, certificate, team, device and every required entitlement.")
-            }
-            for appExtension in appExtensions {
-                guard let identifier = PacketTunnelProvisioning.extensionBundleIdentifier(
-                    appExtension.bundleIdentifier, parent: targetAppBundle.bundleIdentifier, resolvedParent: effectiveBundleId
-                ), let profile = await reusableEmbeddedProfile(for: appExtension, parentAppBundle: targetAppBundle,
-                                                              bundleID: identifier, team: team) else {
-                    throw OperationError.invalidParameters("Import a compatible profile for extension " + appExtension.bundleIdentifier + ". The host profile cannot be reused for an extension.")
-                }
-                profiles[identifier] = profile
-            }
-            self.setProgress(100)
-            return profiles
-        }
-
         let team = try await AuthManager.shared.getAuthenticatedTeam()
         self.debugLog("[FetchProvisioningProfiles] Executing for app \(targetAppBundle.bundleIdentifier), targetBundleID: \(effectiveBundleId), team: \(team.identifier), useMainProfile: \(self.context.useMainProfile)")
         
@@ -84,6 +59,10 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
 
         self.debugLog("[FetchProvisioningProfiles] Preparing main provisioning profile for \(targetAppBundle.bundleIdentifier)...")
         let profile = try await self.provisionAndFetchProfile(for: targetAppBundle, parentAppBundle: nil, team: team)
+        if context.overrideProvisioningProfile != nil {
+            // Persist the replacement, not the stale/deleted assigned UUID.
+            context.overrideProvisioningProfile = profile
+        }
         self.debugLog("[FetchProvisioningProfiles] Main profile prepared successfully for \(effectiveBundleId), expiration: \(String(describing: profile.expirationDate))")
         
         var profiles = [effectiveBundleId: profile]
@@ -374,63 +353,37 @@ private extension FetchProvisioningProfilesOperation{
             }
             return true
         }
-        // Check actual authorization, not profile names. An update can reuse the
-        // installed profile even when the downloaded IPA contains no profile.
-        var localCandidates = [app.provisioningProfile, context.overrideProvisioningProfile].compactMap { $0 }
-        localCandidates.append(contentsOf: ProfileManager.shared.getAllLocalProfiles())
-        if context.targetAppBundle?.isZLoaderApp == true,
-           let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL),
-           let installed = ([running] + running.appExtensions).first(where: { $0.bundleIdentifier == appID.bundleIdentifier }),
-           let profile = installed.provisioningProfile {
-            localCandidates.insert(profile, at: 0)
-        }
-        if let profile = localCandidates.first(where: compatible) {
-            self.debugLog("[FetchProvisioningProfiles] Reusing compatible installed/local profile without issuing a profile.")
-            return profile
-        }
-        let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
-        let candidates = existing.filter {
-            $0.identifier != nil && ($0.bundleIdentifier.map { EmbeddedProfileReuse.matchesBundleID($0, target: appID.bundleIdentifier) } == true ||
-                $0.bundleIdentifier == nil || ManagedProfileNaming.isOwned($0.name, base: managedName))
-        }.sorted { ($0.identifier ?? "") < ($1.identifier ?? "") }
-        var selectedID: String?
-        var downloadError: Error?
-        for item in candidates {
-            guard let identifier = item.identifier else { continue }
-            let candidate: ALTProvisioningProfile
-            do {
-                candidate = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
-            } catch {
-                downloadError = error
-                continue
+        let preferredUUID = app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier
+            ? context.overrideProvisioningProfile?.uuid : nil
+        let profile = try await PortalProfileResolver.resolve(list: {
+            let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
+            return existing.filter {
+                $0.identifier != nil && ($0.bundleIdentifier.map { EmbeddedProfileReuse.matchesBundleID($0, target: appID.bundleIdentifier) } == true ||
+                    $0.bundleIdentifier == nil || ManagedProfileNaming.isOwned($0.name, base: managedName))
+            }.sorted {
+                if ($0.uuid == preferredUUID) != ($1.uuid == preferredUUID) { return $0.uuid == preferredUUID }
+                return ($0.identifier ?? "") < ($1.identifier ?? "")
+            }.compactMap { item in
+                guard let identifier = item.identifier else { return nil }
+                return PortalProfileResolver.Candidate(identifier: identifier,
+                    mayRenew: ManagedProfileNaming.isOwned(item.name, base: managedName) &&
+                        item.bundleIdentifier == appID.bundleIdentifier)
             }
-            if compatible(candidate) {
-                _ = try ProfileManager.shared.importProfile(data: candidate.data)
-                self.debugLog("[FetchProvisioningProfiles] Reusing compatible portal profile without regenerating it.")
-                return candidate
-            }
-            // Only an incompatible profile owned by this flow may be regenerated.
-            // Continue searching: another duplicate or Xcode profile may already fit.
-            if selectedID == nil, ManagedProfileNaming.isOwned(item.name, base: managedName),
-               candidate.bundleIdentifier == appID.bundleIdentifier, candidate.teamIdentifier == team.identifier {
-                selectedID = identifier
-            }
-        }
-        if let downloadError { throw downloadError }
-        let profile: ALTProvisioningProfile
-        if let identifier = selectedID {
-            profile = try await DeveloperPortalProxy.shared.updateProvisioningProfile(
+        }, download: { identifier in
+            try await DeveloperPortalProxy.shared.downloadProvisioningProfile(profileID: identifier, team: team)
+        }, compatible: compatible, renewable: {
+            $0.bundleIdentifier == appID.bundleIdentifier && $0.teamIdentifier == team.identifier
+        }, renew: { identifier in
+            try await DeveloperPortalProxy.shared.updateProvisioningProfile(
                 profileID: identifier, name: ManagedProfileNaming.uniqueName(base: managedName, identity: identifier),
                 appIDId: appID.identifier, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
             )
-        } else {
-            // A unique first name also prevents collisions between concurrent first
-            // requests. Subsequent refreshes find this owned profile and renew its ID.
-            profile = try await DeveloperPortalProxy.shared.createProvisioningProfile(
+        }, create: {
+            try await DeveloperPortalProxy.shared.createProvisioningProfile(
                 name: ManagedProfileNaming.uniqueName(base: managedName, identity: UUID().uuidString),
                 appID: appID, certificateIDs: [certificateID], deviceIDs: registeredIDs, type: profileType, team: team
             )
-        }
+        })
         let snapshot = EmbeddedProfileSnapshot(
             bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
             certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
@@ -459,54 +412,6 @@ private extension FetchProvisioningProfilesOperation{
         // Retain the issued profile for subsequent refreshes with this key.
         _ = try ProfileManager.shared.importProfile(data: profile.data)
         return profile
-    }
-
-    func reusableEmbeddedProfile(for app: ALTApplication, parentAppBundle: ALTApplication?,
-                                 bundleID: String, team: ALTTeam) async -> ALTProvisioningProfile? {
-        if context.includeAllRegisteredDevices ||
-            (context.targetAppBundle?.isZLoaderApp == true && UserDefaults.standard.isExportResignedAppEnabled) { return nil }
-        guard let certificate = context.targetSigningCertificate,
-              let validUntil = certificate.certificate.notAfter, validUntil > Date() else { return nil }
-
-        var candidates = [app.provisioningProfile].compactMap { $0 }
-        if parentAppBundle == nil, let overrideProfile = context.overrideProvisioningProfile {
-            candidates = [overrideProfile]
-        }
-        // Each extension needs its own profile. Imported profiles are candidates,
-        // never blanket overrides; the same strict authorization checks apply.
-        if parentAppBundle != nil || context.overrideProvisioningProfile == nil {
-            candidates.append(contentsOf: ProfileManager.shared.getAllLocalProfiles())
-        }
-        // An unsigned update may omit profiles; the running installation can supply its own.
-        if context.targetAppBundle?.isZLoaderApp == true,
-           let running = ALTApplication(fileURL: Bundle.Info.activeBundleURL) {
-            let current = ([running] + running.appExtensions).first { $0.bundleIdentifier == bundleID }
-            if let profile = current?.provisioningProfile { candidates.append(profile) }
-        }
-        let matching = candidates.filter {
-            $0.bundleIdentifier == bundleID && $0.teamIdentifier == team.identifier &&
-            $0.expirationDate > Date() &&
-            $0.certificates.contains { $0.rawDER == certificate.certificate.rawDER }
-        }
-        guard !matching.isEmpty, let deviceID = try? await safeFetchUDID() else { return nil }
-        let required = requestedEntitlements(for: app, team: team)
-        return matching.first { profile in
-            var candidateRequirements = required
-            if let groups = required["com.apple.security.application-groups"] as? [String],
-               let granted = profile.entitlements["com.apple.security.application-groups"] as? [String] {
-                candidateRequirements["com.apple.security.application-groups"] = groups.map {
-                    granted.contains($0) ? $0 : $0 + "." + team.identifier
-                }
-            }
-            let target = ProfileReuseRequirements(bundleID: bundleID, teamID: team.identifier,
-                                                  certificate: certificate.certificate.rawDER,
-                                                  deviceID: deviceID, entitlements: candidateRequirements)
-            return EmbeddedProfileReuse.accepts(EmbeddedProfileSnapshot(
-                bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
-                expiresAt: profile.expirationDate, certificates: profile.certificates.map { $0.rawDER },
-                devices: profile.deviceIDs, entitlements: profile.entitlements
-            ), for: target)
-        }
     }
 
     func requiresPacketTunnelCapability(for app: ALTApplication) -> Bool {
