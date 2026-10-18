@@ -22,30 +22,32 @@ final class UpdateAppCertificateOperation: BasePipelineOperation<InstallAppOpera
         }
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         
-        let targetBundleID = self.context.installedApp?.bundleIdentifier ?? self.context.targetBundleIdentifier
-        let profileToUse = self.context.overrideProvisioningProfile ?? ProfileManager.shared.getAssignedProfile(for: targetBundleID)
-
-        if let assignedProfile = profileToUse {
-            debugLog("[UpdateAppCertificateOperation] Target bundle '\(targetBundleID)' using assigned profile: '\(assignedProfile.name)' (\(assignedProfile.uuid))")
-            self.context.overrideProvisioningProfile = assignedProfile
-
-            if let matchingCert = ProfileManager.shared.getMatchingCertificate(for: assignedProfile) {
-                debugLog("[UpdateAppCertificateOperation] Loaded matching certificate '\(matchingCert.serialNumber)' for assigned profile. Setting context.overrideSigningCertificate.")
-                self.context.overrideSigningCertificate = matchingCert
-            } else if let serialNumber = self.context.installedApp?.certificateSerialNumber,
-                      let customCert = CertificateManager.shared.getSignableCertificate(for: serialNumber) {
-                self.context.overrideSigningCertificate = customCert
-            }
-        } else if let installedApp = self.context.installedApp, let serialNumber = installedApp.certificateSerialNumber {
-            debugLog("[UpdateAppCertificateOperation] InstalledApp '\(installedApp.name)' has custom certificate serial: '\(serialNumber)'")
-            if let customCert = CertificateManager.shared.getSignableCertificate(for: serialNumber) {
-                debugLog("[UpdateAppCertificateOperation] Loaded custom certificate '\(customCert.serialNumber)' for app '\(installedApp.name)'. Setting context.overrideSigningCertificate.")
-                self.context.overrideSigningCertificate = customCert
-            } else {
-                debugLog("[UpdateAppCertificateOperation] WARNING: Signable certificate with serial '\(serialNumber)' not found for app '\(installedApp.name)'.")
+        // Explicit signing choices are validated by the next operation. An
+        // installed/assigned historical identity must not overwrite that choice.
+        guard context.overrideSigningCertificate == nil else {
+            self.setProgress(100)
+            return
+        }
+        let team = try await AuthManager.shared.getAuthenticatedTeam()
+        let portal = try await DeveloperPortalProxy.shared.fetchCertificates(team: team)
+        let targetBundleID = context.installedApp?.bundleIdentifier ?? context.targetBundleIdentifier
+        let profileToUse = context.overrideProvisioningProfile ?? ProfileManager.shared.getAssignedProfile(for: targetBundleID)
+        if let assignedProfile = profileToUse, assignedProfile.teamIdentifier == team.identifier {
+            context.overrideProvisioningProfile = assignedProfile
+            if let candidate = ProfileManager.shared.getMatchingCertificate(for: assignedProfile),
+               CertificateProvisioningFlow.isUsable(candidate, portalCertificates: portal) {
+                context.overrideSigningCertificate = candidate
             }
         }
-        
+        if context.overrideSigningCertificate == nil,
+           let serial = context.installedApp?.certificateSerialNumber,
+           let candidate = CertificateManager.shared.getSignableCertificate(for: serial),
+           CertificateProvisioningFlow.isUsable(candidate, portalCertificates: portal) {
+            context.overrideSigningCertificate = candidate
+        }
+        // If the old identity is unusable, retain the selected active account
+        // identity. Fresh provisioning will replace its obsolete profile.
+
         self.setProgress(100)
     }
 }

@@ -48,24 +48,23 @@ final class CertificateProvisioningFlow: @unchecked Sendable {
     }
     
     private func performCertificateResolution(for team: ALTTeam) async throws -> ALTCertificate? {
-        let activeCert = CertificateManager.shared.activeCertificate?.certificate
-        let isCustomCert = activeCert?.data.map { data in
-            let details = parseCertificate(derData: data)
-            return !details.subject.contains(team.identifier) && !details.issuer.contains(team.identifier)
-        } ?? false
-        
-        if isCustomCert {
-            debugLog("[CertificateProvisioningFlow] Custom active certificate detected (Subject OU mismatch with Team ID '\(team.identifier)'). Bypassing portal fetch.")
-            return activeCert
-        } else if self.skipCertificateProvisioning {
-            return activeCert
-        } else {
-            let certificate = try await self.fetchCertificate(for: team)
-            try CertificateManager.shared.setActiveCertificate(certificate)
-            return certificate
-        }
+        if skipCertificateProvisioning { return CertificateManager.shared.activeCertificate?.certificate }
+        // Apple-account provisioning must resolve the selected team's identity,
+        // even when the installer supplied an active certificate from another team.
+        let certificate = try await fetchCertificate(for: team)
+        try CertificateManager.shared.setActiveCertificate(certificate)
+        return certificate
     }
-    
+
+    static func isUsable(_ certificate: ALTCertificate, portalCertificates: [ALTX509Certificate]) -> Bool {
+        let matchingKey = certificate.data.map {
+            (try? PortablePKCS12.validate(certificate: $0, key: certificate.privateKey)) != nil
+        } ?? false
+        return AccountCertificatePolicy.canReuse(certificate: certificate.data,
+            expiresAt: certificate.certificate.notAfter, hasMatchingPrivateKey: matchingKey,
+            portalCertificates: portalCertificates.map { $0.rawDER })
+    }
+
     func fetchPortalCertificates(for team: ALTTeam) async throws -> [ALTX509Certificate] {
         if let cached = self.portalCertificates {
             return cached
@@ -82,29 +81,22 @@ final class CertificateProvisioningFlow: @unchecked Sendable {
         let mainBundleCertSerial = CertificateManager.shared.getSigningCertificate(at: Bundle.Info.activeBundleURL)?.serialNumber
             ?? Bundle.main.object(forInfoDictionaryKey: Bundle.Info.certificateID) as? String
         
-        if let activeCert = CertificateManager.shared.activeCertificate,
-           let certificate = portalCertificates.first(where: { $0.serialNumber == activeCert.serialNumber }) 
-        {
-            var keyStoreCert = activeCert.certificate
-            keyStoreCert.machineIdentifier = certificate.machineIdentifier
-
-            if let mainBundleCertSerial = mainBundleCertSerial, 
-                mainBundleCertSerial.lowercased() != activeCert.serialNumber.lowercased() 
-            {
-                debugLog("[CertificateProvisioningFlow] Active certificate (\(activeCert.serialNumber)) and running bundle certificate (\(mainBundleCertSerial)) mismatch detected. Running Bundle Certificate is still active on the Paid account portal. Using active Keychain certificate.")
-            }
-            return keyStoreCert
+        var candidates = [CertificateManager.shared.activeCertificate?.certificate].compactMap { $0 }
+        // Recover a matching embedded/local P12 before asking to replace any
+        // certificate. This also supports a Side Installer identity with its key.
+        if let mainBundleCertSerial,
+           let remote = portalCertificates.first(where: { $0.serialNumber.caseInsensitiveCompare(mainBundleCertSerial) == .orderedSame }),
+           let installed = CertificateManager.shared.getSignableCertificate(for: mainBundleCertSerial,
+                                                                           fallbackPassword: remote.machineIdentifier) {
+            candidates.append(installed)
         }
-        
-        if let mainBundleCertSerial = mainBundleCertSerial,
-           let certificate = portalCertificates.first(where: { $0.serialNumber.lowercased() == mainBundleCertSerial.lowercased() }),
-           var cert = CertificateManager.shared.getSignableCertificate(for: mainBundleCertSerial, fallbackPassword: certificate.machineIdentifier) 
-        {
-            cert.machineIdentifier = certificate.machineIdentifier
-            debugLog("[CertificateProvisioningFlow] Using running bundle certificate (\(cert.serialNumber)) with valid private key from signable cache.")
-            return cert
+        candidates.append(contentsOf: CertificateManager.shared.getAllLocalCertificates())
+        for candidate in candidates where Self.isUsable(candidate, portalCertificates: portalCertificates) {
+            guard let remote = portalCertificates.first(where: { $0.rawDER == candidate.certificate.rawDER }) else { continue }
+            var reused = candidate
+            reused.machineIdentifier = remote.machineIdentifier
+            return reused
         }
-        
         if portalCertificates.isEmpty {
             return try await self.requestCertificate(for: team)
         } else {
@@ -141,8 +133,7 @@ final class CertificateProvisioningFlow: @unchecked Sendable {
     
     private func replaceCertificate(portalCertificates: [ALTX509Certificate], for team: ALTTeam) async throws -> ALTCertificate {
         let iosCertificates = portalCertificates.filter { cert in
-            let nameLower = cert.name.lowercased()
-            return nameLower.contains("ios development") || nameLower.contains("iphone developer")
+            AccountCertificatePolicy.isIOSDevelopment(name: cert.name, portalType: cert.certificateType)
         }
 
         debugLog("[CertificateProvisioningFlow] replaceCertificate: Starting. Total certs on portal: \(portalCertificates.count), iOS Development certs: \(iosCertificates.count)")

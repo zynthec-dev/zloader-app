@@ -95,6 +95,7 @@ final class VerifyCertificateOperation: BasePipelineOperation<InstallAppOperatio
     private func validateCertificate(_ certificate: ALTX509Certificate,
                                      portalCertificateSerials: Set<String>,
                                      signingCertificateSerial: String?) async -> CertificateStatus {
+        guard certificate.expiryDate > Date() else { return .expired }
         if portalCheck(certificate, portalCertificateSerials: portalCertificateSerials) 
         {
             let isCrossSigned = (signingCertificateSerial != nil && !signingCertificateSerial!.isEmpty && certificate.serialNumber != signingCertificateSerial)

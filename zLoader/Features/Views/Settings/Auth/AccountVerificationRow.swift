@@ -162,8 +162,17 @@ final class AccountVerificationRow: InsetGroupTableViewCell {
 
 extension AccountVerificationRow {
     static func verifyStatus(for team: ALTTeam) async -> Status {
-        let hasActiveCert = CertificateManager.shared.activeCertificate != nil || (try? CertificateManager.shared.loadActiveCertificate()) != nil
-        let certMissing = !hasActiveCert
+        let active = CertificateManager.shared.activeCertificate?.certificate ??
+            (try? CertificateManager.shared.loadActiveCertificate())?.certificate
+        let certMissing: Bool
+        do {
+            let portal = try await DeveloperPortalProxy.shared.fetchCertificates(team: team)
+            certMissing = active.map { !CertificateProvisioningFlow.isUsable($0, portalCertificates: portal) } ?? true
+        } catch {
+            // Presence in Keychain alone cannot mark a revoked, expired or
+            // foreign installation certificate as ready for account signing.
+            certMissing = true
+        }
         let isDeviceRegistered = UserDefaults.standard.isDeviceRegistered
         
         if isDeviceRegistered {
@@ -268,6 +277,7 @@ extension AccountVerificationRow {
         let handler = SignInFlowHandler(presentingViewController: presentingViewController)
         handler.showsDoItLater = true
         
+        var preparationError: Error?
         do {
             if deviceUnregistered {
                 try await executeStep(description: NSLocalizedString("Registering device…", comment: "")) {
@@ -283,6 +293,7 @@ extension AccountVerificationRow {
                 }
             }
         } catch {
+            preparationError = error
             verboseLog("[AccountVerificationRow] resolvePendingActions error: \(error)")
         }
         
@@ -292,6 +303,16 @@ extension AccountVerificationRow {
             }
         }
         
+        if let preparationError {
+            if !(preparationError is CancellationError) {
+                let alert = UIAlertController(title: NSLocalizedString("Account setup failed", comment: ""),
+                    message: preparationError.localizedDescription, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default))
+                presentingViewController.present(alert, animated: true)
+            }
+            return
+        }
+
         if UserDefaults.standard.isDeviceRegistered,
            let activeCert = CertificateManager.shared.activeCertificate?.certificate ?? (try? CertificateManager.shared.loadActiveCertificate())?.certificate
         {
