@@ -376,8 +376,12 @@ public extension Source
         if let current = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), Source.zLoaderIdentifier), in: context) {
             return current
         }
-        // Migrate either former fixed URL in place, retaining app/news links.
-        for address in ["https://zloader.zynthec.com", "https://altsource.zynthec.com"] {
+        // Migrate former fixed URLs in place, retaining app/news links.
+        for address in [
+            "https://zynthec.com/zloader/source.json",
+            "https://zloader.zynthec.com",
+            "https://altsource.zynthec.com"
+        ] {
             guard let url = URL(string: address), let identifier = try? Source.sourceID(from: url) else { continue }
             if let source = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), identifier), in: context) {
                 return source

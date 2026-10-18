@@ -1,0 +1,93 @@
+diff --git a/Sources/CodeSigning/SigningEntitlements.swift b/Sources/CodeSigning/SigningEntitlements.swift
+new file mode 100644
+--- /dev/null
++++ b/Sources/CodeSigning/SigningEntitlements.swift
+@@ -0,0 +1,88 @@
++import Foundation
++import CoreFoundation
++
++/// Derive signing rights from the selected Apple profile without granting
++/// capabilities that the profile does not authorize.
++public enum SigningEntitlements {
++    public enum Failure: LocalizedError {
++        case unauthorized(String)
++
++        public var errorDescription: String? {
++            switch self {
++            case .unauthorized(let key):
++                return "The provisioning profile does not authorize entitlement '\(key)'."
++            }
++        }
++    }
++
++    public static func matchesBundleIdentifier(_ rule: String, bundleIdentifier: String) -> Bool {
++        guard !bundleIdentifier.isEmpty, !bundleIdentifier.contains("*") else { return false }
++        if rule == bundleIdentifier || rule == "*" { return true }
++        guard rule.hasSuffix(".*"), rule.filter({ $0 == "*" }).count == 1 else { return false }
++        let prefix = String(rule.dropLast())
++        return bundleIdentifier.hasPrefix(prefix) && bundleIdentifier.count > prefix.count
++    }
++
++    public static func prepare(application: [String: Any], profile: [String: Any], teamID: String,
++                        bundleIdentifier: String? = nil) throws -> [String: Any] {
++        let identityKeys: Set<String> = ["application-identifier", "com.apple.developer.team-identifier", "get-task-allow"]
++        var result = profile.filter { identityKeys.contains($0.key) }
++
++        if let bundleIdentifier {
++            guard let identity = profile["application-identifier"] as? String,
++                  let dot = identity.firstIndex(of: "."), dot != identity.startIndex,
++                  matchesBundleIdentifier(String(identity[identity.index(after: dot)...]), bundleIdentifier: bundleIdentifier) else {
++                throw Failure.unauthorized("application-identifier")
++            }
++            result["application-identifier"] = String(identity[...dot]) + bundleIdentifier
++        } else if let identity = profile["application-identifier"] as? String, identity.contains("*") {
++            // Wildcard profiles need the actual target ID before signing.
++            throw Failure.unauthorized("application-identifier")
++        }
++        if let profileTeam = profile["com.apple.developer.team-identifier"] {
++            guard profileTeam as? String == teamID else {
++                throw Failure.unauthorized("com.apple.developer.team-identifier")
++            }
++        }
++
++        for key in application.keys.sorted() where !identityKeys.contains(key) {
++            guard let requested = application[key] else { continue }
++            if let number = requested as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID(), !number.boolValue { continue }
++            if let values = requested as? [Any], values.isEmpty { continue }
++
++            let value: Any
++            if key == "keychain-access-groups", let groups = requested as? [String] {
++                value = try groups.map { group in
++                    guard let dot = group.firstIndex(of: "."), dot != group.startIndex else {
++                        throw Failure.unauthorized(key)
++                    }
++                    return teamID + group[dot...]
++                }
++            } else if key == "com.apple.security.application-groups", let groups = requested as? [String],
++                      let allowed = profile[key] as? [String] {
++                value = groups.map { allowed.contains($0) ? $0 : $0 + "." + teamID }
++            } else {
++                value = requested
++            }
++            guard authorizes(profile[key], requested: value) else { throw Failure.unauthorized(key) }
++            result[key] = value
++        }
++        return result
++    }
++
++    private static func authorizes(_ allowed: Any?, requested: Any) -> Bool {
++        guard let allowed else { return false }
++        if let values = requested as? [Any] {
++            guard let rules = allowed as? [Any] else { return false }
++            return values.allSatisfy { value in rules.contains { authorizes($0, requested: value) } }
++        }
++        if let value = requested as? String, let rule = allowed as? String {
++            let pattern = "^" + NSRegularExpression.escapedPattern(for: rule).replacingOccurrences(of: "\\*", with: ".*") + "$"
++            return value.range(of: pattern, options: .regularExpression) != nil
++        }
++        if let value = requested as? NSNumber, let rule = allowed as? NSNumber {
++            guard (CFGetTypeID(value) == CFBooleanGetTypeID()) == (CFGetTypeID(rule) == CFBooleanGetTypeID()) else { return false }
++        }
++        return (requested as? NSObject)?.isEqual(allowed) == true
++    }
++}

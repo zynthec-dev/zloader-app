@@ -45,6 +45,41 @@ struct ManagedSigningTests {
         } catch SigningEntitlements.Failure.unauthorized(let key) {
             precondition(key == "com.apple.developer.networking.networkextension")
         }
+        let exactIdentity = try SigningEntitlements.prepare(application: [:], profile: profile,
+            teamID: "TEAM", bundleIdentifier: "example.app")
+        precondition(exactIdentity["application-identifier"] as? String == "TEAM.example.app")
+        precondition(exactIdentity["get-task-allow"] as? Bool == true)
+        precondition(exactIdentity["com.apple.security.application-groups"] == nil)
+        let preservedGroup = try SigningEntitlements.prepare(
+            application: ["com.apple.security.application-groups": ["group.shared.TEAM"]],
+            profile: profile, teamID: "TEAM")
+        precondition(preservedGroup["com.apple.security.application-groups"] as? [String] == ["group.shared.TEAM"])
+
+        func reject(_ application: [String: Any], _ granted: [String: Any], key: String,
+                    bundleIdentifier: String? = nil) throws {
+            do {
+                _ = try SigningEntitlements.prepare(application: application, profile: granted,
+                    teamID: "TEAM", bundleIdentifier: bundleIdentifier)
+                preconditionFailure("Unauthorized entitlement accepted: " + key)
+            } catch SigningEntitlements.Failure.unauthorized(let failedKey) {
+                precondition(failedKey == key)
+            }
+        }
+        try reject([:], profile, key: "application-identifier", bundleIdentifier: "example.other")
+        try reject([:], wildcard, key: "application-identifier")
+        try reject([:], [:], key: "application-identifier", bundleIdentifier: "example.app")
+        try reject([:], ["com.apple.developer.team-identifier": "OTHER"], key: "com.apple.developer.team-identifier")
+        try reject(["keychain-access-groups": ["invalid"]], profile, key: "keychain-access-groups")
+        try reject(["keychain-access-groups": ["OLD.example.app"]],
+            ["keychain-access-groups": ["OTHER.*"]], key: "keychain-access-groups")
+        try reject(["com.apple.security.application-groups": ["group.foreign"]], profile,
+            key: "com.apple.security.application-groups")
+        try reject(["aps-environment": "production"], ["aps-environment": "development"], key: "aps-environment")
+        try reject(["capabilities": ["allowed", "forbidden"]], ["capabilities": ["allowed"]], key: "capabilities")
+        try reject(["enabled": true], ["enabled": false], key: "enabled")
+        try reject(["enabled": true], ["enabled": 1], key: "enabled")
+        precondition(!SigningEntitlements.matchesBundleIdentifier("*", bundleIdentifier: ""))
+        precondition(!SigningEntitlements.matchesBundleIdentifier("*", bundleIdentifier: "example.*"))
         print("PASS exact Apple/iOS certificate types, entitlement values, least privileges, identity remapping and missing permission rejection")
     }
 }

@@ -17,7 +17,7 @@ have been removed completely. Other compatible external local VPN apps remain
 supported. Cellular-only and iOS suspension behavior need physical iPhone testing.
 
 The fixed, non-removable default source is
-[zLoader Source](https://zynthec.com/zloader/source.json). zLoader self-updates use its own
+[zLoader Source](https://source.zloader.de). zLoader self-updates use its own
 `com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
 
 Self-updates hand the staged package to iOS's installation service before
