@@ -29,3 +29,14 @@ Build success, ad-hoc IPA integrity, Apple signing and physical-device runtime a
 separate claims. Test cellular-only behavior and iOS lifecycle on actual hardware
 before claiming they work. Own releases use https://source.zloader.de; preserve
 its non-removable default source and the corresponding-source distribution requirement.
+
+## Release policy
+
+The user authorizes direct publication of every new zLoader version after the
+required build and local checks pass. Upload the resignable IPA and matching
+corresponding-source archive as separate public GitHub release downloads in
+`zynthec-dev/zloader-altsource`, then update https://source.zloader.de. The feed
+contains the app update and IPA download only; keep the source archive outside
+the feed. This is standing authorization for future versions, including 0.7.57.
+Keep the private app repository and its Git history private. Report untested
+physical-device behavior accurately in release notes.

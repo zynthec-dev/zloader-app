@@ -8,4 +8,4 @@ Publish one resignable IPA containing the host and widget, using the external Wi
 
 Preserve other source entries and validate the live feed and downloadable IPA after deployment. A local commit does not authorize pushing the private app repository.
 
-The 0.7.56 IPA and its matching corresponding-source archive are approved for public release on source.zloader.de. Publish both together; keep credentials and private repository history local.
+Standing user authorization: publish every new zLoader version directly after the required build and local checks pass. This includes 0.7.57 and future updates. Publish the resignable IPA and matching corresponding-source archive as separate public GitHub release downloads in `zynthec-dev/zloader-altsource`, then update source.zloader.de. The feed contains only the app update and IPA download; the source archive is available separately from the release. Keep credentials and private repository history local. Physical-device validation is a separate claim and must be described accurately.
