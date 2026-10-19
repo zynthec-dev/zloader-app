@@ -355,6 +355,8 @@ final class PipelineRunner: Sendable
             additionalEntitlements: defaultEntitlements,
             activeSigningCertificate: CertificateManager.shared.activeCertificate?.certificate
         )
+        // Includes transport-only IPAs; also runs after errors and cancellation.
+        defer { context.removeTemporaryFiles() }
         context.isCellularRefreshGroup = group.isCellularRefreshGroup
         context.groupOperationsCount = operationsCount
         

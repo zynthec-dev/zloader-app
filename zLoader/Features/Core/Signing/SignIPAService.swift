@@ -14,7 +14,7 @@ final class SignIPAPreparation: @unchecked Sendable {
         self.certificate = certificate
         importedProfiles = profiles
     }
-    deinit { try? FileManager.default.removeItem(at: context.temporaryDirectory) }
+    deinit { context.removeTemporaryFiles() }
 }
 
 /// Sign-only never writes InstalledApp records or launches installation.

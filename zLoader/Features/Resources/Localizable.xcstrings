@@ -15250,23 +15250,6 @@
         }
       }
     },
-    "Save signed IPAs": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save signed IPAs"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Signierte IPAs speichern"
-          }
-        }
-      }
-    },
     "Saved signed IPA files. Tap a file to share it or save it to Files.": {
       "extractionState": "manual",
       "localizations": {
@@ -25065,16 +25048,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Profile"
-          }
-        }
-      }
-    },
-    "Save Resigned IPAs": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neu signierte IPAs speichern"
           }
         }
       }

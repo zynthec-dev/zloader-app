@@ -298,7 +298,6 @@ enum SettingsEntrySymbol {
             ("Background Refresh", "arrow.clockwise"),
             ("Disable Idle Timeout", "lock.open"),
             ("Signed IPAs", "doc.zipper"),
-            ("Save Resigned IPAs", "square.and.arrow.down"),
             ("Shortcuts", "square.stack.3d.up"),
             ("Health Check", "stethoscope"),
             ("View Error Log", "exclamationmark.triangle"),

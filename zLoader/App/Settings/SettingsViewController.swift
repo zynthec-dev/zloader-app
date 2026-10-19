@@ -935,7 +935,6 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat
     {
-        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return UITableView.automaticDimension }
         if Section.allCases[indexPath.section] == .account && indexPath.row == 5 {
             return UITableView.automaticDimension
         }
@@ -967,7 +966,6 @@ extension SettingsViewController
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 0 }
-        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 { return 0 }
         if Section.allCases[indexPath.section] == .account && indexPath.row >= 3 {
             return 0
         }
@@ -976,7 +974,7 @@ extension SettingsViewController
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
         } else if Section.allCases[indexPath.section] == .appRefresh {
-            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
+            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
@@ -992,7 +990,7 @@ extension SettingsViewController
         case .signIn: return (self.activeTeam == nil) ? 1 : 0
         case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 5 : 6)
         case .display: return 1
-        case .appRefresh: return AppRefreshRow.allCases.count + 1
+        case .appRefresh: return AppRefreshRow.allCases.count
         case .techyThings: return TechyThingsRow.allCases.count + 1
         case .advancedSettings: return AdvancedSettingsRow.allCases.count
         default: return super.tableView(tableView, numberOfRowsInSection: section.rawValue)
@@ -1008,40 +1006,6 @@ extension SettingsViewController
             cell.textLabel?.text = NSLocalizedString("Shortcuts", comment: "")
             cell.textLabel?.font = .preferredFont(forTextStyle: .body)
             cell.accessoryType = .disclosureIndicator
-            decorateSettingsCell(cell)
-            return cell
-        }
-        if Section.allCases[indexPath.section] == .appRefresh && indexPath.row == 2 {
-            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
-            cell.style = AppRefreshRow.allCases.count == 2 ? .bottom : .middle
-            cell.isSelectable = false
-            let title = UILabel()
-            title.text = NSLocalizedString("Save Resigned IPAs", comment: "Save install and refresh results")
-            title.numberOfLines = 0
-            title.font = self.backgroundRefreshSwitch.superview?.subviews.compactMap { $0 as? UILabel }.first?.font ?? .preferredFont(forTextStyle: .body)
-            title.adjustsFontForContentSizeCategory = true
-            title.textColor = .label
-            cell.backgroundColor = .clear
-            let toggle = UISwitch()
-            toggle.isOn = UserDefaults.standard.isExportResignedAppEnabled
-            toggle.onTintColor = .altPrimary
-            toggle.accessibilityLabel = NSLocalizedString("Save Resigned IPAs", comment: "")
-            toggle.addTarget(self, action: #selector(setExportSignedIPAs(_:)), for: .valueChanged)
-            for view in [title, toggle] {
-                view.translatesAutoresizingMaskIntoConstraints = false
-                cell.contentView.addSubview(view)
-            }
-            // Match the storyboard rows: label and switch sit inside the inset card.
-            NSLayoutConstraint.activate([
-                title.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 30),
-                title.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
-                title.trailingAnchor.constraint(lessThanOrEqualTo: toggle.leadingAnchor, constant: -12),
-                title.topAnchor.constraint(greaterThanOrEqualTo: cell.contentView.topAnchor, constant: 10),
-                title.bottomAnchor.constraint(lessThanOrEqualTo: cell.contentView.bottomAnchor, constant: -10),
-                cell.contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
-                toggle.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -30),
-                toggle.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor)
-            ])
             decorateSettingsCell(cell)
             return cell
         }
@@ -1104,7 +1068,7 @@ extension SettingsViewController
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
         } else if Section.allCases[indexPath.section] == .appRefresh {
-            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row].rawValue, section: indexPath.section)
+            effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
@@ -1133,14 +1097,12 @@ extension SettingsViewController
         
         if let cell = cell as? InsetGroupTableViewCell,
                indexPath.section == Section.appRefresh.rawValue,
-               indexPath.row == AppRefreshRow.allCases.count  // last row
+               indexPath.row == AppRefreshRow.allCases.count - 1  // last row
         {
             cell.style = .bottom
         }
         
         
-        if Section.allCases[indexPath.section] == .appRefresh, indexPath.row == 1,
-           let insetCell = cell as? InsetGroupTableViewCell { insetCell.style = .middle }
         decorateSettingsCell(cell)
         return cell
     }
@@ -1217,18 +1179,10 @@ extension SettingsViewController
 
 extension SettingsViewController
 {
-    @objc private func setExportSignedIPAs(_ sender: UISwitch) {
-        UserDefaults.standard.isExportResignedAppEnabled = sender.isOn
-    }
-
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     {
         let section = Section.allCases[indexPath.section]
         verboseLog("[SettingsVC] didSelectRowAt: section \(section) (index \(indexPath.section)), row \(indexPath.row)")
-        if section == .appRefresh && indexPath.row == 2 {
-            tableView.deselectRow(at: indexPath, animated: true)
-            return
-        }
         switch section
         {
         case .signIn: self.signIn()
@@ -1242,7 +1196,7 @@ extension SettingsViewController
                 self.resolvePendingAccountActions()
             }
         case .appRefresh:
-            let row = AppRefreshRow.allCases[indexPath.row > 2 ? indexPath.row - 1 : indexPath.row]
+            let row = AppRefreshRow.allCases[indexPath.row]
             switch row
             {
             case .backgroundRefresh: break

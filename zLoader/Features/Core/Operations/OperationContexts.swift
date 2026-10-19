@@ -318,16 +318,21 @@ class InstallAppOperationContext: PipelineOperationContext
 
     var targetBundleIdentifier: String { customBundleIdentifier ?? bundleIdentifier }
 
-    lazy var temporaryDirectory: URL = {
-        let temporaryDirectory = FileManager.default.uniqueTemporaryURL()
+    private var allocatedTemporaryDirectory: URL?
+    var temporaryDirectory: URL {
+        if let allocatedTemporaryDirectory { return allocatedTemporaryDirectory }
+        let directory = FileManager.default.uniqueTemporaryURL()
+        allocatedTemporaryDirectory = directory
         do {
-            try FileManager.default.createDirectory(at: temporaryDirectory,
-                                                    withIntermediateDirectories: true,
-                                                    attributes: nil)
-        }
-        catch { self.error = error }
-        return temporaryDirectory
-    }()
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        } catch { self.error = error }
+        return directory
+    }
+
+    func removeTemporaryFiles() {
+        guard let directory = allocatedTemporaryDirectory else { return }
+        try? FileManager.default.removeItem(at: directory)
+    }
 
     var includeAllRegisteredDevices = false
     var ipaURL: URL?

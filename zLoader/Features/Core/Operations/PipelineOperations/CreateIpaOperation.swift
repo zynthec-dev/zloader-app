@@ -21,8 +21,8 @@ final class CreateIpaOperation: BasePipelineOperation<InstallAppOperationContext
         try await super.executePreconditionCheck(parentProgress: parentProgress)
         self.setProgress(10)
 
-        guard UserDefaults.standard.preferResignedIPA || UserDefaults.standard.isExportResignedAppEnabled else {
-            debugLog("[CreateIpaOperation] Skipping: preferResignedIPA and isExportResignedAppEnabled are disabled")
+        guard UserDefaults.standard.preferResignedIPA else {
+            debugLog("[CreateIpaOperation] Skipping: IPA transport is disabled")
             self.setProgress(100)
             return nil
         }

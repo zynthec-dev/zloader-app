@@ -347,8 +347,7 @@ private extension FetchProvisioningProfilesOperation{
             throw OperationError.invalidParameters("This device is not eligible for provisioning in the selected Apple team (\(status)). Check its registration in Certificates, Identifiers & Profiles.")
         }
         var authorizedDevices = [device]
-        let includesSharingDevices = context.includeAllRegisteredDevices ||
-            (context.targetAppBundle?.isZLoaderApp == true && UserDefaults.standard.isExportResignedAppEnabled)
+        let includesSharingDevices = context.includeAllRegisteredDevices
         if includesSharingDevices {
             let registered = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
             authorizedDevices += registered.filter { other in
