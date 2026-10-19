@@ -33,6 +33,7 @@ class InsetGroupTableViewCell: UITableViewCell
     
     @IBInspectable var isSelectable: Bool = false
     
+    private var stacksValueLabels = false
     private let separatorView = UIView()
     private let insetView = UIVisualEffectView()
     private var separatorLeadingConstraint: NSLayoutConstraint!
@@ -64,14 +65,42 @@ class InsetGroupTableViewCell: UITableViewCell
               let label = textLabel else { return }
         icon.contentMode = .scaleAspectFit
         icon.frame = CGRect(x: ZLoaderSettingsStyle.symbolLeading, y: (contentView.bounds.height - ZLoaderSettingsStyle.symbolFrame) / 2, width: ZLoaderSettingsStyle.symbolFrame, height: ZLoaderSettingsStyle.symbolFrame)
-        let trailing = label.frame.maxX
-        label.frame.origin.x = ZLoaderSettingsStyle.titleLeading
-        label.frame.size.width = max(0, trailing - ZLoaderSettingsStyle.titleLeading)
-        if let detail = detailTextLabel {
-            let detailTrailing = detail.frame.maxX
-            detail.frame.origin.x = ZLoaderSettingsStyle.titleLeading
-            detail.frame.size.width = max(0, detailTrailing - ZLoaderSettingsStyle.titleLeading)
+        let width = max(0, contentView.bounds.width - ZLoaderSettingsStyle.titleLeading - 30)
+        if stacksValueLabels, let detail = detailTextLabel {
+            // Account values can be wider than the remaining horizontal space.
+            // Stack them so UIKit cannot compress the field name to an ellipsis.
+            label.numberOfLines = 0
+            detail.numberOfLines = 0
+            detail.textAlignment = .natural
+            detail.adjustsFontForContentSizeCategory = true
+            let titleHeight = label.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+            let valueHeight = detail.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+            let top = max(16, (contentView.bounds.height - titleHeight - valueHeight - 4) / 2)
+            label.frame = CGRect(x: ZLoaderSettingsStyle.titleLeading, y: top, width: width, height: titleHeight)
+            detail.frame = CGRect(x: ZLoaderSettingsStyle.titleLeading, y: label.frame.maxY + 4, width: width, height: valueHeight)
+        } else {
+            label.frame.origin.x = ZLoaderSettingsStyle.titleLeading
+            label.frame.size.width = width
+            if let detail = detailTextLabel {
+                detail.frame.origin.x = ZLoaderSettingsStyle.titleLeading
+                detail.frame.size.width = width
+            }
         }
+    }
+
+    func valueRowHeight(for width: CGFloat) -> CGFloat {
+        guard let title = textLabel, let value = detailTextLabel else {
+            return ZLoaderSettingsStyle.minimumRowHeight + ZLoaderSettingsStyle.rowSpacing
+        }
+        stacksValueLabels = true
+        let availableWidth = max(1, width - ZLoaderSettingsStyle.titleLeading - 30)
+        let size = CGSize(width: availableWidth, height: .greatestFiniteMagnitude)
+        title.numberOfLines = 0
+        value.numberOfLines = 0
+        title.font = .preferredFont(forTextStyle: .body)
+        value.font = UIFont.preferredFont(forTextStyle: .body)
+        return max(ZLoaderSettingsStyle.minimumRowHeight + ZLoaderSettingsStyle.rowSpacing,
+                   ceil(title.sizeThatFits(size).height + value.sizeThatFits(size).height) + 44)
     }
 
     override func awakeFromNib()

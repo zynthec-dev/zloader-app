@@ -938,6 +938,10 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .account && indexPath.row == 5 {
             return UITableView.automaticDimension
         }
+        if Section.allCases[indexPath.section] == .account && indexPath.row < 3,
+           let cell = super.tableView(tableView, cellForRowAt: indexPath) as? InsetGroupTableViewCell {
+            return cell.valueRowHeight(for: tableView.bounds.width)
+        }
         let body = UIFont.preferredFont(forTextStyle: .body)
         if Section.allCases[indexPath.section] == .credits && indexPath.row > 0 {
             return max(60, body.lineHeight + UIFont.preferredFont(forTextStyle: .footnote).lineHeight + 16)
