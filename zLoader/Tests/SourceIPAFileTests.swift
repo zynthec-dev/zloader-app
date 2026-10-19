@@ -2,7 +2,7 @@ import Foundation
 import CryptoKit
 
 @main struct SourceIPAFileTests {
-    static func main() throws {
+    static func main() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -20,6 +20,11 @@ import CryptoKit
         do { try SourceIPAFile.validate(file: file, statusCode: 200, sha256: nil); preconditionFailure("Must reject HTML") } catch {}
         let name = SourceIPADownloadRequest(url: URL(string: "https://example.test/app.ipa")!, name: "../../App/name", version: "../1.0", sha256: nil).filename
         precondition(!name.contains("/") && !name.contains("\\") && name.hasSuffix(".ipa"))
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try SourceIPAFile.validate(file: file, statusCode: 200, sha256: nil)
+        }
+        do { try await cancelled.value; preconditionFailure("Cancelled validation must stop") } catch is CancellationError {}
         print("PASS raw IPA validation: HTTP failures, HTML rejection, streaming checksum, unchanged bytes and safe export filename")
     }
 }

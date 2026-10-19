@@ -18,14 +18,16 @@ import CoreData
         do {
             let file = try await SourceIPAFile.download(request)
             exportDirectory = file.deletingLastPathComponent()
+            try Task.checkCancellation()
             guard presenter.viewIfLoaded?.window != nil else { finish(); return }
             #if !os(tvOS)
             let picker = UIDocumentPickerViewController(forExporting: [file], asCopy: true)
             picker.delegate = self
             presenter.present(picker, animated: true)
             #else
-            TVWebFileTransferManager.shared.startExport(fileURL: file, title: "Export IPA", presentingVC: presenter)
-            isBusy = false
+            TVWebFileTransferManager.shared.startExport(fileURL: file, title: "Export IPA", presentingVC: presenter) { [weak self] in
+                self?.finish()
+            }
             #endif
         } catch {
             finish()

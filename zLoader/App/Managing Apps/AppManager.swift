@@ -777,8 +777,9 @@ extension AppManager: PipelineProgress, PipelineExecutionContext, PipelineErrorL
     
     func isActivelyManagingApp(withBundleID bundleID: String) -> Bool
     {
-        let isActivelyManaging = self.installationProgress.keys.contains(bundleID) || self.refreshProgress.keys.contains(bundleID)
-        return isActivelyManaging
+        return progressLock.withLock {
+            self.installationProgress[bundleID] != nil || self.refreshProgress[bundleID] != nil
+        }
     }
     
     var isActivelyManagingAnyApp: Bool

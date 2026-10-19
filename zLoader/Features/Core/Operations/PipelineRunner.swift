@@ -333,7 +333,8 @@ final class PipelineRunner: Sendable
             let isStore = operation.bundleIdentifier == StoreApp.zloaderAppID || operation.bundleIdentifier == Bundle.main.bundleIdentifier
             if isStore {
                 let dbContext = group.dbContext
-                let authorized = await dbContext.perform { SelfRefreshPolicy.canRefresh(in: dbContext, signingTeamID: group.sharedContext.importedSigningMaterial?.team.identifier) }
+                let selectedTeamID = group.sharedContext.importedSigningMaterial?.team.identifier
+                let authorized = await dbContext.perform { SelfRefreshPolicy.canRefresh(in: dbContext, signingTeamID: selectedTeamID) }
                 guard authorized else { throw OperationError.invalidParameters(SelfRefreshPolicy.protectedMessage) }
             }
         default: break

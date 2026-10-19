@@ -29,6 +29,7 @@ enum SourceIPAFile {
     }
 
     static func validate(file: URL, statusCode: Int, sha256: String?) throws {
+        try Task.checkCancellation()
         guard (200..<300).contains(statusCode) else { throw Failure.http(statusCode) }
         let input = try FileHandle(forReadingFrom: file)
         defer { try? input.close() }
@@ -36,7 +37,10 @@ enum SourceIPAFile {
         if let sha256, !sha256.isEmpty {
             try input.seek(toOffset: 0)
             var digest = SHA256()
-            while let chunk = try input.read(upToCount: 1_048_576), !chunk.isEmpty { digest.update(data: chunk) }
+            while let chunk = try input.read(upToCount: 1_048_576), !chunk.isEmpty {
+                try Task.checkCancellation()
+                digest.update(data: chunk)
+            }
             let actual = digest.finalize().map { String(format: "%02x", $0) }.joined()
             guard actual.caseInsensitiveCompare(sha256) == .orderedSame else { throw Failure.checksum }
         }
@@ -45,12 +49,13 @@ enum SourceIPAFile {
     static func download(_ request: SourceIPADownloadRequest) async throws -> URL {
         let (temporary, response) = try await URLSession.shared.download(from: request.url)
         // Hashing large archives and file copying must not run on the UI actor.
-        return try await Task.detached {
+        let worker = Task.detached {
             defer { try? FileManager.default.removeItem(at: temporary) }
             try validate(file: temporary, statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0, sha256: request.sha256)
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("SourceIPA-" + UUID().uuidString, isDirectory: true)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             do {
+                try Task.checkCancellation()
                 let file = folder.appendingPathComponent(request.filename)
                 try FileManager.default.moveItem(at: temporary, to: file)
                 return file
@@ -58,6 +63,7 @@ enum SourceIPAFile {
                 try? FileManager.default.removeItem(at: folder)
                 throw error
             }
-        }.value
+        }
+        return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
     }
 }
