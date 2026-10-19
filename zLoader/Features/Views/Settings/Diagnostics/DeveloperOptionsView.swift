@@ -6,20 +6,21 @@
 //  Copyright © 2026 SideStore. All rights reserved.
 //
 
-import SwiftUI
 import CoreData
-import UniformTypeIdentifiers
-#if !os(tvOS)
-import WidgetKit
-#else
-import TVServices
-#endif
-import SideSign
 import MinimuxerCommon
+import SideSign
+import SwiftUI
+import UniformTypeIdentifiers
 
-private extension Color {
-    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
-    static var settingsDivider: Color { Color(uiColor: .separator) }
+#if !os(tvOS)
+    import WidgetKit
+#else
+    import TVServices
+#endif
+
+extension Color {
+    fileprivate static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    fileprivate static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct DeveloperOptionsView: View {
@@ -32,9 +33,10 @@ struct DeveloperOptionsView: View {
     @State private var isRotateLogsOnStartupEnabled: Bool = UserDefaults.standard.isRotateLogsOnStartupEnabled
     @State private var recreateDatabaseOnNextStart: Bool = UserDefaults.standard.recreateDatabaseOnNextStart
     @State private var acceptIPv6ConnectionConfig: Bool = UserDefaults.standard.acceptIPv6ConnectionConfig
-    @State private var isAutoRetryRemotePairingPortEnabled: Bool = UserDefaults.standard.isAutoRetryRemotePairingPortEnabled
+    @State private var isAutoRetryRemotePairingPortEnabled: Bool = UserDefaults.standard
+        .isAutoRetryRemotePairingPortEnabled
     @State private var tcpProbeTimeoutText: String = ""
-    
+
     @State private var isExportingDB: Bool = false
     @State private var showDeleteConfirmation: Bool = false
     @State private var showClearRefreshAttemptsConfirmation: Bool = false
@@ -46,542 +48,458 @@ struct DeveloperOptionsView: View {
     @State private var isDumpingProfiles: Bool = false
     @State private var showDumpProfilesAlert: Bool = false
     @State private var dumpProfilesAlertMessage: String = ""
-    
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                ZLoaderGlassGroup { HStack(alignment: .top, spacing: 12) {
-                    NavigationLink(destination: WirelessPairView()) {
-                        Text("Wireless Pairing")
-                            .font(.body).foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, minHeight: 76)
-                            .padding(.horizontal, 12)
-                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
-                    }
-                    NavigationLink(destination: WirelessIPAInstallerView()) {
-                        Text("Wireless IPA Installer")
-                            .font(.body).foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, minHeight: 76)
-                            .padding(.horizontal, 12)
-                            .zLoaderGlassSurface(cornerRadius: 14, interactive: true)
-                    }
+        List {
+
+            Section("Developer Features") {
+                NavigationLink(destination: WirelessPairView()) {
+                    SettingsEntryLabel(title: "Wireless Pairing", systemImage: "antenna.radiowaves.left.and.right")
                 }
+                NavigationLink(destination: WirelessIPAInstallerView()) {
+                    SettingsEntryLabel(title: "Wireless IPA Installer", systemImage: "wifi")
                 }
-                .buttonStyle(.plain)
                 NavigationLink(destination: CacheManagementView()) {
-                    HStack(spacing: 12) {
-                        Label("Refresh Cache", systemImage: "arrow.clockwise.circle")
-                            .foregroundStyle(.primary)
+                    SettingsEntryLabel(title: "Refresh Cache", systemImage: "arrow.clockwise.circle")
+                }
+            }.zLoaderSettingsRows()
+
+            // Section 1: Logging & Diagnostics
+            Section {
+
+                toggleRow(
+                    title: "Disable URL Response Caching",
+                    isOn: Binding(
+                        get: { responseCachingDisabled },
+                        set: { newValue in
+                            responseCachingDisabled = newValue
+                            UserDefaults.standard.responseCachingDisabled = newValue
+                        }
+                    ))
+
+                toggleRow(
+                    title: "Rotate Logs on Startup",
+                    isOn: Binding(
+                        get: { isRotateLogsOnStartupEnabled },
+                        set: { newValue in
+                            isRotateLogsOnStartupEnabled = newValue
+                            UserDefaults.standard.isRotateLogsOnStartupEnabled = newValue
+                            let suffixFormat: SuffixFormat = newValue ? .timestamp : .none
+                            if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                                appDelegate.consoleLog.updateConfiguration(
+                                    baseName: "console", suffixFormat: suffixFormat, policy: .immediate)
+                            }
+                        }
+                    ))
+
+                toggleRow(
+                    title: "zLoader Verbose Logging",
+                    isOn: Binding(
+                        get: { isZLoaderVerboseLoggingEnabled },
+                        set: { newValue in
+                            isZLoaderVerboseLoggingEnabled = newValue
+                            UserDefaults.standard.isZLoaderVerboseLoggingEnabled = newValue
+                            ZLoaderLogging.setLogging(newValue)
+                        }
+                    ))
+
+                #if !os(tvOS)
+                    let title = "Widget Verbose Logging"
+                #else
+                    let title = "Top Shelf Verbose Logging"
+                #endif
+                toggleRow(
+                    title: title,
+                    isOn: Binding(
+                        get: { isAltWidgetVerboseLoggingEnabled },
+                        set: { newValue in
+                            isAltWidgetVerboseLoggingEnabled = newValue
+                            WidgetDataManager.shared.isVerboseLoggingEnabled = newValue
+                        }
+                    ))
+
+                toggleRow(
+                    title: "SideSign Verbose Logging",
+                    isOn: Binding(
+                        get: { isSideSignVerboseLoggingEnabled },
+                        set: { newValue in
+                            isSideSignVerboseLoggingEnabled = newValue
+                            UserDefaults.standard.isAltSignVerboseLoggingEnabled = newValue
+                            SideSignLogging.setLogging(newValue)
+                        }
+                    ))
+
+                toggleRow(
+                    title: "Minimuxer Verbose Logging",
+                    isOn: Binding(
+                        get: { isMinimuxerVerboseLoggingEnabled },
+                        set: { newValue in
+                            isMinimuxerVerboseLoggingEnabled = newValue
+                            UserDefaults.standard.isMinimuxerVerboseLoggingEnabled = newValue
+                            minimuxerSetLogging(newValue)
+                        }
+                    ))
+
+                toggleRow(
+                    title: "Operations Verbose Logging",
+                    isOn: Binding(
+                        get: { isVerboseOperationsLoggingEnabled },
+                        set: { newValue in
+                            isVerboseOperationsLoggingEnabled = newValue
+                            UserDefaults.standard.isVerboseOperationsLoggingEnabled = newValue
+                        }
+                    ))
+
+                NavigationLink(destination: OperationsLoggingControlView()) {
+                    HStack {
+                        Text("Operations Logging Control")
+                            .font(.body)
+                            .foregroundColor(.primary)
                         Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Color.primary.opacity(0.4))
                     }
-                    .padding(16)
-                    .frame(minHeight: 44)
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
 
-                // Section 1: Logging & Diagnostics
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("LOGGING & DIAGNOSTICS")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        toggleRow(title: "Disable URL Response Caching", isOn: Binding(
-                            get: { responseCachingDisabled },
-                            set: { newValue in
-                                responseCachingDisabled = newValue
-                                UserDefaults.standard.responseCachingDisabled = newValue
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "Rotate Logs on Startup", isOn: Binding(
-                            get: { isRotateLogsOnStartupEnabled },
-                            set: { newValue in
-                                isRotateLogsOnStartupEnabled = newValue
-                                UserDefaults.standard.isRotateLogsOnStartupEnabled = newValue
-                                let suffixFormat: SuffixFormat = newValue ? .timestamp : .none
-                                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-                                    appDelegate.consoleLog.updateConfiguration(baseName: "console", suffixFormat: suffixFormat, policy: .immediate)
-                                }
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "zLoader Verbose Logging", isOn: Binding(
-                            get: { isZLoaderVerboseLoggingEnabled },
-                            set: { newValue in
-                                isZLoaderVerboseLoggingEnabled = newValue
-                                UserDefaults.standard.isZLoaderVerboseLoggingEnabled = newValue
-                                ZLoaderLogging.setLogging(newValue)
-                            }
-                        ))
-                        
-                        divider
-                        
+            } header: {
+                Text("LOGGING & DIAGNOSTICS")
+
+            }.zLoaderSettingsRows()
+
+            // Section: Widget Options
+            Section {
+
+                SwiftUI.Button(action: { triggerReloadAllWidgets() }) {
+                    HStack(spacing: 12) {
+
                         #if !os(tvOS)
-                        let title = "Widget Verbose Logging"
+                            let title = "Reload All Widgets"
                         #else
-                        let title = "Top Shelf Verbose Logging"
+                            let title = "Reload Top Shelf"
                         #endif
-                        toggleRow(title: title, isOn: Binding(
-                            get: { isAltWidgetVerboseLoggingEnabled },
-                            set: { newValue in
-                                isAltWidgetVerboseLoggingEnabled = newValue
-                                WidgetDataManager.shared.isVerboseLoggingEnabled = newValue
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "SideSign Verbose Logging", isOn: Binding(
-                            get: { isSideSignVerboseLoggingEnabled },
-                            set: { newValue in
-                                isSideSignVerboseLoggingEnabled = newValue
-                                UserDefaults.standard.isAltSignVerboseLoggingEnabled = newValue
-                                SideSignLogging.setLogging(newValue)
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "Minimuxer Verbose Logging", isOn: Binding(
-                            get: { isMinimuxerVerboseLoggingEnabled },
-                            set: { newValue in
-                                isMinimuxerVerboseLoggingEnabled = newValue
-                                UserDefaults.standard.isMinimuxerVerboseLoggingEnabled = newValue
-                                minimuxerSetLogging(newValue)
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "Operations Verbose Logging", isOn: Binding(
-                            get: { isVerboseOperationsLoggingEnabled },
-                            set: { newValue in
-                                isVerboseOperationsLoggingEnabled = newValue
-                                UserDefaults.standard.isVerboseOperationsLoggingEnabled = newValue
-                            }
-                        ))
-                        
-                        divider
-                        
-                        NavigationLink(destination: OperationsLoggingControlView()) {
-                            HStack {
-                                Text("Operations Logging Control")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.primary.opacity(0.4))
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
+                        SettingsEntryLabel(title: title)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-                
-                // Section: Widget Options
-                VStack(alignment: .leading, spacing: 8) {
-                    #if !os(tvOS)
-                    let title = "WIDGET OPTIONS"
-                    #else
-                    let title = "TOP SHELF OPTIONS"
-                    #endif
-                    SettingsEntryLabel(title: title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { triggerReloadAllWidgets() }) {
-                            HStack(spacing: 12) {
 
-                                #if !os(tvOS)
-                                let title = "Reload All Widgets"
-                                #else
-                                let title = "Reload Top Shelf"
-                                #endif
-                                SettingsEntryLabel(title: title)
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { triggerRotateWidgetLog() }) {
-                            HStack(spacing: 12) {
-                                
-                                #if !os(tvOS)
-                                let title = "Rotate Widget Log"
-                                #else
-                                let title = "Rotate Top Shelf Log"
-                                #endif
-                                SettingsEntryLabel(title: title)
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
+                SwiftUI.Button(action: { triggerRotateWidgetLog() }) {
+                    HStack(spacing: 12) {
+
+                        #if !os(tvOS)
+                            let title = "Rotate Widget Log"
+                        #else
+                            let title = "Rotate Top Shelf Log"
+                        #endif
+                        SettingsEntryLabel(title: title)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+            } header: {
+                #if !os(tvOS)
+                    let title = "WIDGET OPTIONS"
+                #else
+                    let title = "TOP SHELF OPTIONS"
+                #endif
+                Text(LocalizedStringKey(title))
+            }.zLoaderSettingsRows()
+
+            // Section 2: Database Options
+            Section {
+
+                SwiftUI.Button(action: { exportDatabase() }) {
+                    HStack(spacing: 12) {
+                        Text("Export Database")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if isExportingDB {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         }
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-                
-                // Section 2: Database Options
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("DATABASE OPTIONS")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { exportDatabase() }) {
-                            HStack(spacing: 12) {
-                                Text("Export Database")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                if isExportingDB {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        .disabled(isExportingDB)
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { showClearRefreshAttemptsConfirmation = true }) {
-                            HStack(spacing: 12) {
-                                Text("Clear Refresh Attempts")
-                                    .font(.body)
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { showDeleteConfirmation = true }) {
-                            HStack(spacing: 12) {
-                                Text("Delete Database")
-                                    .font(.body)
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { showClearKeychainConfirmation = true }) {
-                            HStack(spacing: 12) {
-                                Text("Clear Keychain Items")
-                                    .font(.body)
-                                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        toggleRow(title: "Wipe Database on Next Start", isOn: Binding(
-                            get: { recreateDatabaseOnNextStart },
-                            set: { newValue in
-                                recreateDatabaseOnNextStart = newValue
-                                UserDefaults.standard.recreateDatabaseOnNextStart = newValue
-                            }
-                        ))
+                .disabled(isExportingDB)
+
+                SwiftUI.Button(action: { showClearRefreshAttemptsConfirmation = true }) {
+                    HStack(spacing: 12) {
+                        Text("Clear Refresh Attempts")
+                            .font(.body)
+                            .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
+                        Spacer()
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("BACKGROUND SERVICE")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { triggerStartBackgroundService() }) {
-                            HStack(spacing: 12) {
-                                Text("Start Background Service")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: { triggerStopBackgroundService() }) {
-                            HStack(spacing: 12) {
-                                Text("Stop Background Service")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
+
+                SwiftUI.Button(action: { showDeleteConfirmation = true }) {
+                    HStack(spacing: 12) {
+                        Text("Delete Database")
+                            .font(.body)
+                            .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
+                        Spacer()
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-                
-                // Section: Device (TCP) Probe Timeout
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("DEVICE (TCP) PROBE TIMEOUT")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
+
+                SwiftUI.Button(action: { showClearKeychainConfirmation = true }) {
+                    HStack(spacing: 12) {
+                        Text("Clear Keychain Items")
+                            .font(.body)
+                            .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.27))
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+                toggleRow(
+                    title: "Wipe Database on Next Start",
+                    isOn: Binding(
+                        get: { recreateDatabaseOnNextStart },
+                        set: { newValue in
+                            recreateDatabaseOnNextStart = newValue
+                            UserDefaults.standard.recreateDatabaseOnNextStart = newValue
+                        }
+                    ))
+
+            } header: {
+                Text("DATABASE OPTIONS")
+
+            }.zLoaderSettingsRows()
+
+            Section {
+
+                SwiftUI.Button(action: { triggerStartBackgroundService() }) {
+                    HStack(spacing: 12) {
+                        Text("Start Background Service")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+                SwiftUI.Button(action: { triggerStopBackgroundService() }) {
+                    HStack(spacing: 12) {
+                        Text("Stop Background Service")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+            } header: {
+                Text("BACKGROUND SERVICE")
+
+            }.zLoaderSettingsRows()
+
+            // Section: Device (TCP) Probe Timeout
+            Section {
+
+                HStack(spacing: 12) {
+                    Text("Timeout (ms)")
+                        .font(.body)
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    TextField("ms", text: $tcpProbeTimeoutText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(.primary)
+                        .font(.system(size: 17))
+                        .frame(width: 90)
+                        .onValueChange(of: tcpProbeTimeoutText) { newValue in
+                            let filtered = newValue.filter { "0123456789".contains($0) }
+                            if filtered != newValue {
+                                tcpProbeTimeoutText = filtered
+                            }
+                            if let timeout = Int(filtered), timeout > 0 {
+                                minimuxerSetDeviceProbeTimeout(timeout)
+                            }
+                        }
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 24)
+
+                SwiftUI.Button(action: {
+                    let defaultTimeout = AppConstants.Minimuxer.defaultTCPProbeTimeoutMs
+                    tcpProbeTimeoutText = String(defaultTimeout)
+                    minimuxerSetDeviceProbeTimeout(defaultTimeout)
+                }) {
+                    HStack(spacing: 12) {
+                        Text("Use Default (\(AppConstants.Minimuxer.defaultTCPProbeTimeoutMs) ms)")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+            } header: {
+                Text("DEVICE (TCP) PROBE TIMEOUT")
+
+            }.zLoaderSettingsRows()
+
+            // Section: Connection Config
+            Section {
+
+                toggleRow(
+                    title: "Accept IPv6 Config",
+                    isOn: Binding(
+                        get: { acceptIPv6ConnectionConfig },
+                        set: { newValue in
+                            acceptIPv6ConnectionConfig = newValue
+                            UserDefaults.standard.acceptIPv6ConnectionConfig = newValue
+                        }
+                    ))
+
+                toggleRow(
+                    title: "Auto Retry RemotePairing Port",
+                    isOn: Binding(
+                        get: { isAutoRetryRemotePairingPortEnabled },
+                        set: { newValue in
+                            isAutoRetryRemotePairingPortEnabled = newValue
+                            UserDefaults.standard.isAutoRetryRemotePairingPortEnabled = newValue
+                        }
+                    ))
+
+            } header: {
+                Text("CONNECTION CONFIG")
+
+            }.zLoaderSettingsRows()
+
+            #if DEBUG
+                // Section 3: Account Management
+                Section {
+
+                    SwiftUI.Button(action: { showImportAccountPicker() }) {
                         HStack(spacing: 12) {
-                            Text("Timeout (ms)")
+                            Text("Import Account JSON")
                                 .font(.body)
                                 .foregroundColor(.primary)
-                            
                             Spacer()
-                            
-                            TextField("ms", text: $tcpProbeTimeoutText)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundColor(.primary)
-                                .font(.system(size: 17))
-                                .frame(width: 90)
-                                .onValueChange(of: tcpProbeTimeoutText) { newValue in
-                                    let filtered = newValue.filter { "0123456789".contains($0) }
-                                    if filtered != newValue {
-                                        tcpProbeTimeoutText = filtered
-                                    }
-                                    if let timeout = Int(filtered), timeout > 0 {
-                                        minimuxerSetDeviceProbeTimeout(timeout)
-                                    }
-                                }
                         }
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 44)
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: {
-                            let defaultTimeout = AppConstants.Minimuxer.defaultTCPProbeTimeoutMs
-                            tcpProbeTimeoutText = String(defaultTimeout)
-                            minimuxerSetDeviceProbeTimeout(defaultTimeout)
-                        }) {
-                            HStack(spacing: 12) {
-                                Text("Use Default (\(AppConstants.Minimuxer.defaultTCPProbeTimeoutMs) ms)")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
+                        .frame(minHeight: 24)
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
-                }
-                
-                // Section: Connection Config
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("CONNECTION CONFIG")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        toggleRow(title: "Accept IPv6 Config", isOn: Binding(
-                            get: { acceptIPv6ConnectionConfig },
-                            set: { newValue in
-                                acceptIPv6ConnectionConfig = newValue
-                                UserDefaults.standard.acceptIPv6ConnectionConfig = newValue
-                            }
-                        ))
-                        
-                        divider
-                        
-                        toggleRow(title: "Auto Retry RemotePairing Port", isOn: Binding(
-                            get: { isAutoRetryRemotePairingPortEnabled },
-                            set: { newValue in
-                                isAutoRetryRemotePairingPortEnabled = newValue
-                                UserDefaults.standard.isAutoRetryRemotePairingPortEnabled = newValue
-                            }
-                        ))
-                    }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
-                }
-                
-                #if DEBUG
-                // Section 3: Account Management
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ACCOUNT MANAGEMENT")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { showImportAccountPicker() }) {
-                            HStack(spacing: 12) {
-                                Text("Import Account JSON")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: {
-                            if AuthManager.shared.currentAppleID == nil ||
-                               AuthManager.shared.password == nil ||
-                               CertificateManager.shared.activeCertificate == nil {
-                                if let top = UIApplication.shared.topViewController() {
-                                    let toastView = ToastView(text: NSLocalizedString("Failed to export account!", comment: ""), detailText: "Account not found or missing credentials.")
-                                    toastView.show(in: top)
-                                }
-                            } else {
-                                exportCertPassword = ""
-                                showExportPasswordPrompt = true
-                            }
-                        }) {
-                            HStack(spacing: 12) {
-                                Text("Export Account JSON")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                    }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
-                }
-                #endif
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("PROVISIONING PROFILES")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
 
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: {
-                            Task {
-                                await dumpProvisioningProfiles()
-                            }
-                        }) {
-                            HStack(spacing: 12) {
-                                Text("Dump Provisioning Profiles")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                if isDumpingProfiles {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        .disabled(isDumpingProfiles)
-                    }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ONBOARDING")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: { showOnboardingSheet = true }) {
-                            HStack(spacing: 12) {
-                                Text("Replay Onboarding")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color.primary.opacity(0.4))
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        .sheet(isPresented: $showOnboardingSheet) {
-                            OnboardingView(onFinish: {
-                                showOnboardingSheet = false
-                            })
-                        }
-
-                        divider
-
-                        SwiftUI.Button(action: {
-                            UserDefaults.standard.hasCompletedOnboarding = false
-                            UserDefaults.standard.set(0, forKey: "zLoader.onboarding.currentStep")
-                            UserDefaults.standard.set(false, forKey: "zLoader.onboarding.eligibleForTunnel")
-                            UserDefaults.standard.synchronize()
+                    SwiftUI.Button(action: {
+                        if AuthManager.shared.currentAppleID == nil || AuthManager.shared.password == nil
+                            || CertificateManager.shared.activeCertificate == nil
+                        {
                             if let top = UIApplication.shared.topViewController() {
-                                let toastView = ToastView(text: NSLocalizedString("Onboarding reset for next launch", comment: ""), detailText: nil)
+                                let toastView = ToastView(
+                                    text: NSLocalizedString("Failed to export account!", comment: ""),
+                                    detailText: "Account not found or missing credentials.")
                                 toastView.show(in: top)
                             }
-                        }) {
-                            HStack(spacing: 12) {
-                                Text("Reset Onboarding State")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
+                        } else {
+                            exportCertPassword = ""
+                            showExportPasswordPrompt = true
+                        }
+                    }) {
+                        HStack(spacing: 12) {
+                            Text("Export Account JSON")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .frame(minHeight: 24)
+                    }
+
+                } header: {
+                    Text("ACCOUNT MANAGEMENT")
+
+                }.zLoaderSettingsRows()
+            #endif
+
+            Section {
+
+                SwiftUI.Button(action: {
+                    Task {
+                        await dumpProvisioningProfiles()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        Text("Dump Provisioning Profiles")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if isDumpingProfiles {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         }
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+                .disabled(isDumpingProfiles)
+
+            } header: {
+                Text("PROVISIONING PROFILES")
+
+            }.zLoaderSettingsRows()
+
+            Section {
+
+                SwiftUI.Button(action: { showOnboardingSheet = true }) {
+                    HStack(spacing: 12) {
+                        Text("Replay Onboarding")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Color.primary.opacity(0.4))
+                    }
+                    .frame(minHeight: 24)
+                }
+                .sheet(isPresented: $showOnboardingSheet) {
+                    OnboardingView(onFinish: {
+                        showOnboardingSheet = false
+                    })
+                }
+
+                SwiftUI.Button(action: {
+                    UserDefaults.standard.hasCompletedOnboarding = false
+                    UserDefaults.standard.set(0, forKey: "zLoader.onboarding.currentStep")
+                    UserDefaults.standard.set(false, forKey: "zLoader.onboarding.eligibleForTunnel")
+                    UserDefaults.standard.synchronize()
+                    if let top = UIApplication.shared.topViewController() {
+                        let toastView = ToastView(
+                            text: NSLocalizedString("Onboarding reset for next launch", comment: ""), detailText: nil)
+                        toastView.show(in: top)
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        Text("Reset Onboarding State")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+            } header: {
+                Text("ONBOARDING")
+
+            }.zLoaderSettingsRows()
+
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Developer Options")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
-        .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.large)
         #endif
         .alert("Delete Database", isPresented: $showDeleteConfirmation) {
             SwiftUI.Button("Delete & Exit", role: .destructive) {
@@ -601,15 +519,15 @@ struct DeveloperOptionsView: View {
             Text("Are you sure you want to clear all existing refresh attempt entries?")
         }
         #if DEBUG
-        .alert("Export Account", isPresented: $showExportPasswordPrompt) {
-            SecureField("Certificate Password", text: $exportCertPassword)
-            SwiftUI.Button("Export") {
-                exportAccountJSON(password: exportCertPassword)
+            .alert("Export Account", isPresented: $showExportPasswordPrompt) {
+                SecureField("Certificate Password", text: $exportCertPassword)
+                SwiftUI.Button("Export") {
+                    exportAccountJSON(password: exportCertPassword)
+                }
+                SwiftUI.Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enter a password for the certificate.")
             }
-            SwiftUI.Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Please enter a password for the certificate.")
-        }
         #endif
         .alert("Clear Keychain Items", isPresented: $showClearKeychainConfirmation) {
             SwiftUI.Button("Clear All", role: .destructive) {
@@ -619,7 +537,8 @@ struct DeveloperOptionsView: View {
         } message: {
             Text("Do you want to clear all keychain items related to this zLoader instance?")
         }
-        .sheet(isPresented: Binding(get: { exportedProfilesURL != nil }, set: { if !$0 { exportedProfilesURL = nil } })) {
+        .sheet(isPresented: Binding(get: { exportedProfilesURL != nil }, set: { if !$0 { exportedProfilesURL = nil } }))
+        {
             if let url = exportedProfilesURL { ActivityViewController(activityItems: [url]) }
         }
         .alert("Dump Profiles", isPresented: $showDumpProfilesAlert) {
@@ -631,7 +550,7 @@ struct DeveloperOptionsView: View {
             tcpProbeTimeoutText = String(minimuxerGetDeviceProbeTimeout())
         }
     }
-    
+
     private func dumpProvisioningProfiles() async {
         guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         isDumpingProfiles = true
@@ -640,8 +559,10 @@ struct DeveloperOptionsView: View {
             let zipPath = try await safeDumpProfiles(docsURL.path)
             let url = URL(fileURLWithPath: zipPath)
             guard !zipPath.isEmpty, FileManager.default.fileExists(atPath: url.path),
-                  (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0 else {
-                throw OperationError.invalidParameters(NSLocalizedString("No provisioning profile archive was created.", comment: ""))
+                (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0
+            else {
+                throw OperationError.invalidParameters(
+                    NSLocalizedString("No provisioning profile archive was created.", comment: ""))
             }
             exportedProfilesURL = url
         } catch {
@@ -649,80 +570,98 @@ struct DeveloperOptionsView: View {
             showDumpProfilesAlert = true
         }
     }
-    
+
     #if DEBUG
-    private func showImportAccountPicker() {
-        guard let top = UIApplication.shared.topViewController() else { return }
-        #if !os(tvOS)
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType(filenameExtension: "sideconf")!, .json], asCopy: false)
-        ImportExport.documentPickerHandler = DocumentPickerHandler { selectedURL in
-            guard let url = selectedURL else { return }
-            Task { @MainActor in
-                do {
-                    try await ImportExport.importAccountJSON(from: url)
-                    let email = AuthManager.shared.currentAppleID ?? ""
-                    let toastView = ToastView(text: String(format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email), detailText: "zLoader should be fully operational!")
-                    toastView.show(in: top)
-                } catch {
-                    let toastView = ToastView(text: NSLocalizedString("Failed to import account JSON!", comment: ""), detailText: error.localizedDescription)
-                    toastView.show(in: top)
-                }
-            }
-        }
-        picker.delegate = ImportExport.documentPickerHandler
-        top.present(picker, animated: true)
-        #else
-        TVWebFileTransferManager.shared.startImport(
-            acceptedExtensions: ["sideconf", "json"],
-            title: "Import Account",
-            presentingVC: top
-        ) { selectedURL in
-            guard let url = selectedURL else { return }
-            Task { @MainActor in
-                do {
-                    try await ImportExport.importAccountJSON(from: url)
-                    let email = AuthManager.shared.currentAppleID ?? ""
-                    let toastView = ToastView(text: String(format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email), detailText: "zLoader should be fully operational!")
-                    toastView.show(in: top)
-                } catch {
-                    let toastView = ToastView(text: NSLocalizedString("Failed to import account JSON!", comment: ""), detailText: error.localizedDescription)
-                    toastView.show(in: top)
-                }
-            }
-        }
-        #endif
-    }
-    
-    private func exportAccountJSON(password: String) {
-        guard let top = UIApplication.shared.topViewController() else { return }
-        guard let account = ImportExport.exportAccountJSON(password: password) else {
-            let toastView = ToastView(text: NSLocalizedString("Failed to export account!", comment: ""), detailText: "Account not found or missing credentials.")
-            toastView.show(in: top)
-            return
-        }
-        
-        guard let accountData = try? Foundation.JSONEncoder().encode(account) else {
-            let toastView = ToastView(text: NSLocalizedString("Failed to export account data!", comment: ""), detailText: "Account malformed.")
-            toastView.show(in: top)
-            return
-        }
-        
-        let tmpPath = FileManager.default.temporaryDirectory.appendingPathComponent("\(account.email).sideconf")
-        do {
-            try accountData.write(to: tmpPath)
+        private func showImportAccountPicker() {
+            guard let top = UIApplication.shared.topViewController() else { return }
             #if !os(tvOS)
-            let exportVC = UIDocumentPickerViewController(forExporting: [tmpPath], asCopy: false)
-            top.present(exportVC, animated: true)
+                let picker = UIDocumentPickerViewController(
+                    forOpeningContentTypes: [UTType(filenameExtension: "sideconf")!, .json], asCopy: false)
+                ImportExport.documentPickerHandler = DocumentPickerHandler { selectedURL in
+                    guard let url = selectedURL else { return }
+                    Task { @MainActor in
+                        do {
+                            try await ImportExport.importAccountJSON(from: url)
+                            let email = AuthManager.shared.currentAppleID ?? ""
+                            let toastView = ToastView(
+                                text: String(
+                                    format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email),
+                                detailText: "zLoader should be fully operational!")
+                            toastView.show(in: top)
+                        } catch {
+                            let toastView = ToastView(
+                                text: NSLocalizedString("Failed to import account JSON!", comment: ""),
+                                detailText: error.localizedDescription)
+                            toastView.show(in: top)
+                        }
+                    }
+                }
+                picker.delegate = ImportExport.documentPickerHandler
+                top.present(picker, animated: true)
             #else
-            TVWebFileTransferManager.shared.startExport(fileURL: tmpPath, title: "Export Account", presentingVC: top)
+                TVWebFileTransferManager.shared.startImport(
+                    acceptedExtensions: ["sideconf", "json"],
+                    title: "Import Account",
+                    presentingVC: top
+                ) { selectedURL in
+                    guard let url = selectedURL else { return }
+                    Task { @MainActor in
+                        do {
+                            try await ImportExport.importAccountJSON(from: url)
+                            let email = AuthManager.shared.currentAppleID ?? ""
+                            let toastView = ToastView(
+                                text: String(
+                                    format: NSLocalizedString("Successfully imported '%@'!", comment: ""), email),
+                                detailText: "zLoader should be fully operational!")
+                            toastView.show(in: top)
+                        } catch {
+                            let toastView = ToastView(
+                                text: NSLocalizedString("Failed to import account JSON!", comment: ""),
+                                detailText: error.localizedDescription)
+                            toastView.show(in: top)
+                        }
+                    }
+                }
             #endif
-        } catch {
-            let toastView = ToastView(text: NSLocalizedString("Failed to export account!", comment: ""), detailText: error.localizedDescription)
-            toastView.show(in: top)
         }
-    }
+
+        private func exportAccountJSON(password: String) {
+            guard let top = UIApplication.shared.topViewController() else { return }
+            guard let account = ImportExport.exportAccountJSON(password: password) else {
+                let toastView = ToastView(
+                    text: NSLocalizedString("Failed to export account!", comment: ""),
+                    detailText: "Account not found or missing credentials.")
+                toastView.show(in: top)
+                return
+            }
+
+            guard let accountData = try? Foundation.JSONEncoder().encode(account) else {
+                let toastView = ToastView(
+                    text: NSLocalizedString("Failed to export account data!", comment: ""),
+                    detailText: "Account malformed.")
+                toastView.show(in: top)
+                return
+            }
+
+            let tmpPath = FileManager.default.temporaryDirectory.appendingPathComponent("\(account.email).sideconf")
+            do {
+                try accountData.write(to: tmpPath)
+                #if !os(tvOS)
+                    let exportVC = UIDocumentPickerViewController(forExporting: [tmpPath], asCopy: false)
+                    top.present(exportVC, animated: true)
+                #else
+                    TVWebFileTransferManager.shared.startExport(
+                        fileURL: tmpPath, title: "Export Account", presentingVC: top)
+                #endif
+            } catch {
+                let toastView = ToastView(
+                    text: NSLocalizedString("Failed to export account!", comment: ""),
+                    detailText: error.localizedDescription)
+                toastView.show(in: top)
+            }
+        }
     #endif
-    
+
     private func clearRefreshAttempts() {
         let context = DatabaseManager.shared.persistentContainer.newBackgroundContext()
         context.perform {
@@ -732,34 +671,16 @@ struct DeveloperOptionsView: View {
             try? context.save()
         }
     }
-    
+
     private func toggleRow(title: String, isOn: Binding<Bool>) -> some View {
-        HStack {
-            SettingsEntryLabel(title: title)
-                .font(.body)
-                .foregroundColor(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .tint(Color(uiColor: .altPrimary))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .frame(minHeight: 44)
+        Toggle(isOn: isOn) { SettingsEntryLabel(title: title) }
+            .tint(Color(uiColor: .altPrimary))
     }
-    
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.settingsDivider)
-            .frame(height: 0.5)
-            .padding(.horizontal, 16)
-    }
-    
+
     private func exportDatabase() {
         guard !isExportingDB else { return }
         isExportingDB = true
-        
+
         Task {
             do {
                 let exportedURL = try await CoreDataHelper.exportCoreDataStore()
@@ -776,16 +697,19 @@ struct DeveloperOptionsView: View {
         }
     }
 
-    
     private func triggerStartBackgroundService() {
         guard let top = UIApplication.shared.topViewController() else { return }
         let started = BackgroundServiceManager.ensureBackgroundServicesStarted()
         let modeName = UserDefaults.standard.backgroundServiceMode.displayName
         if started {
-            let toastView = ToastView(text: NSLocalizedString("Started Background Service", comment: ""), detailText: "\(modeName) keepalive is running.")
+            let toastView = ToastView(
+                text: NSLocalizedString("Started Background Service", comment: ""),
+                detailText: "\(modeName) keepalive is running.")
             toastView.show(in: top)
         } else {
-            let toastView = ToastView(text: NSLocalizedString("Background Service Disabled", comment: ""), detailText: "Enable background service in User Customizations.")
+            let toastView = ToastView(
+                text: NSLocalizedString("Background Service Disabled", comment: ""),
+                detailText: "Enable background service in User Customizations.")
             toastView.show(in: top)
         }
     }
@@ -793,43 +717,50 @@ struct DeveloperOptionsView: View {
     private func triggerStopBackgroundService() {
         guard let top = UIApplication.shared.topViewController() else { return }
         BackgroundServiceManager.stop()
-        let toastView = ToastView(text: NSLocalizedString("Stopped Background Service", comment: ""), detailText: "Background keepalive service stopped.")
+        let toastView = ToastView(
+            text: NSLocalizedString("Stopped Background Service", comment: ""),
+            detailText: "Background keepalive service stopped.")
         toastView.show(in: top)
     }
-    
+
     private func triggerReloadAllWidgets() {
         #if !os(tvOS)
-        WidgetCenter.shared.reloadAllTimelines()
-        let title = NSLocalizedString("Reloaded All Widgets", comment: "")
-        let detail = "Triggered timeline refresh for all widgets."
+            WidgetCenter.shared.reloadAllTimelines()
+            let title = NSLocalizedString("Reloaded All Widgets", comment: "")
+            let detail = "Triggered timeline refresh for all widgets."
         #else
-        NotificationCenter.default.post(name: .TVTopShelfItemsDidChange, object: nil)
-        let title = NSLocalizedString("Reloaded Top Shelf", comment: "")
-        let detail = "Triggered Top Shelf refresh."
+            NotificationCenter.default.post(name: .TVTopShelfItemsDidChange, object: nil)
+            let title = NSLocalizedString("Reloaded Top Shelf", comment: "")
+            let detail = "Triggered Top Shelf refresh."
         #endif
         if let top = UIApplication.shared.topViewController() {
             let toastView = ToastView(text: title, detailText: detail)
             toastView.show(in: top)
         }
     }
-    
+
     private func triggerRotateWidgetLog() {
         guard let top = UIApplication.shared.topViewController() else { return }
         #if !os(tvOS)
-        let logName = "Widget"
+            let logName = "Widget"
         #else
-        let logName = "Top Shelf"
+            let logName = "Top Shelf"
         #endif
         do {
             if let rotatedURL = try WidgetLogManager.rotateLog() {
-                let toastView = ToastView(text: String(format: NSLocalizedString("Rotated %@ Log", comment: ""), logName), detailText: "Saved to WidgetLogs/\(rotatedURL.lastPathComponent)")
+                let toastView = ToastView(
+                    text: String(format: NSLocalizedString("Rotated %@ Log", comment: ""), logName),
+                    detailText: "Saved to WidgetLogs/\(rotatedURL.lastPathComponent)")
                 toastView.show(in: top)
             } else {
-                let toastView = ToastView(text: String(format: NSLocalizedString("%@ Log Empty", comment: ""), logName), detailText: "Nothing to rotate.")
+                let toastView = ToastView(
+                    text: String(format: NSLocalizedString("%@ Log Empty", comment: ""), logName),
+                    detailText: "Nothing to rotate.")
                 toastView.show(in: top)
             }
         } catch {
-            let toastView = ToastView(text: NSLocalizedString("Failed to Rotate Log", comment: ""), detailText: error.localizedDescription)
+            let toastView = ToastView(
+                text: NSLocalizedString("Failed to Rotate Log", comment: ""), detailText: error.localizedDescription)
             toastView.show(in: top)
         }
     }

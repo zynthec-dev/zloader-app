@@ -6,7 +6,7 @@ struct ShortcutsSettingsView: View {
     @State private var addingRefresh = false
 
     var body: some View {
-        Form {
+        List {
             Section {
                 SwiftUI.Button { addingRefresh = true } label: {
                     SettingsEntryLabel(title: "Add Refresh All Apps to Siri")
@@ -20,12 +20,12 @@ struct ShortcutsSettingsView: View {
                 Group {
                     Text("Open zLoader in Shortcuts to add Install IPA, Refresh All Apps or Enable JIT to your own shortcuts.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 Text("Create a personal automation in Shortcuts: App → Is Opened → Run Immediately → Enable JIT. Select the same app in the JIT action. An external local VPN tunnel must be connected for activation. JIT remains enabled until that app process ends. iOS decides whether background execution is available.")
                     .foregroundStyle(.secondary)
             } header: { Text("Automatic JIT") }
-            .listRowBackground(ZLoaderGlassBackground())
+            .zLoaderSettingsRows()
             #if os(iOS)
             Section {
                 ExternalLocalTunnelSetupView(showsConnectionControls: false, isExternalSelected: true)
@@ -35,12 +35,12 @@ struct ShortcutsSettingsView: View {
                 Group {
                     Text("Choose your VPN in Shortcuts using Set VPN. Personal automations must be created in Shortcuts on this device.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             #endif
         }
         .navigationTitle("Shortcuts")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if os(iOS)
         .sheet(isPresented: $addingRefresh) {
             RefreshShortcutAdder()

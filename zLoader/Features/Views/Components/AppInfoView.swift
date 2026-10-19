@@ -109,7 +109,7 @@ struct AppInfoView: View {
                         }
                     }
                     .padding(.vertical, 8)
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 
                 // Metadata Section
                 Section(header: Text("General Metadata")) {
@@ -144,7 +144,7 @@ struct AppInfoView: View {
                         }
                     }
                     InfoRow(label: "Uses Main Profile", value: installedApp.useMainProfile ? "Yes" : "No")
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 
                 // Provisioning Profile Section
                 if resignedProfileURL != nil || bundleProfileURL != nil {
@@ -204,7 +204,7 @@ struct AppInfoView: View {
                                 .font(.caption)
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 
                 // Info.plist Section
@@ -260,7 +260,7 @@ struct AppInfoView: View {
                                 .font(.caption)
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 
                 // App Extensions Section
@@ -277,7 +277,7 @@ struct AppInfoView: View {
                                 }
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
 
                 // Resources Section
@@ -286,13 +286,9 @@ struct AppInfoView: View {
                         Text("Browse Bundle Contents")
                             .font(.subheadline)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
-            #if !os(tvOS)
-            .listStyle(InsetGroupedListStyle())
-            #else
-            .listStyle(GroupedListStyle())
-            #endif
+
             .navigationTitle("App Details")
             .navigationBarItems(trailing: SwiftUI.Button("Close") {
                 presentationMode.wrappedValue.dismiss()
@@ -354,7 +350,7 @@ struct ProvisioningProfileDetailView: View {
                 ProfileInfoRow(label: "Created", value: formatDate(profile.creationDate))
                 ProfileInfoRow(label: "Expires", value: formatDate(profile.expirationDate))
                 ProfileInfoRow(label: "Free Developer Profile", value: profile.isFreeProvisioningProfile ? "Yes" : "No")
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             if !profile.certificates.isEmpty {
                 Section(header: Text("Developer Certificates (\(profile.certificates.count))")) {
@@ -369,7 +365,7 @@ struct ProvisioningProfileDetailView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             
             if !profile.deviceIDs.isEmpty {
@@ -377,7 +373,7 @@ struct ProvisioningProfileDetailView: View {
                     NavigationLink(destination: DeviceIDsView(devices: profile.deviceIDs)) {
                         Text("View Provisioned Devices")
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             
             Section(header: Text("Entitlements (\(profile.entitlements.count))")) {
@@ -385,10 +381,10 @@ struct ProvisioningProfileDetailView: View {
                 ForEach(sortedEntitlements, id: \.key) { entitlement, value in
                     EntitlementRow(key: entitlement, value: value)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -404,7 +400,7 @@ struct ProvisioningProfileDetailView: View {
             }
         }
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .navigationTitle("Profile Details")
         .zLoaderSettingsPage()
@@ -707,7 +703,7 @@ struct ExtensionInfoView: View {
                     InfoRow(label: "Profile Created", value: formatDate(profile.creationDate))
                     InfoRow(label: "Profile Expires", value: formatDate(profile.expirationDate))
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Provisioning Profile
             if resignedProfileURL != nil || bundleProfileURL != nil {
@@ -770,7 +766,7 @@ struct ExtensionInfoView: View {
                             .font(.caption)
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             // Info.plist
@@ -826,7 +822,7 @@ struct ExtensionInfoView: View {
                             .font(.caption)
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             // Nested Sub-Extensions (recursive)
@@ -848,16 +844,16 @@ struct ExtensionInfoView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .sheet(item: $shareSheetItem) { item in
             ActivityViewController(items: [item.url])
         }
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .navigationTitle(appExtension.name)
         .interactiveDismissDisabled(true)
@@ -942,7 +938,7 @@ struct BundleInspectorView: View {
                 if let minOS = infoPlist?["MinimumOSVersion"] as? String {
                     InfoRow(label: "Min iOS", value: minOS)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             if let profile = provisioningProfile {
                 Section(header: Text("Provisioning Profile")) {
@@ -958,7 +954,7 @@ struct BundleInspectorView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             if let plist = infoPlist {
@@ -967,7 +963,7 @@ struct BundleInspectorView: View {
                         Text("View Info.plist (\(plist.count) keys)")
                             .font(.subheadline)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             if !subExtensions.isEmpty {
@@ -988,7 +984,7 @@ struct BundleInspectorView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             // Resources
@@ -997,13 +993,13 @@ struct BundleInspectorView: View {
                     Text("Browse Bundle Contents")
                         .font(.subheadline)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .navigationBarTitleDisplayMode(.inline)
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .navigationTitle(displayName)
         .interactiveDismissDisabled(true)

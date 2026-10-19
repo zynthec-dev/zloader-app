@@ -159,13 +159,13 @@ struct DevicesListView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search Devices")
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -176,7 +176,7 @@ struct DevicesListView: View {
         }
         .navigationTitle("Devices")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -194,7 +194,7 @@ struct DevicesListView: View {
         }
         .sheet(isPresented: $showRegisterSheet) {
             NavigationView {
-                Form {
+                List {
                     Section(header: Text("Device Information"), footer: Text("UDID is a 25-character or 40-character unique device identifier.")) {
                         TextField("Device Name", text: $newDeviceName)
                         TextField("Device UDID", text: $newDeviceUDID)
@@ -209,7 +209,7 @@ struct DevicesListView: View {
                             Text("Mac").tag(ALTDeviceType.mac)
                             Text("Vision Pro").tag(ALTDeviceType.visionPro)
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section {
                         SwiftUI.Button {
@@ -268,11 +268,11 @@ struct DevicesListView: View {
                             }
                         }
                         .disabled(isFetchingUDID)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Register Device")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         showRegisterSheet = false
@@ -297,16 +297,16 @@ struct DevicesListView: View {
         }
         .sheet(item: $deviceToEdit) { device in
             NavigationView {
-                Form {
+                List {
                     Section(header: Text("Device Name")) {
                         TextField("Device Name", text: $editDeviceName)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section(header: Text("Device Identifier (UDID)")) {
                         Text(device.identifier.isEmpty ? "Not Available" : device.identifier)
                             .font(.system(.subheadline, design: .monospaced))
                             .foregroundColor(.secondary)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section(header: Text("Device Details")) {
                         InfoRow(label: "Type", value: device.type.displayName)
@@ -314,7 +314,7 @@ struct DevicesListView: View {
                         if let devID = device.deviceID, !devID.isEmpty {
                             InfoRow(label: "Portal ID", value: devID)
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section {
                         if device.status != "d" {
@@ -343,11 +343,11 @@ struct DevicesListView: View {
                                 Spacer()
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Edit Device")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         deviceToEdit = nil

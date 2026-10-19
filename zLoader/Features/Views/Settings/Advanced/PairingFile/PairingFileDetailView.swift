@@ -89,7 +89,7 @@ struct PairingFileDetailView: View {
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle(titleText)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -157,8 +157,7 @@ struct PairingFileDetailView: View {
                     }
                 }
             }
-            .zLoaderGlassSurface()
-            .cornerRadius(12)
+            .zLoaderSettingsCard()
         }
     }
 
@@ -202,8 +201,7 @@ struct PairingFileDetailView: View {
                     .foregroundColor(Color.primary.opacity(0.5))
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .zLoaderSettingsCard()
             }
         }
     }

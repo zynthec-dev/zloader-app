@@ -320,8 +320,7 @@ struct AnisetteDataView: View {
                                 isMultiline: true
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                     
                     // SECTION 2: DEVICE & IDENTITY
@@ -363,8 +362,7 @@ struct AnisetteDataView: View {
                                 placeholder: "17106176"
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                     
                     // SECTION 3: ENVIRONMENT & LOCALIZATION
@@ -398,8 +396,7 @@ struct AnisetteDataView: View {
                                 placeholder: "26.0 (26A242)"
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                     
                     // SECTION 4: DYNAMIC TOKENS (INFORMATIONAL)
@@ -429,8 +426,7 @@ struct AnisetteDataView: View {
                                 subtitle: "ISO8601 UTC timestamp locked to OTP generation time"
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                     
                     // SAVE OVERRIDES BUTTON
@@ -484,8 +480,7 @@ struct AnisetteDataView: View {
                             .disabled(viewModel.rawEditableJSON.isEmpty)
                         }
                         .padding(16)
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                 }
                 
@@ -577,8 +572,7 @@ struct AnisetteDataView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                 }
                 
@@ -665,8 +659,7 @@ struct AnisetteDataView: View {
                             Text("This will restore the client headers to the default recommended values.")
                         }
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .zLoaderSettingsCard()
                 }
             }
             .padding(.horizontal, 16)
@@ -676,7 +669,7 @@ struct AnisetteDataView: View {
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Client Config")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -685,7 +678,7 @@ struct AnisetteDataView: View {
                 if viewModel.isLoading {
                     ProgressView()
                         .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.settingsRowBackground))
+                        .zLoaderSettingsCard()
                         .shadow(radius: 10)
                 }
             }

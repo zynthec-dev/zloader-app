@@ -1,9 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private extension Color {
-    static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
-    static var settingsDivider: Color { Color(uiColor: .separator) }
+extension Color {
+    fileprivate static var settingsRowBackground: Color { Color(uiColor: .settingsCard) }
+    fileprivate static var settingsDivider: Color { Color(uiColor: .separator) }
 }
 
 struct BackupAndRestoreView: View {
@@ -11,123 +11,104 @@ struct BackupAndRestoreView: View {
     @State private var importedData: Data? = nil
     @State private var showingImportPasswordAlert = false
     @State private var importFilePassword = ""
-    
+
     @State private var importedAccount: ImportedAccount? = nil
     @State private var showingApplePasswordAlert = false
     @State private var applePasswordInput = ""
-    
+
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showingMessageAlert = false
     @State private var exportFileURL: URL? = nil
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Section 1: Account, Certificate, & Pairing Data
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ACCOUNT, CERTIFICATE, & PAIRING DATA")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: {
-                            showingImportFilePicker = true
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.down")
-                                    .font(.system(size: 18, weight: .semibold))
-.foregroundColor(.accentColor)
-                                Text("Import Account")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: {
-                            presentExportAlert()
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .semibold))
-.foregroundColor(.accentColor)
-                                Text("Export Account")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
+        List {
+
+            // Section 1: Account, Certificate, & Pairing Data
+            Section {
+
+                SwiftUI.Button(action: {
+                    showingImportFilePicker = true
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                        Text("Import Account")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .frame(minHeight: 24)
                 }
-                
-                #if DEBUG
+
+                SwiftUI.Button(action: {
+                    presentExportAlert()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                        Text("Export Account")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .frame(minHeight: 24)
+                }
+
+            } header: {
+                Text("ACCOUNT, CERTIFICATE, & PAIRING DATA")
+
+            }.zLoaderSettingsRows()
+
+            #if DEBUG
                 // Section 2: Sources Data
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("SOURCES DATA")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color.secondary)
-                        .padding(.horizontal, 16)
-                    
-                    VStack(spacing: 0) {
-                        SwiftUI.Button(action: {
-                            print("[BackupAndRestoreView] Import Sources tapped")
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.down")
-                                    .font(.system(size: 18, weight: .semibold))
-.foregroundColor(.accentColor)
-                                Text("Import Sources")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
+                Section {
+
+                    SwiftUI.Button(action: {
+                        print("[BackupAndRestoreView] Import Sources tapped")
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                            Text("Import Sources")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Spacer()
                         }
-                        
-                        divider
-                        
-                        SwiftUI.Button(action: {
-                            print("[BackupAndRestoreView] Export Sources tapped")
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .semibold))
-.foregroundColor(.accentColor)
-                                Text("Export Sources")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
-                        }
+                        .frame(minHeight: 24)
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
-                }
-                #endif
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+
+                    SwiftUI.Button(action: {
+                        print("[BackupAndRestoreView] Export Sources tapped")
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                            Text("Export Sources")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .frame(minHeight: 24)
+                    }
+
+                } header: {
+                    Text("SOURCES DATA")
+
+                }.zLoaderSettingsRows()
+            #endif
+
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Backup & Restore")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
-        .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.large)
         #endif
         .sheet(isPresented: $showingImportFilePicker) {
             DocumentPickerView(contentTypes: [UTType(filenameExtension: "sideconf") ?? .data]) { url in
@@ -171,16 +152,18 @@ struct BackupAndRestoreView: View {
         } message: {
             Text(alertMessage)
         }
-        .sheet(isPresented: Binding<Bool>(
-            get: { exportFileURL != nil },
-            set: { if !$0 { exportFileURL = nil } }
-        )) {
+        .sheet(
+            isPresented: Binding<Bool>(
+                get: { exportFileURL != nil },
+                set: { if !$0 { exportFileURL = nil } }
+            )
+        ) {
             if let url = exportFileURL {
                 ActivityViewController(activityItems: [url])
             }
         }
     }
-    
+
     private var divider: some View {
         Rectangle()
             .fill(Color.settingsDivider)
@@ -190,33 +173,36 @@ struct BackupAndRestoreView: View {
 
     private func presentExportAlert() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-              var top = window.rootViewController else { return }
+            let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+            var top = window.rootViewController
+        else { return }
         while let presented = top.presentedViewController {
             top = presented
         }
-        
-        let alert = UIAlertController(title: NSLocalizedString("Export Account", comment: ""), message: nil, preferredStyle: .alert)
+
+        let alert = UIAlertController(
+            title: NSLocalizedString("Export Account", comment: ""), message: nil, preferredStyle: .alert)
         let alertVC = ExportAccountAlertViewController()
         alert.setValue(alertVC, forKey: "contentViewController")
-        
+
         let exportAction = UIAlertAction(title: NSLocalizedString("Export", comment: ""), style: .default) { _ in
             let filePassword = alertVC.passwordTextField.text ?? ""
             let includeApplePassword = alertVC.isIncludePasswordChecked
-            
+
             guard !filePassword.isEmpty else {
                 showAlert(title: "Export Error", message: "File password cannot be empty.")
                 return
             }
-            
+
             do {
-                let encryptedData = try ImportExport.exportAccount(password: filePassword, includeApplePassword: includeApplePassword)
+                let encryptedData = try ImportExport.exportAccount(
+                    password: filePassword, includeApplePassword: includeApplePassword)
                 guard AuthManager.shared.currentAppleID != nil else { return }
-                
+
                 let tempDir = FileManager.default.temporaryDirectory
                 let fileURL = tempDir.appendingPathComponent(AppConstants.accountConfigurationFileName)
                 try encryptedData.write(to: fileURL)
-                
+
                 DispatchQueue.main.async {
                     self.exportFileURL = fileURL
                 }
@@ -224,22 +210,22 @@ struct BackupAndRestoreView: View {
                 showAlert(title: "Export Error", message: error.localizedDescription)
             }
         }
-        
+
         let cancelAction = UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel)
-        
+
         alert.addAction(exportAction)
         alert.addAction(cancelAction)
-        
+
         top.present(alert, animated: true)
     }
-    
+
     private func performImportDecrypt() {
         guard let data = importedData, !importFilePassword.isEmpty else { return }
         Task { @MainActor in
             do {
                 let account = try await ImportExport.importAccount(data, filePassword: importFilePassword)
                 self.importedAccount = account
-                
+
                 if let pass = account.password, !pass.isEmpty {
                     showAlert(title: "Account Imported", message: "Account \(account.email) imported successfully!")
                 } else {
@@ -251,7 +237,7 @@ struct BackupAndRestoreView: View {
             }
         }
     }
-    
+
     private func performAppleSignIn() {
         guard let account = importedAccount, !applePasswordInput.isEmpty else { return }
         AuthManager.shared.password = applePasswordInput
@@ -266,54 +252,54 @@ struct BackupAndRestoreView: View {
 }
 
 #if !os(tvOS)
-struct DocumentPickerView: UIViewControllerRepresentable {
-    let contentTypes: [UTType]
-    let onPick: (URL?) -> Void
-    
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: false)
-        picker.delegate = context.coordinator
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPick: onPick)
-    }
-    
-    class Coordinator: NSObject, UIDocumentPickerDelegate {
+    struct DocumentPickerView: UIViewControllerRepresentable {
+        let contentTypes: [UTType]
         let onPick: (URL?) -> Void
-        init(onPick: @escaping (URL?) -> Void) {
-            self.onPick = onPick
+
+        func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: false)
+            picker.delegate = context.coordinator
+            return picker
         }
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            onPick(urls.first)
+
+        func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+        func makeCoordinator() -> Coordinator {
+            Coordinator(onPick: onPick)
         }
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            onPick(nil)
-        }
-    }
-}
-#else
-struct DocumentPickerView: UIViewControllerRepresentable {
-    let contentTypes: [UTType]
-    let onPick: (URL?) -> Void
-    
-    func makeUIViewController(context: Context) -> UIViewController {
-        let vc = UIViewController()
-        DispatchQueue.main.async {
-            TVWebFileTransferManager.shared.startImport(
-                contentTypes: contentTypes,
-                title: "Import File",
-                presentingVC: vc
-            ) { url in
-                onPick(url)
+
+        class Coordinator: NSObject, UIDocumentPickerDelegate {
+            let onPick: (URL?) -> Void
+            init(onPick: @escaping (URL?) -> Void) {
+                self.onPick = onPick
+            }
+            func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+                onPick(urls.first)
+            }
+            func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+                onPick(nil)
             }
         }
-        return vc
     }
-    
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
+#else
+    struct DocumentPickerView: UIViewControllerRepresentable {
+        let contentTypes: [UTType]
+        let onPick: (URL?) -> Void
+
+        func makeUIViewController(context: Context) -> UIViewController {
+            let vc = UIViewController()
+            DispatchQueue.main.async {
+                TVWebFileTransferManager.shared.startImport(
+                    contentTypes: contentTypes,
+                    title: "Import File",
+                    presentingVC: vc
+                ) { url in
+                    onPick(url)
+                }
+            }
+            return vc
+        }
+
+        func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    }
 #endif

@@ -35,7 +35,7 @@ struct WirelessPairTargetDialog: View {
             .background(Color.black.ignoresSafeArea())
             .navigationTitle(viewModel.dialogMode == .client ? "Select Device To Pair" : "Select Server Interface")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
             #endif
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

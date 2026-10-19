@@ -105,6 +105,6 @@ struct ActiveCertSectionView: View {
                     .foregroundColor(.secondary)
                     .font(.body)
             }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
 }

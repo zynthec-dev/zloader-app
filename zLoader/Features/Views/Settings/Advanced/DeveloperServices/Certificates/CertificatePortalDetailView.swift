@@ -62,7 +62,7 @@ struct CertificatePortalDetailView: View {
                 InfoRow(label: "Created Date", value: formatDate(certificate.creationDate))
                 InfoRow(label: "Expiration Date", value: formatDate(certificate.expiryDate), valueColor: isExpired ? .red : .primary)
                 InfoRow(label: "Status", value: isExpired ? "Expired" : "Active", valueColor: isExpired ? .red : .green)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(footer: Text("Revoking a certificate permanently invalidates it on Apple's servers. Any provisioning profiles tied exclusively to this certificate may need to be re-generated.")) {
                 SwiftUI.Button(role: .destructive) {
@@ -76,16 +76,12 @@ struct CertificatePortalDetailView: View {
                         Spacer()
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
-        #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
-        #else
-        .listStyle(GroupedListStyle())
-        #endif
+
         .navigationTitle(certificate.name)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .refreshable {
             await viewModel.fetchCertificates(presentingViewController: presentingViewController, isPullToRefresh: true)
         }

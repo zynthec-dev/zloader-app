@@ -50,7 +50,7 @@ struct DeveloperServicesView: View {
                         NavigationLink(destination: CertificatesPortalListView(viewModel: viewModel, presentingViewController: presentingViewController)) {
                             SettingsEntryLabel(title: "Certificates", systemImage: "checkmark.seal")
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
 
                 Section(header: Text("Developer Portal")) {
@@ -121,13 +121,8 @@ struct DeveloperServicesView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
-            #if !os(tvOS)
-            .listStyle(InsetGroupedListStyle())
-            #else
-            .listStyle(GroupedListStyle())
-            #endif
 
             if viewModel.isLoading && viewModel.appIDs.isEmpty && viewModel.profiles.isEmpty {
                 Color.black.opacity(0.15)
@@ -145,7 +140,7 @@ struct DeveloperServicesView: View {
         }
         .navigationTitle("Apple Developer Portal")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .onAppear {
             if viewModel.appIDs.isEmpty && viewModel.profiles.isEmpty {
                 Task {

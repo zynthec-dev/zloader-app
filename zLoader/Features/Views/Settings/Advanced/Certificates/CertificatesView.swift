@@ -65,7 +65,7 @@ struct CertificatesView: View {
                     } label: {
                         SettingsEntryLabel(title: "Developer Account Certificates", systemImage: "icloud.and.arrow.down")
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 ActiveCertSectionView(
                     viewModel: viewModel,
                     hasCopiedActiveSerial: $hasCopiedActiveSerial,
@@ -427,7 +427,7 @@ private struct CreateCertificateSheetView: View {
 
     var body: some View {
         NavigationView {
-            Form {
+            List {
                 Section(
                     header: Text("Certificate Information"),
                     footer: Text(isPaidWarningVisible
@@ -443,7 +443,7 @@ private struct CreateCertificateSheetView: View {
                     TextField("Machine Name", text: $machineName)
                     if viewModel.isLoading { ProgressView("Creating certificate…") }
                     if let error = viewModel.errorMessage { Text(error).foregroundStyle(.red).textSelection(.enabled) }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             .navigationTitle("New Certificate")
         .zLoaderSettingsPage()
@@ -518,7 +518,7 @@ struct AccountCertificatesView: View {
                 Group {
                     Text("Apple provides the public certificate. A matching local private key is associated automatically. For a certificate from your Mac, import its .p12 containing the private key.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .alert("Revoke Certificate", isPresented: $confirmsRevoke) {
             SwiftUI.Button("Revoke", role: .destructive) {

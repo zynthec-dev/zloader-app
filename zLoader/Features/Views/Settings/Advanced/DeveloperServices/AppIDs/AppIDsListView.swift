@@ -115,13 +115,13 @@ struct AppIDsListView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search App IDs")
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -132,7 +132,7 @@ struct AppIDsListView: View {
         }
         .navigationTitle("App IDs")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -147,17 +147,17 @@ struct AppIDsListView: View {
         }
         .sheet(isPresented: $showRegisterSheet) {
             NavigationView {
-                Form {
+                List {
                     Section(header: Text("App ID Information"), footer: Text("Bundle ID must match reverse-DNS format (e.g. com.example.myapp).")) {
                         TextField("Name (e.g. My App)", text: $newAppIDName)
                         TextField("Bundle Identifier", text: $newAppIDBundleID)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Register App ID")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         newAppIDName = ""

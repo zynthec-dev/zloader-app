@@ -174,7 +174,7 @@ struct WirelessPairView: View {
         }
         .navigationTitle(selfPairing ? "Self-Pairing" : "Wireless Pairing")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

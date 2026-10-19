@@ -26,10 +26,10 @@ struct SignIPAView: View {
     }
 
     var body: some View {
-        Form {
+        List {
             Section("IPA") {
                 SwiftUI.Button(ipa?.lastPathComponent ?? NSLocalizedString("Choose IPA", comment: "")) { importingIPA = true }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Edit Before Signing") {
                 Toggle("Customize Info.plist", isOn: $customization.infoPlist)
                 Toggle("Customize App ID", isOn: $customization.appID).disabled(customization.infoPlist)
@@ -43,7 +43,7 @@ struct SignIPAView: View {
                 }
                 SwiftUI.Button("Edit App") { Task { await editApp() } }.disabled(ipa == nil || !canUseSigningMethod)
                 if preparation != nil { Text("Changes ready for signing").foregroundStyle(.secondary) }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Sign With") {
                 Picker("Signing Method", selection: $identityID) {
                     Text("Apple Account").tag(nil as UUID?).disabled(!AuthManager.shared.isAuthenticated)
@@ -51,7 +51,7 @@ struct SignIPAView: View {
                         Text(verbatim: identity.name).tag(Optional(identity.id))
                     }
                 }
-                NavigationLink("Signing Identities") { SigningIdentitiesView() }
+                NavigationLink { SigningIdentitiesView() } label: { SettingsEntryLabel(title: "Signing Identities") }
                 if !AuthManager.shared.isAuthenticated {
                     Text("No Apple Account is required when you use an imported certificate with its private key and matching profiles.")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -59,24 +59,24 @@ struct SignIPAView: View {
                 if identityID != nil {
                     SwiftUI.Button("Import Additional Profiles") { importingProfiles = true }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 SwiftUI.Button("Sign App") { Task { await sign() } }
                     .disabled(ipa == nil || isSigning || !canUseSigningMethod)
                 if isSigning { ProgressView("Signing…") }
                 if let result {
                     ShareLink("Share Signed IPA", item: result)
-                    NavigationLink("IPA Library") { CacheManagementView(signedIPAsOnly: true, onInstall: onInstall) }
+                    NavigationLink { CacheManagementView(signedIPAsOnly: true, onInstall: onInstall) } label: { SettingsEntryLabel(title: "IPA Library") }
                 }
             } footer: {
                 Group {
                     Text("Signing without installation always saves the IPA in Signed IPAs. The receiving device must be authorized by every embedded profile. A wildcard profile does not grant additional capabilities.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("Sign App")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .disabled(isSigning)
         .onAppear { selectOfflineIdentityIfNeeded() }
         .onChange(of: identities.identities) { _, _ in selectOfflineIdentityIfNeeded() }

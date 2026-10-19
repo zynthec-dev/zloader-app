@@ -130,13 +130,13 @@ struct AppGroupsListView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search App Groups")
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -147,7 +147,7 @@ struct AppGroupsListView: View {
         }
         .navigationTitle("App Groups")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {
@@ -164,17 +164,17 @@ struct AppGroupsListView: View {
         }
         .sheet(isPresented: $showCreateSheet) {
             NavigationView {
-                Form {
+                List {
                     Section(header: Text("App Group Details"), footer: Text("Group identifier must start with 'group.' prefix (e.g. group.com.example.shared).")) {
                         TextField("Name (e.g. Shared Storage)", text: $newGroupName)
                         TextField("Group Identifier", text: $newGroupIdentifier)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Create App Group")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         showCreateSheet = false
@@ -199,15 +199,15 @@ struct AppGroupsListView: View {
         }
         .sheet(item: $groupToEdit) { group in
             NavigationView {
-                Form {
+                List {
                     Section(header: Text("Description"), footer: Text("You cannot use special characters such as @, &, *, ', \", -, .")) {
                         TextField("Description", text: $editGroupName)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section(header: Text("Identifier")) {
                         Text(group.groupIdentifier)
                             .foregroundColor(.secondary)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     Section {
                         SwiftUI.Button(role: .destructive) {
@@ -221,11 +221,11 @@ struct AppGroupsListView: View {
                                 Spacer()
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Edit Identifier Configuration")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
                 .navigationBarItems(
                     leading: SwiftUI.Button("Cancel") {
                         groupToEdit = nil
@@ -292,7 +292,7 @@ struct AppGroupsListView: View {
                         LabeledContent("Name", value: group.name)
                         LabeledContent("Identifier", value: group.groupIdentifier)
                         LabeledContent("Group ID", value: group.identifier)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 } }.navigationTitle("Info")
                 .zLoaderSettingsPage()
                 .toolbar { ToolbarItem(placement: .confirmationAction) { SwiftUI.Button("Done") { showInfo = false } } }

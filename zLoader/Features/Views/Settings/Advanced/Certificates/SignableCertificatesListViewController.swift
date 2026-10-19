@@ -121,13 +121,13 @@ final class SignableCertificatesListViewController: UITableViewController {
         self.certificates = viewModel.loadAllSignableLocalCertificates()
         
         self.view.backgroundColor = .settingsBackground
-        self.tableView.backgroundColor = .settingsBackground
+        ZLoaderSettingsTableStyle.apply(to: self.tableView)
         
         #if !os(tvOS)
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .settingsBackground
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
         self.navigationItem.standardAppearance = appearance
         self.navigationItem.scrollEdgeAppearance = appearance
         #endif
@@ -135,7 +135,7 @@ final class SignableCertificatesListViewController: UITableViewController {
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelTapped))
         self.navigationItem.leftBarButtonItem?.tintColor = .white
         
-        self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CertCell")
+        self.tableView.register(ZLoaderSettingsTableViewCell.self, forCellReuseIdentifier: "CertCell")
     }
     
     @objc private func cancelTapped() {

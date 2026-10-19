@@ -44,7 +44,7 @@ struct LocalKeyMaterialView: View {
                 Group {
                     Text("Requests are created locally without an Apple login. Private keys remain in this app's protected keychain. Import Apple's returned certificate in the certificate manager to match it to its key.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Keys and Signing Requests") {
                 ForEach(items) { item in
                     VStack(alignment: .leading, spacing: 8) {
@@ -67,8 +67,8 @@ struct LocalKeyMaterialView: View {
                     .padding(.vertical, 4)
                 }
                 if items.isEmpty { Text("No local keys or requests.").foregroundStyle(.secondary) }
-            }.listRowBackground(ZLoaderGlassBackground())
-            if let message { Section { Text(message).textSelection(.enabled) }.listRowBackground(ZLoaderGlassBackground()) }
+            }.zLoaderSettingsRows()
+            if let message { Section { Text(message).textSelection(.enabled) }.zLoaderSettingsRows() }
         }
         .navigationTitle("Keys & Signing Requests")
         .zLoaderSettingsPage()
@@ -78,16 +78,16 @@ struct LocalKeyMaterialView: View {
         .task { reload() }
         .sheet(isPresented: $creating) {
             NavigationStack {
-                Form {
+                List {
                     Section("Certificate Request") {
                         TextField("Common Name", text: $commonName)
                         TextField("Email Address (optional)", text: $email).textInputAutocapitalization(.never).autocorrectionDisabled()
                         TextField("Organization (optional)", text: $organization)
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                     Section {
                         Text("RSA 2048 • SHA-256. A key pair is generated and retained locally. Save the CSR to Files and submit it to Apple; the CSR contains no private key.")
                         if busy { ProgressView() }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                 }
                 .navigationTitle("Local Signing Request")
         .zLoaderSettingsPage()

@@ -71,7 +71,7 @@ struct ProfilePortalDetailView: View {
                 }
                 InfoRow(label: "Status", value: isExpired ? "Expired" : (profile.status ?? "Active"), valueColor: isExpired ? .red : .primary)
                 InfoRow(label: "Expiration Date", value: formatDate(profile.dateExpire), valueColor: isExpired ? .red : .primary)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(header: Text("App ID Association"), footer: Text("Choose from registered team App IDs or specify a custom App ID / identifier.")) {
                 if !viewModel.appIDs.isEmpty {
@@ -90,7 +90,7 @@ struct ProfilePortalDetailView: View {
                     TextField("App ID Identifier (e.g. R7V954WR9W)", text: $selectedAppIDId)
                         .font(.system(.subheadline, design: .monospaced))
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(header: Text("Associated Certificates (\(selectedCertificateIDs.count))"), footer: Text("Select which certificates are authorized to sign with this profile, or add custom certificate IDs.")) {
                 if viewModel.certificates.isEmpty {
@@ -150,7 +150,7 @@ struct ProfilePortalDetailView: View {
                     }
                     .disabled(customCertInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(header: HStack {
                 Text("Associated Devices (\(selectedDeviceIDs.count))")
@@ -214,7 +214,7 @@ struct ProfilePortalDetailView: View {
                     }
                     .disabled(customDeviceInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             if hasChanges {
                 Section {
@@ -247,7 +247,7 @@ struct ProfilePortalDetailView: View {
                         }
                     }
                     .disabled(!canSave)
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
 
             Section {
@@ -277,7 +277,7 @@ struct ProfilePortalDetailView: View {
                     }
                 }
                 .disabled(viewModel.isActionLoading)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section {
                 SwiftUI.Button(role: .destructive) {
@@ -291,16 +291,12 @@ struct ProfilePortalDetailView: View {
                         Spacer()
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
-        #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
-        #else
-        .listStyle(GroupedListStyle())
-        #endif
+
         .navigationTitle(profile.name)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .refreshable {
             await viewModel.fetchProfiles(presentingViewController: presentingViewController, isPullToRefresh: true)
         }

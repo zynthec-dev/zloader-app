@@ -71,7 +71,7 @@ struct ProfileManagementView: View {
                             catch { viewModel.showToast(error.localizedDescription) }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 Section(header: Text("Overview")) {
                     LabeledContent("Total", value: String(viewModel.profiles.count))
                     LabeledContent("Ready") {
@@ -82,7 +82,7 @@ struct ProfileManagementView: View {
                         Text(String(viewModel.profiles.count - viewModel.readyCount))
                             .foregroundStyle(viewModel.profiles.count - viewModel.readyCount > 0 ? .orange : .secondary)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
 
                 Section(
                     header: Text("Provisioning Profiles (\(filteredProfiles.count))"),
@@ -156,13 +156,13 @@ struct ProfileManagementView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             #if !os(tvOS)
-            .listStyle(InsetGroupedListStyle())
+
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search Profiles")
             #else
-            .listStyle(GroupedListStyle())
+
             #endif
 
             if let message = viewModel.toastMessage {
@@ -184,7 +184,7 @@ struct ProfileManagementView: View {
         }
         .navigationTitle("Profile Management")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {

@@ -119,7 +119,7 @@ final class SelectProfileViewController: UITableViewController {
         }
 
         self.view.backgroundColor = .settingsBackground
-        self.tableView.backgroundColor = .settingsBackground
+        ZLoaderSettingsTableStyle.apply(to: self.tableView)
 
         #if !os(tvOS)
         let appearance = UINavigationBarAppearance()
@@ -132,7 +132,7 @@ final class SelectProfileViewController: UITableViewController {
 
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelTapped))
 
-        self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ProfileCell")
+        self.tableView.register(ZLoaderSettingsTableViewCell.self, forCellReuseIdentifier: "ProfileCell")
     }
 
     static func isProfileCompatible(_ profile: ALTProvisioningProfile, for installedApp: InstalledApp) -> Bool {

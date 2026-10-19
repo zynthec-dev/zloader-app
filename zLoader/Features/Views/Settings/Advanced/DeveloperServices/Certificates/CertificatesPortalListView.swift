@@ -77,13 +77,13 @@ struct CertificatesPortalListView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search Certificates")
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -100,7 +100,7 @@ struct CertificatesPortalListView: View {
         } message: { Text("Deleting locally removes the certificate and private key from this device. It does not revoke the certificate in your Apple Account.") }
         .navigationTitle("Certificates")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .refreshable {
             await viewModel.fetchCertificates(presentingViewController: presentingViewController, isPullToRefresh: true)
         }

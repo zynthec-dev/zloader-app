@@ -68,7 +68,7 @@ struct UserCustomizationsView: View {
     @State private var editingValueText: String = ""
 
     var body: some View {
-        Form {
+        List {
             // Section 0: APPEARANCE & THEMES
             Section("Appearance") {
 
@@ -87,7 +87,7 @@ struct UserCustomizationsView: View {
 
                 }
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Section 1: ANISETTE
             Section("Anisette") {
@@ -134,7 +134,7 @@ struct UserCustomizationsView: View {
 
                 }
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Section: SIDESIGN
             Section("SideSign") {
@@ -149,7 +149,7 @@ struct UserCustomizationsView: View {
 
                 }
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Section 2: GENERAL
             generalSection
@@ -231,7 +231,7 @@ struct UserCustomizationsView: View {
                 .disabled(appVerificationDisabled)
                 .opacity(appVerificationDisabled ? 0.5 : 1.0)
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Section 4: CELLULAR REFRESH
             cellularRefreshShortcutsSection
@@ -268,7 +268,7 @@ struct UserCustomizationsView: View {
                     }
                 }
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             // Section 6: BACKGROUND SERVICE
             Section("Background Service") {
@@ -312,13 +312,13 @@ struct UserCustomizationsView: View {
                     .disabled(!isBackgroundServiceEnabled)
                 }
 
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
         }
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("User Customizations")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
             .navigationBarTitleDisplayMode(.large)
         #endif
@@ -470,7 +470,7 @@ struct UserCustomizationsView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
 
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
 
     private var customizeAppExtensionsBinding: Binding<AppExtensionCustomization> {
@@ -685,7 +685,7 @@ struct UserCustomizationsView: View {
             .disabled(!customizeEntitlements)
             .opacity(!customizeEntitlements ? 0.4 : 1.0)
 
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
 
     private func presentResetAdiDialog() {

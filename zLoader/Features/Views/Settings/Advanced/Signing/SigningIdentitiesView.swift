@@ -26,15 +26,15 @@ struct SigningIdentitiesView: View {
                 }
             } footer: {
                 Text("An imported identity supports signing, installation and refresh without Apple login. Its profiles must authorize this device, the app and every extension. Refresh cannot extend their expiry dates.")
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             ActiveCertSectionView(viewModel: certificates, hasCopiedActiveSerial: $copiedActive,
                 onDeactivate: { deactivate = true })
             Section("Certificates & Keys") {
-                NavigationLink("Certificates") {
+                NavigationLink {
                     CertificatesView(presentingViewController: UIApplication.shared.topViewController())
-                }
-                NavigationLink("Keys & Local Signing Requests…") { LocalKeyMaterialView() }
-            }.listRowBackground(ZLoaderGlassBackground())
+                } label: { SettingsEntryLabel(title: "Certificates") }
+                NavigationLink { LocalKeyMaterialView() } label: { SettingsEntryLabel(title: "Keys & Local Signing Requests…") }
+            }.zLoaderSettingsRows()
             Section {
                 ForEach(store.identities) { identity in
                     NavigationLink { SigningIdentityEditor(identity: identity) } label: {
@@ -50,12 +50,12 @@ struct SigningIdentitiesView: View {
                         }
                     }
                 }
-                NavigationLink("Add Signing Identity") { SigningIdentityEditor() }
+                NavigationLink { SigningIdentityEditor() } label: { SettingsEntryLabel(title: "Add Signing Identity") }
             } header: { Text("Imported Signing Identities") } footer: {
                 Group {
                     Text("Import a PKCS#12 certificate with its private key and the Apple-signed profiles for the app and its extensions. Removing an identity here does not revoke anything in your Developer Account.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .alert("Remove Signing Identity?", isPresented: $confirmsRemoval) {
             SwiftUI.Button("Remove", role: .destructive) {
@@ -86,7 +86,7 @@ struct SigningIdentitiesView: View {
         }
         .navigationTitle("Signing Identities")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .alert("Signing Identity", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             SwiftUI.Button("OK", role: .cancel) { errorMessage = nil }
         } message: { Text(verbatim: errorMessage ?? "") }
@@ -110,7 +110,7 @@ private struct SigningIdentityEditor: View {
     }
 
     var body: some View {
-        Form {
+        List {
             Section("Identity") {
                 TextField("Name", text: $draft.name)
                 Picker("Certificate", selection: $draft.certificateSerial) {
@@ -123,7 +123,7 @@ private struct SigningIdentityEditor: View {
                     importsCertificate = true
                     showsImporter = true
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 ForEach(profiles, id: \.uuid) { profile in
                     Toggle(isOn: Binding(get: { draft.profileIDs.contains(profile.uuid) }, set: { enabled in
@@ -144,11 +144,11 @@ private struct SigningIdentityEditor: View {
                 Group {
                     Text("Each app and extension needs a matching profile. A wildcard profile cannot grant capabilities that Apple did not authorize.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("Signing Identity")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 SwiftUI.Button("Save") {

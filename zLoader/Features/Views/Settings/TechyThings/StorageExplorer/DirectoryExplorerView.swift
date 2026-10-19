@@ -91,11 +91,7 @@ public struct DirectoryExplorerView: View {
                     DirectoryItemListSectionView(viewModel: viewModel, clipboard: clipboard, onSelectFolder: onSelectFolder)
                     EmptyPasteAreaSectionView(viewModel: viewModel, clipboard: clipboard)
                 }
-                #if !os(tvOS)
-                .listStyle(.insetGrouped)
-                #else
-                .listStyle(.grouped)
-                #endif
+
                 .searchable(text: $viewModel.searchText, prompt: "Search files & folders")
             }
             
@@ -113,7 +109,7 @@ public struct DirectoryExplorerView: View {
         }
         .navigationTitle(viewModel.currentURL.lastPathComponent)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -224,25 +220,25 @@ private struct DirectoryItemListSectionView: View {
                     ForEach(folders) { item in
                         renderRow(item: item)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 
                 Section("Files (\(files.count))") {
                     ForEach(files) { item in
                         renderRow(item: item)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             } else if !folders.isEmpty {
                 Section("Folders (\(folders.count))") {
                     ForEach(folders) { item in
                         renderRow(item: item)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             } else {
                 Section("Files (\(files.count))") {
                     ForEach(files) { item in
                         renderRow(item: item)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
         .onAppear {
@@ -308,7 +304,7 @@ private struct EmptyPasteAreaSectionView: View {
                 .contextMenu {
                     EmptyAreaContextMenuView(viewModel: viewModel, clipboard: clipboard)
                 }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
 }
 

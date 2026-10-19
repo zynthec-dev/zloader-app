@@ -60,7 +60,7 @@ struct CreateManualProfileView: View {
 
     var body: some View {
         NavigationView {
-            Form {
+            List {
                 Section(footer: Text(isManualConfiguration
                     ? "Manually select which signing certificates and test devices are authorized."
                     : "Apple automatically provisions active certificates and devices for this App ID and platform.")) {
@@ -109,7 +109,7 @@ struct CreateManualProfileView: View {
                     TextField("Profile Name", text: $profileName)
 
                     Toggle(isOn: $isManualConfiguration.animation()) { SettingsEntryLabel(title: "Manual Configuration") }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
 
                 if isManualConfiguration {
                     Section(header: HStack {
@@ -178,7 +178,7 @@ struct CreateManualProfileView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
 
                     if selectedProfileType.acceptedDeviceTypes != .none {
                         Section(header: HStack {
@@ -235,13 +235,13 @@ struct CreateManualProfileView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                        }.listRowBackground(ZLoaderGlassBackground())
+                        }.zLoaderSettingsRows()
                     }
                 }
             }
             .navigationTitle("New Profile")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
             .navigationBarItems(
                 leading: SwiftUI.Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()

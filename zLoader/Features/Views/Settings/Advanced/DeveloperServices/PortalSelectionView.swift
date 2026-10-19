@@ -67,7 +67,7 @@ struct PortalSelectionView: View {
                 Group {
                     Text("Changes are applied to the Apple Developer Portal. An item is removed here only after Apple confirms it is no longer present.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .onChange(of: items.map(\.id)) { _, available in
             selected.formIntersection(Set(available))
@@ -75,7 +75,7 @@ struct PortalSelectionView: View {
         .environment(\.editMode, $editMode)
         .navigationTitle(LocalizedStringKey(kind.title))
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 SwiftUI.Button {

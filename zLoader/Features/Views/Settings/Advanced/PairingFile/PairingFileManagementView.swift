@@ -35,7 +35,7 @@ struct PairingFileManagementView: View {
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("Pairing File Management")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -173,8 +173,7 @@ struct PairingFileManagementView: View {
                     }
                 }
             }
-            .zLoaderGlassSurface()
-            .cornerRadius(12)
+            .zLoaderSettingsCard()
         }
     }
 
@@ -325,8 +324,7 @@ struct PairingFileManagementView: View {
                 }
             }
         }
-        .zLoaderGlassSurface()
-        .cornerRadius(12)
+        .zLoaderSettingsCard()
     }
 
     private func installedCardHeader(for proto: PairingProtocol, isValid: Bool) -> some View {
@@ -495,8 +493,7 @@ struct PairingFileManagementView: View {
                         .padding(.horizontal, 16)
                 }
             }
-            .zLoaderGlassSurface()
-            .cornerRadius(12)
+            .zLoaderSettingsCard()
         }
     }
 
@@ -524,8 +521,7 @@ struct PairingFileManagementView: View {
                     .frame(minHeight: 44)
                 }
             }
-            .zLoaderGlassSurface()
-            .cornerRadius(12)
+            .zLoaderSettingsCard()
 
             Text("Resetting pairing files removes stored Lockdown and Remote Pairing credentials. You will need to re-pair or re-import a pairing file and restart zLoader.")
                 .font(.footnote)

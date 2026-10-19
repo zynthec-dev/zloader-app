@@ -65,7 +65,7 @@ struct ConnectionConfigView: View {
             Section("Connection Method") {
                 Text("Local tunnel VPN via an external app")
                 WireGuardSetupView()
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 LabeledContent("Interface") { Text(verbatim: config.formattedTunnelIface ?? NSLocalizedString("Not Detected", comment: "")) }
                 LabeledContent("Peer") { Text(verbatim: config.formattedTunnelPeer ?? NSLocalizedString("Not Detected", comment: "")) }
@@ -74,11 +74,11 @@ struct ConnectionConfigView: View {
                 Text("Tunnel Data")
             } footer: {
                 if let connectionError { Text(verbatim: connectionError) }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("Connection Settings")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             config.useLocalVPN = true
@@ -108,11 +108,11 @@ struct ConnectionConfigView: View {
 struct ConnectionConfigView: View {
     @ObservedObject private var config = ConnectionConfig.shared
     var body: some View {
-        Form {
+        List {
             Section("Remote Device Connection") {
                 TextField("Device IP", text: $config.remoteServerIp)
                 Text("An external local VPN tunnel is required on iPhone and iPad.")
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }.navigationTitle("Connection")
         .zLoaderSettingsPage()
     }

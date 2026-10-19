@@ -163,12 +163,15 @@ struct ZLoaderThemedRoot<Content: View>: View {
             .accentColor(Color(uiColor: theme.primaryColor))
             .environment(\.locale, AppLanguage.launchLocale)
             .environment(\.zLoaderUsesGlass, usesGlass)
-            .environment(\.defaultMinListRowHeight, 44)
+            .environment(\.defaultMinListRowHeight, ZLoaderSettingsStyle.minimumRowHeight)
+            .environment(\.settingsEntryIconsVisible, true)
+            .labelStyle(.titleAndIcon)
+            .tint(Color(uiColor: .altPrimary))
             .font(.body)
             #if os(tvOS)
             .listStyle(.grouped)
             #else
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
             #endif
             .formStyle(.grouped)
             .preferredColorScheme(theme.appearance.colorScheme)
@@ -260,7 +263,9 @@ extension ThemeManager {
         if let collection = view as? UICollectionView { collection.backgroundColor = .settingsBackground }
         // Native grouped tables own their group clipping and separators. A
         // rounded background on every cell breaks those continuous sections.
-        if let cell = view as? UITableViewCell, !(cell is InsetGroupTableViewCell) {
+        if let cell = view as? ZLoaderSettingsTableViewCell {
+            cell.refreshSettingsAppearance()
+        } else if let cell = view as? UITableViewCell, !(cell is InsetGroupTableViewCell) {
             if cell.backgroundView is UIVisualEffectView { cell.backgroundView = nil }
             cell.backgroundColor = .settingsCard
             cell.contentView.backgroundColor = .clear
@@ -362,7 +367,7 @@ extension EnvironmentValues {
     }
 }
 
-/// Ordinary submenu labels stay text-only; certificate tools opt into meaningful icons.
+/// Consistent menu symbols in root settings, pushed destinations and sheets.
 struct SettingsEntryLabel: View {
     let title: String
     var systemImage: String? = nil
@@ -386,14 +391,20 @@ extension View {
     func zLoaderSettingsPage() -> some View {
         self
             .environment(\.zLoaderUsesGlass, false)
-            .environment(\.defaultMinListRowHeight, 44)
+            .environment(\.defaultMinListRowHeight, ZLoaderSettingsStyle.minimumRowHeight)
+            .environment(\.settingsEntryIconsVisible, true)
+            .labelStyle(.titleAndIcon)
+            .tint(Color(uiColor: .altPrimary))
             .font(.body)
             #if os(tvOS)
             .listStyle(.grouped)
             #else
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
             #endif
-            .formStyle(.grouped)
+            .listRowSpacing(ZLoaderSettingsStyle.rowSpacing)
+            .listSectionSpacing(20)
+            .listSectionSeparator(.hidden)
+            .contentMargins(.horizontal, ZLoaderSettingsStyle.horizontalInset, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(Color(uiColor: .settingsBackground).ignoresSafeArea())
     }

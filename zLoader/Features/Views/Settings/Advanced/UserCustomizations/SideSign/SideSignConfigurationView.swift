@@ -229,8 +229,7 @@ struct SideSignConfigurationView: View {
                                 isMultiline: true
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
 
                     // SECTION 2: APPLE AUTH (idmsa.apple.com)
@@ -256,8 +255,7 @@ struct SideSignConfigurationView: View {
                                 isMultiline: true
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
 
                     // SECTION 3: DEVELOPER SERVICES (developerservices2.apple.com)
@@ -299,8 +297,7 @@ struct SideSignConfigurationView: View {
                                 placeholder: Constants.DeveloperServices.userAgent
                             )
                         }
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
 
                     // SAVE OVERRIDES BUTTON
@@ -353,8 +350,7 @@ struct SideSignConfigurationView: View {
                             .disabled(viewModel.rawEditableJSON.isEmpty)
                         }
                         .padding(16)
-                        .zLoaderGlassSurface()
-                        .cornerRadius(12)
+                        .zLoaderSettingsCard()
                     }
                 }
 
@@ -441,8 +437,7 @@ struct SideSignConfigurationView: View {
                             Text("This will restore the SideSign headers to their default recommended values.")
                         }
                     }
-                    .zLoaderGlassSurface()
-                    .cornerRadius(12)
+                    .zLoaderSettingsCard()
                 }
             }
             .padding(.horizontal, 16)
@@ -452,7 +447,7 @@ struct SideSignConfigurationView: View {
         .background(Color(uiColor: .settingsBackground))
         .navigationTitle("SideSign Config")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -461,7 +456,7 @@ struct SideSignConfigurationView: View {
                 if viewModel.isLoading {
                     ProgressView()
                         .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.settingsRowBackground))
+                        .zLoaderSettingsCard()
                         .shadow(radius: 10)
                 }
             }

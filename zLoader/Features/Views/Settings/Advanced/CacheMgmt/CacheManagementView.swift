@@ -40,7 +40,7 @@ struct CacheManagementView: View {
                                 }
                             }
                         }
-                    }.listRowBackground(ZLoaderGlassBackground())
+                    }.zLoaderSettingsRows()
                     
                     } else {
                     Section(header: Text("Signed IPAs"), footer: Text("Saved signed IPA files. Tap a file to share it or save it to Files.")) {
@@ -64,15 +64,15 @@ struct CacheManagementView: View {
                             }
                         }
                     }
-                    .listRowBackground(ZLoaderGlassBackground())
+                    .zLoaderSettingsRows()
                     }
                 }
                 #if !os(tvOS)
-                .listStyle(InsetGroupedListStyle())
+
                 .scrollContentBackground(.hidden)
                 .background(Color(uiColor: .settingsBackground))
                 #else
-                .listStyle(GroupedListStyle())
+
                 #endif
             }
             
@@ -226,7 +226,7 @@ struct SignedIPADetailView: View {
                     LabeledContent("Name", value: inspection.name)
                     LabeledContent("Bundle Identifier", value: inspection.bundleID)
                     LabeledContent("Signed Components", value: String(inspection.components.count))
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
                 ForEach(inspection.components) { component in
                     Section {
                         LabeledContent("Signing Type") { Text(LocalizedStringKey(component.kind)) }
@@ -248,9 +248,9 @@ struct SignedIPADetailView: View {
                             }
                         }
                     } header: { Text(verbatim: component.name + " · " + component.id) }
-                    .listRowBackground(ZLoaderGlassBackground())
+                    .zLoaderSettingsRows()
                 }
-                Section { Text("These values are read from the saved IPA. A profile authorizes its listed devices and certificates; this view does not verify installation on another device.").font(.footnote).foregroundStyle(.secondary) }
+                Section { Text("These values are read from the saved IPA. A profile authorizes its listed devices and certificates; this view does not verify installation on another device.").font(.footnote).foregroundStyle(.secondary) }.zLoaderSettingsRows()
             } else if let error { Text(verbatim: error).foregroundStyle(.red) }
             else { ProgressView() }
         }.navigationTitle("Signing Details")

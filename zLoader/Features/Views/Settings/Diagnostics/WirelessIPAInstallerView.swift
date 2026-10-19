@@ -100,14 +100,14 @@ struct WirelessIPAInstallerView: View {
                     else { Label("Choose Signed IPA", systemImage: "doc.zipper") }
                 }.disabled(model.preparing || model.status.url != nil)
                 if let item = model.selected { Text(item.sizeString).foregroundStyle(.secondary) }
-            } header: { Text("Signed IPA") }
+            } header: { Text("Signed IPA") }.zLoaderSettingsRows()
             Section {
                 if let url = model.certificateURL {
                     ShareLink(item: url) { Label("Share HTTPS Certificate", systemImage: "lock.shield") }
                 }
                 Text("Install this certificate profile on the receiving device, then enable full trust in Settings → General → About → Certificate Trust Settings. Share only with devices you trust; remove the profile when you no longer need it.")
                     .font(.footnote).foregroundStyle(.secondary)
-            } header: { Text("HTTPS Certificate") }
+            } header: { Text("HTTPS Certificate") }.zLoaderSettingsRows()
             Section {
                 if let url = model.status.url {
                     Label("Server Running", systemImage: "wifi").foregroundStyle(.green)
@@ -130,7 +130,7 @@ struct WirelessIPAInstallerView: View {
                 Text("Both devices must be on the same Wi-Fi network. Keep this screen open. The IPA must already authorize the receiving device and every required capability; HTTPS does not change its signature.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let error = model.error { Text(error).foregroundStyle(.red) }
-            } header: { Text("Local Server") }
+            } header: { Text("Local Server") }.zLoaderSettingsRows()
         }
         .navigationTitle("Wireless IPA Installer")
         .zLoaderSettingsPage()

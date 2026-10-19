@@ -942,7 +942,7 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .credits && indexPath.row > 0 {
             return max(60, body.lineHeight + UIFont.preferredFont(forTextStyle: .footnote).lineHeight + 16)
         }
-        return max(44, body.lineHeight + 20)
+        return max(ZLoaderSettingsStyle.minimumRowHeight + ZLoaderSettingsStyle.rowSpacing, body.lineHeight + 40)
     }
 
     override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath)

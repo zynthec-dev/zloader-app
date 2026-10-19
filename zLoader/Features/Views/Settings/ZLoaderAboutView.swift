@@ -8,7 +8,7 @@ enum ZLoaderBrand {
 
 struct ZLoaderAboutView: View {
     var body: some View {
-        Form {
+        List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("zLoader").font(.title.bold())
@@ -22,12 +22,12 @@ struct ZLoaderAboutView: View {
                 Link(destination: ZLoaderBrand.repositoryURL) {
                     SettingsEntryLabel(title: "Main Repository")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Local Device Transport") {
                 Text("Use a compatible external local VPN tunnel. Export a local tunnel configuration for WireGuard from onboarding or Connection Settings.")
                 Text("WireGuard runs the VPN in its own app. zLoader provides the local loopback peer while running; no integrated VPN extension is included.")
                     .font(.footnote).foregroundStyle(.secondary)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Original Authors & Licenses") {
                 Text("SideStore and AltStore authors retain their original credits and copyrights. Original design: Fabian (thdev) and Chris (LitRitt). Local transport work: Stossy11, the SideStore Team and jkcoxson. zLoader includes Minimuxer, SideSign and their dependencies.")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -43,16 +43,16 @@ struct ZLoaderAboutView: View {
                         SettingsEntryLabel(title: title)
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 Link(destination: ZLoaderBrand.upstreamURL) {
                     SettingsEntryLabel(title: "Based on SideStore")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("About zynthec-dev")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
     }
 
     private func license(_ name: String) -> String {

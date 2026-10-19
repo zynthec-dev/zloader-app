@@ -55,7 +55,7 @@ struct AppIDDetailView: View {
         } footer: {
             Text("Opens this App ID in Apple's Developer Portal. Sign in with the selected team, open Capability Requests, then choose Request or Status. Only the Account Holder can submit a request. Apple reviews the application; approval is not automatic. After approval, enable the capability here and sign the app again to update its profiles.")
         }
-        .listRowBackground(ZLoaderGlassBackground())
+        .zLoaderSettingsRows()
     }
     #endif
 
@@ -69,7 +69,7 @@ struct AppIDDetailView: View {
                 if let expiration = currentAppID.expirationDate {
                     InfoRow(label: "Expiration Date", value: formatDate(expiration), valueColor: expiration < Date() ? .red : .primary)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(header: Text("Capabilities & Features (\(currentAppID.features.count))")) {
                 ForEach(Array(viewModel.team?.type.allowedFeatures ?? []).sorted { $0.rawValue < $1.rawValue }, id: \.rawValue) { feature in
@@ -101,7 +101,7 @@ struct AppIDDetailView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             Section(header: Text("Associated App Groups"), footer: Text("The portal API does not return the current group assignments. No groups are preselected. Select the complete desired set before saving; this replaces the associations.")) {
                 if viewModel.appGroups.isEmpty {
@@ -143,7 +143,7 @@ struct AppIDDetailView: View {
 
 
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             #if !os(tvOS)
             capabilityRequestsSection
@@ -160,13 +160,9 @@ struct AppIDDetailView: View {
                         Text("Download Provisioning Profile")
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
-        #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
-        #else
-        .listStyle(GroupedListStyle())
-        #endif
+
         .navigationTitle(currentAppID.name.isEmpty ? "App ID Details" : currentAppID.name)
         .zLoaderSettingsPage()
         .toolbar {
@@ -187,7 +183,7 @@ struct AppIDDetailView: View {
             }
         }
         .disabled(isSaving)
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .onAppear {
             if !hasModifiedName { editedName = currentAppID.name }
             initializeSelectedGroups()
@@ -275,17 +271,17 @@ struct AppIDInfoView: View {
                 LabeledContent("Bundle Identifier", value: appID.bundleIdentifier)
                 LabeledContent("App ID (Identifier)", value: appID.identifier)
                 if let expiration = appID.expirationDate { LabeledContent("Expires") { Text(expiration, style: .date) } }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Capabilities & Features") {
                 ForEach(appID.features.sorted { $0.key.rawValue < $1.key.rawValue }, id: \.key.rawValue) { feature, value in
                     LabeledContent(feature.rawValue, value: value)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section("Requested Entitlements") {
                 ForEach(appID.entitlements.sorted { $0.key < $1.key }, id: \.key) { key, value in
                     LabeledContent(key, value: value)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }.navigationTitle("App ID Details").textSelection(.enabled)
         .zLoaderSettingsPage()
     }

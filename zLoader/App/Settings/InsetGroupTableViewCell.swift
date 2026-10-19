@@ -90,7 +90,7 @@ class InsetGroupTableViewCell: UITableViewCell
         self.addSubview(self.separatorView)
         
         self.insetView.layer.masksToBounds = true
-        self.insetView.layer.cornerRadius = 28
+        self.insetView.layer.cornerRadius = ZLoaderSettingsStyle.cardRadius
         self.insetView.layer.cornerCurve = .continuous
         
         // Get the preferred background color from Interface Builder if set.
@@ -101,7 +101,7 @@ class InsetGroupTableViewCell: UITableViewCell
         }
         self.backgroundColor = nil
         
-        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16))
+        self.addSubview(self.insetView, pinningEdgesWith: UIEdgeInsets(top: 4, left: ZLoaderSettingsStyle.horizontalInset, bottom: 4, right: ZLoaderSettingsStyle.horizontalInset))
         self.sendSubviewToBack(self.insetView)
         
         separatorLeadingConstraint = self.separatorView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 30)
@@ -151,17 +151,9 @@ private extension InsetGroupTableViewCell
 {
     func update()
     {
-        switch style {
-        case .single:
-            insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-        case .top:
-            insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        case .middle:
-            insetView.layer.maskedCorners = []
-        case .bottom:
-            insetView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-        }
-        self.separatorView.isHidden = style == .single || style == .bottom
+        // Each entry is its own card, matching the SwiftUI submenu rows.
+        insetView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        self.separatorView.isHidden = true
         ZLoaderCardMaterial.apply(to: insetView, usesGlass: false)
 
         if self.isSelectable && (self.isHighlighted || self.isSelected)

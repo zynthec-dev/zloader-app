@@ -51,7 +51,7 @@ struct HealthCheckView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Section 2: Core Dependencies
             Section(header: Text("Core Requirements")) {
@@ -90,7 +90,7 @@ struct HealthCheckView: View {
                     subtitle: viewModel.isPairingFileVerified ? "Verified" : (viewModel.isPairingFileLoaded ? "Loaded (Connection down)" : "Unverified / Missing"),
                     isSatisfied: viewModel.pairingSatisfied
                 )
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Section 3: JIT Dependencies
             Section(header: Text("JIT Requirements")) {
@@ -100,7 +100,7 @@ struct HealthCheckView: View {
                     isSatisfied: viewModel.ddiSatisfied,
                     isOptional: true
                 )
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Section 4: Connection Configuration
             Section(header: Text("Connection Configuration")) {
@@ -136,7 +136,7 @@ struct HealthCheckView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Section 4: All Active Interfaces
             Section(header: Text("Active Network Interfaces")) {
@@ -160,11 +160,11 @@ struct HealthCheckView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("Health Check")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -42,7 +42,7 @@ struct BonjourDiscoveryView: View {
         }
         .navigationTitle("Discovery")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -196,14 +196,10 @@ struct BonjourDiscoveryView: View {
                         }
                         .id(domain)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
-        #if !os(tvOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.grouped)
-        #endif
+
         .refreshable {
             await performManualRefresh()
         }
@@ -246,7 +242,7 @@ struct ServiceTypesView: View {
         }
         .navigationTitle(domain)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -429,14 +425,10 @@ struct ServiceTypesView: View {
                         }
                         .id(typeInfo.rawType)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
-        #if !os(tvOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.grouped)
-        #endif
+
         .refreshable {
             await performManualRefresh()
         }
@@ -494,7 +486,7 @@ struct ServiceInstancesView: View {
         }
         .navigationTitle(friendlyName ?? serviceType)
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -660,14 +652,10 @@ struct ServiceInstancesView: View {
                         }
                         .id(instance.id)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
-        #if !os(tvOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.grouped)
-        #endif
+
         .refreshable {
             await performManualRefresh()
         }
@@ -727,7 +715,7 @@ struct ServiceDetailView: View {
         }
         .navigationTitle("Service Details")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         #if !os(tvOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -905,7 +893,7 @@ struct ServiceDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Connection Info (Hostname, Addresses, Port, Type, Domain)
             Section(header: Text("Connection")) {
@@ -920,7 +908,7 @@ struct ServiceDetailView: View {
                 DetailRow(label: "Port", value: "\(resolved.port)", onCopy: copyWithFeedback)
                 DetailRow(label: "Type", value: resolved.type, onCopy: copyWithFeedback)
                 DetailRow(label: "Domain", value: resolved.domain, onCopy: copyWithFeedback)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Interfaces
             if !service.interfaces.isEmpty {
@@ -951,7 +939,7 @@ struct ServiceDetailView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             
             // Decoded Device / Software Information
@@ -967,7 +955,7 @@ struct ServiceDetailView: View {
                     if let os = osRecord {
                         DetailRow(label: "OS Version", value: os, onCopy: copyWithFeedback)
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             
             // TXT Records
@@ -999,7 +987,7 @@ struct ServiceDetailView: View {
                             }
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
             
             // DNS-SD Raw Records
@@ -1031,7 +1019,7 @@ struct ServiceDetailView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             
             // Quick Actions (Moved to Bottom)
             Section(header: Text("Quick Actions")) {
@@ -1069,13 +1057,9 @@ struct ServiceDetailView: View {
                 } label: {
                     SettingsEntryLabel(title: "Copy Details as JSON", systemImage: "curlybraces")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
-        #if !os(tvOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.grouped)
-        #endif
+
         .refreshable {
             viewModel.resolveService(service)
         }

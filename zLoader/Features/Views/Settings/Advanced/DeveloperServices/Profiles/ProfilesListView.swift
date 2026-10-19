@@ -72,7 +72,7 @@ struct ProfilesListView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
 
             if !viewModel.profiles.isEmpty {
                 Section {
@@ -87,14 +87,14 @@ struct ProfilesListView: View {
                             Spacer()
                         }
                     }
-                }.listRowBackground(ZLoaderGlassBackground())
+                }.zLoaderSettingsRows()
             }
         }
         #if !os(tvOS)
-        .listStyle(InsetGroupedListStyle())
+
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search Profiles")
         #else
-        .listStyle(GroupedListStyle())
+
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -105,7 +105,7 @@ struct ProfilesListView: View {
         }
         .navigationTitle("Provisioning Profiles")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 SwiftUI.Button {

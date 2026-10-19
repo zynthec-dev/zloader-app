@@ -92,14 +92,14 @@ struct SideJITServerConfigView: View {
             aboutSection
         }
         #if !os(tvOS)
-        .listStyle(.insetGrouped)
+
         .navigationBarTitleDisplayMode(.inline)
         #else
-        .listStyle(.grouped)
+
         #endif
         .navigationTitle("SideJITServer")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .overlay(
             Group {
                 if showCopiedToast {
@@ -143,7 +143,7 @@ struct SideJITServerConfigView: View {
                     resolvedAddress = ""
                 }
             }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private var statusSection: some View {
@@ -191,7 +191,7 @@ struct SideJITServerConfigView: View {
                     .font(.body)
                     .foregroundColor(.secondary)
             }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private var configurationSection: some View {
@@ -225,7 +225,7 @@ struct SideJITServerConfigView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private var diagnosticActionsSection: some View {
@@ -280,7 +280,7 @@ struct SideJITServerConfigView: View {
             }
             .buttonStyle(.plain)
             .disabled(activeAction != nil)
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private func responseInspectorSection(log: SideJITResponseLog) -> some View {
@@ -344,7 +344,7 @@ struct SideJITServerConfigView: View {
                     SettingsEntryLabel(title: "Copy Response", systemImage: "doc.on.doc")
                 }
             }
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private var aboutSection: some View {
@@ -359,7 +359,7 @@ struct SideJITServerConfigView: View {
                     .foregroundColor(.secondary)
             }
             .padding(.vertical, 2)
-        }.listRowBackground(ZLoaderGlassBackground())
+        }.zLoaderSettingsRows()
     }
     
     private var copiedToastView: some View {

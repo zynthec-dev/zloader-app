@@ -9,7 +9,7 @@ struct ThemePickerView: View {
     @State private var showsLanguageRestart = false
 
     var body: some View {
-        Form {
+        List {
             Section("Appearance") {
                 Picker(selection: $theme.appearance) {
                     ForEach(AppAppearance.allCases) { appearance in
@@ -19,14 +19,14 @@ struct ThemePickerView: View {
                     SettingsEntryLabel(title: "Appearance", systemImage: "circle.lefthalf.filled")
                 }
                 .pickerStyle(.menu)
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             Section {
                 ColorPicker("Accent Color", selection: $selectedColor, supportsOpacity: false)
             } footer: {
                 Group {
                     Text("Used for buttons, switches and selections throughout zLoader. Backgrounds and text follow the system Light and Dark appearance.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             presetsSection
             Section {
                 Picker(selection: $selectedLanguage) {
@@ -41,11 +41,11 @@ struct ThemePickerView: View {
                 Group {
                     Text("System follows your preferred iOS language. English is used when that language is not supported. Language changes take effect the next time you fully close and reopen zLoader.")
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         }
         .navigationTitle("Appearance")
         .zLoaderSettingsPage()
-        .labelStyle(.titleOnly)
+        .labelStyle(.titleAndIcon)
         .onChange(of: selectedLanguage) { _, language in
             language.save()
             showsLanguageRestart = true
@@ -81,7 +81,7 @@ struct ThemePickerView: View {
                         }
                     }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
     }
 
 }

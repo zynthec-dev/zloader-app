@@ -28,7 +28,7 @@ struct CertificatesListView: View {
                 } else {
                     Text("No local certificates found.").foregroundColor(.secondary)
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
         } else {
             ForEach(viewModel.groupedCertificatesList) { group in
                 Section {
@@ -91,7 +91,7 @@ struct CertificatesListView: View {
                             Text("Suffix (R) indicates the certificate is registered remotely on Apple's developer portal.")
                         }
                 }
-            }.listRowBackground(ZLoaderGlassBackground())
+            }.zLoaderSettingsRows()
             }
         }
     }
