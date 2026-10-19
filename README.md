@@ -47,6 +47,7 @@ sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 sh zLoader/scripts/test-embedded-profile-reuse.sh
 sh zLoader/scripts/test-pairing-import.sh
 python3 zLoader/scripts/test-settings-storyboard.py
+python3 zLoader/scripts/test-settings-style.py
 python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
@@ -109,3 +110,5 @@ Sources overview and local HTTPS IPA sharing in 0.7.28: [implementation and vali
 Imported signing identities, account-free install/refresh and source IPA downloads in 0.7.63: [behavior and validation](docs/zloader/IMPORTED-IDENTITIES-0.7.63.md).
 
 0.7.64 removes automatic signed-IPA exports, keeps Refresh Cache in Developer Options, and adds installer IPA icons: [review and validation](docs/zloader/REVIEW-0.7.64.md).
+
+0.7.65 integrates Refresh Cache into the developer settings list and unifies Settings destinations: [coverage and validation](docs/zloader/SETTINGS-STYLE-0.7.65.md).

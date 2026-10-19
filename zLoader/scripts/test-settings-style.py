@@ -15,8 +15,8 @@ for path in sorted(settings.rglob("*.swift")):
     assert "listRowBackground(ZLoaderGlassBackground())" not in source, path
 
 source = (settings / "Diagnostics/DeveloperOptionsView.swift").read_text()
-start = source.index('Section("Developer Features")')
-end = source.index("// Section 1: Logging & Diagnostics", start)
+start = source.index("// Section 2: Database Options")
+end = source.index('Text("DATABASE OPTIONS")', start)
 assert source.count('SettingsEntryLabel(title: "Refresh Cache"') == 1
 assert 'SettingsEntryLabel(title: "Refresh Cache"' in source[start:end]
 assert "List {" in source[:start] and "ZLoaderGlassGroup" not in source[:end]

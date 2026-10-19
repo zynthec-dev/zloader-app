@@ -59,9 +59,6 @@ struct DeveloperOptionsView: View {
                 NavigationLink(destination: WirelessIPAInstallerView()) {
                     SettingsEntryLabel(title: "Wireless IPA Installer", systemImage: "wifi")
                 }
-                NavigationLink(destination: CacheManagementView()) {
-                    SettingsEntryLabel(title: "Refresh Cache", systemImage: "arrow.clockwise.circle")
-                }
             }.zLoaderSettingsRows()
 
             // Section 1: Logging & Diagnostics
@@ -214,6 +211,10 @@ struct DeveloperOptionsView: View {
 
             // Section 2: Database Options
             Section {
+
+                NavigationLink(destination: CacheManagementView()) {
+                    SettingsEntryLabel(title: "Refresh Cache", systemImage: "arrow.clockwise.circle")
+                }
 
                 SwiftUI.Button(action: { exportDatabase() }) {
                     HStack(spacing: 12) {
