@@ -54,6 +54,7 @@ sh zLoader/scripts/test-certificate-revocation.sh
 sh zLoader/scripts/test-portal-profile-resolver.sh
 sh zLoader/scripts/test-account-certificate-policy.sh
 sh zLoader/scripts/test-source-ipa-file.sh
+sh zLoader/scripts/test-ipa-archive-metadata.sh
 sh zLoader/scripts/test-portal-app-id.sh
 sh zLoader/scripts/test-wireguard-config.sh
 sh zLoader/scripts/test-lan-installer.sh

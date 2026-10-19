@@ -53,10 +53,14 @@ public final class CacheManager {
         guard fileManager.fileExists(atPath: resignedAppsDirectory.path) else {
             return []
         }
-        guard let urls = try? fileManager.contentsOfDirectory(at: resignedAppsDirectory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
+        guard let urls = try? fileManager.contentsOfDirectory(at: resignedAppsDirectory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles]) else {
             return []
         }
-        return urls
+        return urls.filter { url in
+            guard url.pathExtension.lowercased() == "ipa",
+                  let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { return false }
+            return values.isRegularFile == true && values.isSymbolicLink != true
+        }
     }
     
     // MARK: - Size Calculations & Formatting
@@ -90,7 +94,7 @@ public final class CacheManager {
             
             // Get installed app bundle IDs
             let context = DatabaseManager.shared.viewContext
-            let installedAppBundleIDs = Set(InstalledApp.all(in: context).map { $0.bundleIdentifier })
+            let installedAppBundleIDs = context.performAndWait { Set(InstalledApp.all(in: context).map { $0.bundleIdentifier }) }
             
             for backupDirectory in fileURLs {
                 if let resourceValues = try? backupDirectory.resourceValues(forKeys: [.isDirectoryKey, .nameKey]),
@@ -142,6 +146,7 @@ public final class CacheManager {
                                                      includingPropertiesForKeys: [.fileSizeKey],
                                                      options: []) else { return 0 }
         for case let fileURL as URL in enumerator {
+            if Task.isCancelled { break }
             if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
                 size += Int64(fileSize)
             }

@@ -9,8 +9,9 @@
 import SwiftUI
 import CoreData
 import SideSign
+import ImageIO
 
-struct CacheItem: Identifiable, Equatable {
+struct CacheItem: Identifiable, Equatable, @unchecked Sendable {
     let id: String
     let name: String
     let bundleIdentifier: String?
@@ -44,49 +45,54 @@ class CacheViewModel: ObservableObject {
     // Export/Share states
     @Published var activeExportURL: URL? = nil
 
-    let formatter = ByteCountFormatter()
+    private typealias Snapshot = (internalApps: [CacheItem], resignedApps: [CacheItem])
+    private typealias AppMetadata = (name: String, bundleID: String, fileURL: URL, alternateIconURL: URL, hasAlternateIcon: Bool)
+    private var loadTask: Task<Snapshot?, Never>?
+    private var generation = UUID()
+    private var includesInternalApps = true
 
-    private func formatBytes(_ size: Int64) -> String {
-        formatter.allowedUnits = [.useAll]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size)
+    func cancelLoading() {
+        generation = UUID()
+        loadTask?.cancel()
+        loadTask = nil
+        isLoading = false
     }
-    
-    func loadCacheItems() {
-        self.isLoading = true
-        
-        let internalAppURLs = CacheManager.shared.fetchInternalApps()
-        let resignedAppURLs = CacheManager.shared.fetchResignedApps()
-        
-        // Fetch all database apps to map display names & icons
-        let context = DatabaseManager.shared.viewContext
-        var dbAppsByFingerprint: [String: (name: String, bundleID: String, fileURL: URL, alternateIconURL: URL, hasAlternateIcon: Bool)] = [:]
-        
-        context.performAndWait {
-            let apps = InstalledApp.all(in: context)
-            for app in apps {
-                guard let fingerprint = app.appBundleFingerprint else { continue }
-                dbAppsByFingerprint[fingerprint] = (
-                    name: app.name,
-                    bundleID: app.bundleIdentifier,
-                    fileURL: app.fileURL,
-                    alternateIconURL: app.alternateIconURL,
-                    hasAlternateIcon: app.hasAlternateIcon
-                )
+
+    func loadCacheItems(includeInternalApps: Bool = true) async {
+        cancelLoading()
+        includesInternalApps = includeInternalApps
+        let current = UUID()
+        generation = current
+        isLoading = true
+        var databaseApps: [String: AppMetadata] = [:]
+        if includeInternalApps {
+            let context = DatabaseManager.shared.persistentContainer.newBackgroundContext()
+            databaseApps = await context.perform {
+                var values: [String: AppMetadata] = [:]
+                for app in InstalledApp.all(in: context) {
+                    guard let fingerprint = app.appBundleFingerprint else { continue }
+                    values[fingerprint] = (app.name, app.bundleIdentifier, app.fileURL, app.alternateIconURL, app.hasAlternateIcon)
+                }
+                return values
             }
         }
-        
-        // Process on background queue
-        Task.detached {
+        guard generation == current, !Task.isCancelled else { return }
+        let dbAppsByFingerprint = databaseApps
+        let worker = Task.detached(priority: .userInitiated) { () -> Snapshot? in
+            let internalAppURLs = includeInternalApps ? CacheManager.shared.fetchInternalApps() : []
+            let resignedAppURLs = includeInternalApps ? [] : CacheManager.shared.fetchResignedApps()
+            let formatter = ByteCountFormatter()
+            formatter.allowedUnits = [.useAll]
+            formatter.countStyle = .file
             var internalItems: [CacheItem] = []
             var resignedItems: [CacheItem] = []
-            
             // 1. Process Internal Cache Items
             for shaDirURL in internalAppURLs {
+                if Task.isCancelled { return nil }
                 let sha = shaDirURL.lastPathComponent
                 let appURL = shaDirURL.appendingPathComponent("App.app")
                 let size = CacheManager.shared.calculateSize(of: shaDirURL)
-                let sizeStr = await self.formatBytes(size)
+                let sizeStr = formatter.string(fromByteCount: size)
                 
                 let appBundle = ALTApplication(fileURL: appURL)
                 let bundleID = appBundle?.bundleIdentifier
@@ -120,17 +126,23 @@ class CacheViewModel: ObservableObject {
             
             // 2. Process Resigned App Items
             for url in resignedAppURLs {
+                if Task.isCancelled { return nil }
                 let filename = url.lastPathComponent
                 let size = CacheManager.shared.calculateSize(of: url)
-                let sizeStr = await self.formatBytes(size)
+                let sizeStr = formatter.string(fromByteCount: size)
                 
-                let metadata = try? SignedIPAInspection.read(url)
+                let metadata = try? SignedIPASummary.read(url)
                 let displayName = metadata?.name ?? filename.replacingOccurrences(of: ".app", with: "")
                                           .replacingOccurrences(of: ".ipa", with: "")
                 
-                var iconImage: UIImage? = metadata?.iconData.flatMap { UIImage(data: $0) }
-                if let appIcon = ALTApplication(fileURL: url)?.icon {
-                    iconImage = appIcon
+                let iconImage: UIImage? = metadata?.iconData.flatMap { data -> UIImage? in
+                    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                            kCGImageSourceCreateThumbnailFromImageAlways: true,
+                            kCGImageSourceCreateThumbnailWithTransform: true,
+                            kCGImageSourceThumbnailMaxPixelSize: 160
+                          ] as CFDictionary) else { return nil }
+                    return UIImage(cgImage: image)
                 }
                 
                 let item = CacheItem(
@@ -146,35 +158,40 @@ class CacheViewModel: ObservableObject {
                 resignedItems.append(item)
             }
             
-            // Sort by size descending
+
             internalItems.sort { $0.sizeInBytes > $1.sizeInBytes }
             resignedItems.sort { $0.sizeInBytes > $1.sizeInBytes }
-            
-            DispatchQueue.main.async {
-                self.internalApps = internalItems
-                self.resignedApps = resignedItems
-                self.isLoading = false
-            }
+            return (internalItems, resignedItems)
         }
+        loadTask = worker
+        let result = await withTaskCancellationHandler { await worker.value } onCancel: { worker.cancel() }
+        guard generation == current else { return }
+        loadTask = nil
+        isLoading = false
+        guard !Task.isCancelled, let result else { return }
+        internalApps = result.internalApps
+        resignedApps = result.resignedApps
     }
-    
+
     func deleteItem(_ item: CacheItem) {
-        self.isLoading = true
-        
-        DispatchQueue.global(qos: .userInitiated).async {
+        if item.isDirectory && AppManager.shared.isActivelyManagingAnyApp {
+            errorMessage = NSLocalizedString("Wait for app operations to finish before deleting the refresh cache.", comment: "")
+            return
+        }
+        cancelLoading()
+        isLoading = true
+        itemToDelete = nil
+        Task {
             do {
-                try CacheManager.shared.delete(at: item.url)
-                DispatchQueue.main.async {
-                    self.loadCacheItems()
-                }
+                try await Task.detached(priority: .userInitiated) { try CacheManager.shared.delete(at: item.url) }.value
+                await loadCacheItems(includeInternalApps: includesInternalApps)
             } catch {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = error.localizedDescription
-                }
+                isLoading = false
+                errorMessage = error.localizedDescription
             }
         }
     }
+
 }
 
 /// Read the resulting IPA, including each separately signed extension.

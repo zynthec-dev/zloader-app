@@ -1,6 +1,41 @@
 {
   "sourceLanguage": "en",
   "strings": {
+"Refresh Cache": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Refresh Cache"
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Refresh-Cache"
+        }
+      }
+    }
+  },
+  "Wait for app operations to finish before deleting the refresh cache.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Wait for app operations to finish before deleting the refresh cache."
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Warte, bis alle App-Vorgänge abgeschlossen sind, bevor du den Refresh-Cache löschst."
+        }
+      }
+    }
+  },
+
 "Install & Refresh": {
     "extractionState": "manual",
     "localizations": {

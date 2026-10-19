@@ -95,8 +95,9 @@ struct WirelessIPAInstallerView: View {
     var body: some View {
         List {
             Section {
-                SwiftUI.Button { selecting = true; library.loadCacheItems() } label: {
-                    Label(model.selected?.name ?? NSLocalizedString("Choose Signed IPA", comment: ""), systemImage: "doc.zipper")
+                SwiftUI.Button { selecting = true } label: {
+                    if let item = model.selected { IPASelectionRow(item: item) }
+                    else { Label("Choose Signed IPA", systemImage: "doc.zipper") }
                 }.disabled(model.preparing || model.status.url != nil)
                 if let item = model.selected { Text(item.sizeString).foregroundStyle(.secondary) }
             } header: { Text("Signed IPA") }
@@ -140,17 +141,43 @@ struct WirelessIPAInstallerView: View {
             NavigationStack {
                 List {
                     if library.isLoading { ProgressView() }
-                    ForEach(library.resignedApps.filter { !$0.isDirectory && $0.url.pathExtension.lowercased() == "ipa" }) { item in
+                    ForEach(library.resignedApps) { item in
                         SwiftUI.Button { model.selected = item; selecting = false } label: {
-                            VStack(alignment: .leading) { Text(item.name); Text(item.sizeString).font(.caption).foregroundStyle(.secondary) }
+                            IPASelectionRow(item: item)
                         }
                     }
                     if !library.isLoading && library.resignedApps.isEmpty { Text("No signed IPAs saved yet.") }
                 }
                 .navigationTitle("IPA Library")
-        .zLoaderSettingsPage()
+                .zLoaderSettingsPage()
+                .task { await library.loadCacheItems(includeInternalApps: false) }
+                .refreshable { await library.loadCacheItems(includeInternalApps: false) }
+                .onDisappear { library.cancelLoading() }
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { SwiftUI.Button("Done") { selecting = false } } }
             }
         }
+    }
+}
+
+private struct IPASelectionRow: View {
+    let item: CacheItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let image = item.image { Image(uiImage: image).resizable().scaledToFit() }
+                else { Image(systemName: "app.dashed").resizable().scaledToFit().padding(6).foregroundStyle(.secondary) }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: item.name).foregroundStyle(.primary)
+                Text(item.sizeString).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }

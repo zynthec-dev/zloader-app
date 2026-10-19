@@ -68,6 +68,19 @@ struct DeveloperOptionsView: View {
                 }
                 }
                 .buttonStyle(.plain)
+                NavigationLink(destination: CacheManagementView()) {
+                    HStack(spacing: 12) {
+                        Label("Refresh Cache", systemImage: "arrow.clockwise.circle")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .padding(16)
+                    .frame(minHeight: 44)
+                    .zLoaderGlassSurface()
+                    .cornerRadius(12)
+                }
+
                 // Section 1: Logging & Diagnostics
                 VStack(alignment: .leading, spacing: 8) {
                     Text("LOGGING & DIAGNOSTICS")

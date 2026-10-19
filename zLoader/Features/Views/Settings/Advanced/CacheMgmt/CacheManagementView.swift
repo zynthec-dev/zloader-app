@@ -13,7 +13,6 @@ struct CacheManagementView: View {
     var onInstall: ((URL) -> Void)? = nil
     @State private var detailsItem: CacheItem?
     @StateObject private var viewModel = CacheViewModel()
-    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ZStack {
@@ -23,7 +22,7 @@ struct CacheManagementView: View {
             } else {
                 List {
                     if !signedIPAsOnly {
-                    Section(header: Text("Internal App Cache"), footer: Text("Cached unzipped app bundles stored in zLoader's private container. These are used during automatic background refreshes and resigns.")) {
+                    Section(header: Text("Refresh Cache"), footer: Text("Cached unzipped app bundles stored in zLoader's private container. These are used during automatic background refreshes and resigns.")) {
                         if viewModel.internalApps.isEmpty {
                             Text("No cached internal apps.")
                                 .foregroundColor(.secondary)
@@ -31,10 +30,7 @@ struct CacheManagementView: View {
                                 .padding(.vertical, 4)
                         } else {
                             ForEach(viewModel.internalApps) { item in
-                                CacheItemRow(item: item, onExport: {
-                                    let appURL = item.url.appendingPathComponent("App.app")
-                                    viewModel.activeExportURL = FileManager.default.fileExists(atPath: appURL.path) ? appURL : item.url
-                                }, onDelete: {
+                                CacheItemRow(item: item, onDelete: {
                                     viewModel.itemToDelete = item
                                 })
                             }
@@ -46,7 +42,7 @@ struct CacheManagementView: View {
                         }
                     }.listRowBackground(ZLoaderGlassBackground())
                     
-                    }
+                    } else {
                     Section(header: Text("Signed IPAs"), footer: Text("Saved signed IPA files. Tap a file to share it or save it to Files.")) {
                         if viewModel.resignedApps.isEmpty {
                             Text("No signed IPAs saved yet.")
@@ -69,6 +65,7 @@ struct CacheManagementView: View {
                         }
                     }
                     .listRowBackground(ZLoaderGlassBackground())
+                    }
                 }
                 #if !os(tvOS)
                 .listStyle(InsetGroupedListStyle())
@@ -95,12 +92,11 @@ struct CacheManagementView: View {
         }
         .navigationTitle(signedIPAsOnly
                          ? NSLocalizedString("IPA Library", comment: "Signed IPA file library")
-                         : NSLocalizedString("Cache Management", comment: ""))
+                         : NSLocalizedString("Refresh Cache", comment: ""))
         .zLoaderSettingsPage()
-        .refreshable { viewModel.loadCacheItems() }
-        .onAppear {
-            viewModel.loadCacheItems()
-        }
+        .refreshable { await viewModel.loadCacheItems(includeInternalApps: !signedIPAsOnly) }
+        .task { await viewModel.loadCacheItems(includeInternalApps: !signedIPAsOnly) }
+        .onDisappear { viewModel.cancelLoading() }
         .alert(isPresented: $viewModel.showErrorAlert) {
             Alert(
                 title: Text("Error"),
@@ -145,10 +141,27 @@ struct CacheItemRow: View {
     var tapToExport: Bool = false
     var onDetails: (() -> Void)? = nil
     var onInstall: (() -> Void)? = nil
-    let onExport: () -> Void
+    var onExport: (() -> Void)? = nil
     let onDelete: () -> Void
     
     var body: some View {
+        Group {
+            if let onExport, tapToExport {
+                SwiftUI.Button(action: onExport) { rowContent }
+                    .buttonStyle(.plain)
+            } else { rowContent }
+        }
+        .contextMenu {
+            if let onDetails { SwiftUI.Button(action: onDetails) { Label("Details", systemImage: "info.circle") } }
+            if let onInstall { SwiftUI.Button(action: onInstall) { Label("Install IPA", systemImage: "square.and.arrow.down") } }
+            if let onExport { SwiftUI.Button(action: onExport) { Label("Share IPA", systemImage: "square.and.arrow.up") } }
+            SwiftUI.Button(role: .destructive, action: onDelete) {
+                Label(tapToExport ? NSLocalizedString("Delete IPA", comment: "") : NSLocalizedString("Delete Cache", comment: ""), systemImage: "trash")
+            }
+        }
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 12) {
             if let image = item.image {
                 Image(uiImage: image)
@@ -198,21 +211,7 @@ struct CacheItemRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        .onTapGesture { if tapToExport { onExport() } }
-        .contextMenu {
-            if let onDetails { SwiftUI.Button(action: onDetails) { Label("Details", systemImage: "info.circle") } }
-            if let onInstall {
-                SwiftUI.Button(action: onInstall) {
-                    Label("Install IPA", systemImage: "square.and.arrow.down")
-                }
-            }
-            SwiftUI.Button(action: onExport) {
-                Label(tapToExport ? NSLocalizedString("Share IPA", comment: "") : NSLocalizedString("Export/Share", comment: ""), systemImage: "square.and.arrow.up")
-            }
-            SwiftUI.Button(role: .destructive, action: onDelete) {
-                Label(tapToExport ? NSLocalizedString("Delete IPA", comment: "") : NSLocalizedString("Delete Cache", comment: ""), systemImage: "trash")
-            }
-        }
+
     }
 }
 
