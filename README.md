@@ -32,7 +32,9 @@ using the same app identity and App Group, without deleting the app.
 
 ## Build
 
-Requires macOS, Xcode and the pinned submodules:
+Requires macOS, Xcode and the pinned submodules. The independent certificate-export
+checks require OpenSSL 3 on PATH (including its valid openssl.cnf); the system
+LibreSSL does not provide the same Unicode PKCS12 CLI behavior:
 
 ```sh
 git submodule update --init --recursive
@@ -105,3 +107,5 @@ Appearance and connection corrections for 0.7.20: [validation and remaining devi
 Sources overview and local HTTPS IPA sharing in 0.7.28: [implementation and validation](docs/zloader/LAN-INSTALLER-0.7.28.md).
 
 Imported signing identities, account-free install/refresh and source IPA downloads in 0.7.63: [behavior and validation](docs/zloader/IMPORTED-IDENTITIES-0.7.63.md).
+
+0.7.64 removes automatic signed-IPA exports, keeps Refresh Cache in Developer Options, and adds installer IPA icons: [review and validation](docs/zloader/REVIEW-0.7.64.md).
