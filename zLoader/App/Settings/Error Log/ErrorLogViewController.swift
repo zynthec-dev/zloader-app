@@ -37,19 +37,24 @@ final class ErrorLogViewController: UITableViewController
     
     #if !os(tvOS)
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
+        return .default
     }
     #endif
     
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        ZLoaderSettingsTableStyle.apply(to: cell)
+    }
+
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        ZLoaderSettingsTableStyle.apply(to: tableView)
         
         self.tableView.dataSource = self.dataSource
         self.dataSource.contentView = self.tableView
         self.tableView.prefetchDataSource = self.dataSource
         
-        self.exportLogButton?.activityIndicatorView.color = .white
+        self.exportLogButton?.activityIndicatorView.color = .label
         
         if #unavailable(iOS 15)
         {

@@ -59,19 +59,18 @@ class InsetGroupTableViewCell: UITableViewCell
     override func layoutSubviews() {
         super.layoutSubviews()
         separatorLeadingConstraint?.constant = contentView.viewWithTag(77023) == nil ? 30 : 62
-        // Match the 22-point symbols and 30/62-point leading positions used
-        // by storyboard rows decorated in SettingsViewController.
+        // Match the symbol and title alignment of the shared SwiftUI rows.
         guard let icon = imageView, icon.tag == 77023, icon.image != nil,
               let label = textLabel else { return }
         icon.contentMode = .scaleAspectFit
-        icon.frame = CGRect(x: 30, y: (contentView.bounds.height - 22) / 2, width: 22, height: 22)
+        icon.frame = CGRect(x: ZLoaderSettingsStyle.symbolLeading, y: (contentView.bounds.height - ZLoaderSettingsStyle.symbolFrame) / 2, width: ZLoaderSettingsStyle.symbolFrame, height: ZLoaderSettingsStyle.symbolFrame)
         let trailing = label.frame.maxX
-        label.frame.origin.x = 62
-        label.frame.size.width = max(0, trailing - 62)
+        label.frame.origin.x = ZLoaderSettingsStyle.titleLeading
+        label.frame.size.width = max(0, trailing - ZLoaderSettingsStyle.titleLeading)
         if let detail = detailTextLabel {
             let detailTrailing = detail.frame.maxX
-            detail.frame.origin.x = 62
-            detail.frame.size.width = max(0, detailTrailing - 62)
+            detail.frame.origin.x = ZLoaderSettingsStyle.titleLeading
+            detail.frame.size.width = max(0, detailTrailing - ZLoaderSettingsStyle.titleLeading)
         }
     }
 
@@ -84,6 +83,9 @@ class InsetGroupTableViewCell: UITableViewCell
     private func setup()
     {
         self.selectionStyle = .none
+        let minimumHeight = contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: ZLoaderSettingsStyle.minimumRowHeight + ZLoaderSettingsStyle.rowSpacing)
+        minimumHeight.priority = .init(999)
+        minimumHeight.isActive = true
         
         self.separatorView.translatesAutoresizingMaskIntoConstraints = false
         self.separatorView.backgroundColor = .separator

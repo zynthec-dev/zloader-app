@@ -30,4 +30,14 @@ for relative in ["Profiles/SelectProfileViewController.swift", "Certificates/Sig
     assert "ZLoaderSettingsTableStyle.apply(to: self.tableView)" in text
     assert "ZLoaderSettingsTableViewCell" in text
 
+legacy = (root / "zLoader/App/Settings/AnisetteServerList.swift").read_text()
+assert ".zLoaderSettingsPage()" in legacy and ".zLoaderSettingsRows()" in legacy
+assert ".listStyle(" not in legacy
+for relative in ["RefreshAttemptsViewController.swift", "Error Log/ErrorLogViewController.swift"]:
+    text = (root / "zLoader/App/Settings" / relative).read_text()
+    assert "ZLoaderSettingsTableStyle.apply(to: tableView)" in text
+    assert "ZLoaderSettingsTableStyle.apply(to: cell)" in text
+for relative in ["LicensesViewController.swift", "Error Log/ErrorDetailsViewController.swift", "AltAppIconsViewController.swift"]:
+    assert "ZLoaderSettingsStyle.cardRadius" in (root / "zLoader/App/Settings" / relative).read_text()
+
 print(f"PASS shared settings style: {len(menus)} menu/detail source files, integrated refresh-cache row, native labelled toggles and UIKit selection menus")

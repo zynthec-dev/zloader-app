@@ -1496,17 +1496,17 @@ extension SettingsViewController {
         icon.translatesAutoresizingMaskIntoConstraints = false
         cell.contentView.addSubview(icon)
         for constraint in cell.contentView.constraints where constraint.firstItem as? UILabel === title && constraint.firstAttribute == .leading {
-            constraint.constant += 32
+            constraint.constant += ZLoaderSettingsStyle.titleLeading - 30
         }
         if title.translatesAutoresizingMaskIntoConstraints {
-            title.frame.origin.x += 32
-            title.frame.size.width = max(0, title.frame.width - 32)
+            title.frame.origin.x += ZLoaderSettingsStyle.titleLeading - 30
+            title.frame.size.width = max(0, title.frame.width - (ZLoaderSettingsStyle.titleLeading - 30))
         }
         NSLayoutConstraint.activate([
-            icon.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 30),
+            icon.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: ZLoaderSettingsStyle.symbolLeading),
             icon.centerYAnchor.constraint(equalTo: title.centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: 22),
-            icon.heightAnchor.constraint(equalToConstant: 22)
+            icon.widthAnchor.constraint(equalToConstant: ZLoaderSettingsStyle.symbolFrame),
+            icon.heightAnchor.constraint(equalToConstant: ZLoaderSettingsStyle.symbolFrame)
         ])
     }
 }

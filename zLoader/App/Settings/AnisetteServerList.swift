@@ -400,7 +400,7 @@ struct AnisetteServersView: View {
                 if !viewModel.items.isEmpty && viewModel.errorMessage == nil {
                     Text("Drag to reorder server priority. Swipe left on a server to hide or unhide it.")
                 }
-            }
+            }.zLoaderSettingsRows()
 
             // Section 2: Source Configuration
             Section {
@@ -539,7 +539,7 @@ struct AnisetteServersView: View {
                         } else {
                             Text("URL of the JSON file containing registered Anisette servers. Press and hold row to export.")
                         }
-                    }
+                    }.zLoaderSettingsRows()
 
                     // Section: Customization
                     Section {
@@ -553,24 +553,21 @@ struct AnisetteServersView: View {
                         Text("Customization")
                     } footer: {
                         Text("Control if zLoader automatically rotates/retries servers upon failure.")
-                    }
+                    }.zLoaderSettingsRows()
 
                     // Bottom spacing section
                     Section {
                         Color.clear
                             .frame(height: 20)
                             .listRowBackground(Color.clear)
-                    }
+                    }.zLoaderSettingsRows()
                 }
-                #if !os(tvOS)
-                .listStyle(.insetGrouped)
-                #else
-                .listStyle(.grouped)
-                #endif
+
                 .refreshable {
                     await viewModel.fetchServers(forceRemote: true)
                 }
         .navigationTitle("Anisette Servers")
+        .zLoaderSettingsPage()
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if viewModel.isOfflineMode {

@@ -261,10 +261,12 @@ extension ThemeManager {
             }
         }
         if let collection = view as? UICollectionView { collection.backgroundColor = .settingsBackground }
-        // Native grouped tables own their group clipping and separators. A
-        // rounded background on every cell breaks those continuous sections.
+        // Settings destinations opt into the same individual rounded cards.
+        // Tables outside Settings retain their existing native presentation.
         if let cell = view as? ZLoaderSettingsTableViewCell {
             cell.refreshSettingsAppearance()
+        } else if let cell = view as? UITableViewCell, ZLoaderSettingsTableStyle.contains(cell), !(cell is InsetGroupTableViewCell) {
+            ZLoaderSettingsTableStyle.apply(to: cell)
         } else if let cell = view as? UITableViewCell, !(cell is InsetGroupTableViewCell) {
             if cell.backgroundView is UIVisualEffectView { cell.backgroundView = nil }
             cell.backgroundColor = .settingsCard
@@ -376,9 +378,9 @@ struct SettingsEntryLabel: View {
         HStack(spacing: 12) {
             if showsIcons {
                 Image(systemName: systemImage ?? SettingsEntrySymbol.name(for: title))
-                    .font(.system(size: 20, weight: .regular))
+                    .font(.system(size: ZLoaderSettingsStyle.symbolSize, weight: .regular))
                     .foregroundStyle(Color(uiColor: .settingsSymbol))
-                    .frame(width: 24, height: 24)
+                    .frame(width: ZLoaderSettingsStyle.symbolFrame, height: ZLoaderSettingsStyle.symbolFrame)
             }
             Text(LocalizedStringKey(title))
         }

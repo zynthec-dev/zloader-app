@@ -28,9 +28,14 @@ final class RefreshAttemptsViewController: UITableViewController
         return dateFormatter
     }()
     
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        ZLoaderSettingsTableStyle.apply(to: cell)
+    }
+
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        ZLoaderSettingsTableStyle.apply(to: tableView)
         
         self.tableView.dataSource = self.dataSource
         self.dataSource.contentView = self.tableView

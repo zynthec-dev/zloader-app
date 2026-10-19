@@ -48,32 +48,32 @@ struct SignableCertificateRowView: View {
                 let certName = cert.name
                 if cert.machineName != nil {
                     Text("\(Text("Name: ").font(.footnote))\(Text(certName).font(.footnote))")
-                    .foregroundColor(Color(uiColor: .lightGray))
+                    .foregroundColor(Color.secondary)
                 }
                 
                 Text("\(Text("Serial: ").font(.footnote))\(Text(cert.serialNumber).font(.system(.footnote, design: .monospaced)))")
-                .foregroundColor(Color(uiColor: .lightGray))
+                .foregroundColor(Color.secondary)
                 
                 if let ident = cert.identifier, !ident.isEmpty {
                     Text("\(Text("ID: ").font(.footnote))\(Text(ident).font(.system(.footnote, design: .monospaced)))")
-                    .foregroundColor(Color(uiColor: .lightGray))
+                    .foregroundColor(Color.secondary)
                 }
                 
                 if let brief = briefInfo {
                     Text("\(Text("Type: ").font(.footnote))\(Text(brief.type).font(.footnote))")
-                    .foregroundColor(Color(uiColor: .lightGray))
+                    .foregroundColor(Color.secondary)
                     
                     Text("\(Text("Validity: ").font(.footnote))\(Text("\(brief.validFrom) - \(brief.validUntil)").font(.footnote))")
-                    .foregroundColor(Color(uiColor: .lightGray))
+                    .foregroundColor(Color.secondary)
                 }
                 
                 if let req = cert.requesterEmail, !req.isEmpty {
                     Text("\(Text("Requester: ").font(.footnote))\(Text(req).font(.footnote))")
-                    .foregroundColor(Color(uiColor: .lightGray))
+                    .foregroundColor(Color.secondary)
                 }
                 
                 Text("\(Text("Keys: ").font(.footnote))\(Text("public + private").font(.footnote))")
-                .foregroundColor(Color(uiColor: .lightGray))
+                .foregroundColor(Color.secondary)
                 
                 if let status = statusText {
                     Text("\(Text("Status: ").font(.footnote))\(Text(status).font(.system(size: 10, weight: .bold)))")
@@ -104,9 +104,9 @@ final class SignableCertificatesListViewController: UITableViewController {
         self.installedApp = installedApp
         self.viewModel = viewModel
         #if !os(tvOS)
-        super.init(style: .insetGrouped)
+        super.init(style: .plain)
         #else
-        super.init(style: .grouped)
+        super.init(style: .plain)
         #endif
     }
     
@@ -184,8 +184,10 @@ final class SignableCertificatesListViewController: UITableViewController {
         if #available(iOS 16.0, tvOS 16.0, *) {
             cell.contentConfiguration = UIHostingConfiguration {
                 SignableCertificateRowView(cert: cert, appName: installedApp.name, appCertSerial: installedApp.certificateSerialNumber, viewModel: viewModel)
+                    .environment(\.settingsEntryIconsVisible, true)
             }
-            .background(Color.white.opacity(0.15))
+            .margins(.horizontal, ZLoaderSettingsStyle.symbolLeading)
+            .margins(.vertical, ZLoaderSettingsStyle.rowPadding)
         } else {
             let certName = cert.name
             let machineName = cert.machineName ?? "N/A"
@@ -205,7 +207,7 @@ final class SignableCertificatesListViewController: UITableViewController {
             """
             cell.textLabel?.textColor = .white
             cell.textLabel?.font = .systemFont(ofSize: 12, weight: .regular)
-            cell.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+            cell.backgroundColor = .clear
             cell.accessoryType = isCurrent ? .checkmark : .none
             cell.tintColor = .green
         }

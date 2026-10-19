@@ -1,6 +1,24 @@
 {
   "sourceLanguage": "en",
   "strings": {
+"Developer Features": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Developer Features"
+        }
+      },
+      "de": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Entwicklerfunktionen"
+        }
+      }
+    }
+  },
+
 "Refresh Cache": {
     "extractionState": "manual",
     "localizations": {

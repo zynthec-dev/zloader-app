@@ -123,10 +123,10 @@ private extension AltAppIconsViewController
     func makeLayout() -> UICollectionViewCompositionalLayout
     {
         #if !os(tvOS)
-        var configuration = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
-        configuration.showsSeparators = true
+        var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
+        configuration.showsSeparators = false
         #else
-        var configuration = UICollectionLayoutListConfiguration(appearance: .grouped)
+        var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         #endif
         configuration.backgroundColor = .clear
         configuration.headerMode = .supplementary
@@ -159,6 +159,7 @@ private extension AltAppIconsViewController
             config.imageProperties.maximumSize = CGSize(width: imageWidth, height: imageWidth)
             config.imageProperties.cornerRadius = imageWidth / 5.0 // Copied from AppIconImageView
             
+            config.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 16, leading: 32, bottom: 16, trailing: 32)
             cell.contentConfiguration = config
 
             let activeIconName = self?.currentAlternateIconName
@@ -173,16 +174,10 @@ private extension AltAppIconsViewController
                 cell.accessories = []
             }
             
-            var backgroundConfiguration = UIBackgroundConfiguration.listCell()
-            backgroundConfiguration.backgroundColorTransformer = UIConfigurationColorTransformer { [weak cell] c in
-                if let state = cell?.configurationState, state.isHighlighted 
-                {
-                    // Highlighted, so use darker white for background.
-                    return .secondarySystemGroupedBackground
-                }
-                
-                return .secondarySystemGroupedBackground
-            }
+            var backgroundConfiguration = UIBackgroundConfiguration.listPlainCell()
+            backgroundConfiguration.backgroundColor = .settingsCard
+            backgroundConfiguration.cornerRadius = ZLoaderSettingsStyle.cardRadius
+            backgroundConfiguration.backgroundInsets = NSDirectionalEdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)
             cell.backgroundConfiguration = backgroundConfiguration
                         
             // Ensure text is legible on green background.

@@ -100,9 +100,9 @@ final class SelectProfileViewController: UITableViewController {
     init(installedApp: InstalledApp) {
         self.installedApp = installedApp
         #if !os(tvOS)
-        super.init(style: .insetGrouped)
+        super.init(style: .plain)
         #else
-        super.init(style: .grouped)
+        super.init(style: .plain)
         #endif
     }
 
@@ -195,7 +195,10 @@ final class SelectProfileViewController: UITableViewController {
         if #available(iOS 16.0, tvOS 16.0, *) {
             cell.contentConfiguration = UIHostingConfiguration {
                 ProfileRowItemView(profile: profile, isCurrent: isCurrent, matchingCert: matchingCert)
+                    .environment(\.settingsEntryIconsVisible, true)
             }
+            .margins(.horizontal, ZLoaderSettingsStyle.symbolLeading)
+            .margins(.vertical, ZLoaderSettingsStyle.rowPadding)
         } else {
             cell.textLabel?.numberOfLines = 0
             cell.textLabel?.text = "\(profile.name)\(isCurrent ? " (Current)" : "")\nBundle ID: \(profile.bundleIdentifier)\nExpires: \(profile.expirationDate)"

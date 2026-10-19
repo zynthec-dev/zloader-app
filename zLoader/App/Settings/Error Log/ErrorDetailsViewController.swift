@@ -17,6 +17,15 @@ class ErrorDetailsViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        view.backgroundColor = .settingsBackground
+        textView.backgroundColor = .settingsCard
+        textView.textColor = .label
+        textView.layer.cornerRadius = ZLoaderSettingsStyle.cardRadius
+        textView.clipsToBounds = true
+        textView.textContainerInset.top = ZLoaderSettingsStyle.rowPadding
+        textView.textContainerInset.bottom = ZLoaderSettingsStyle.rowPadding
+        textView.adjustsFontForContentSizeCategory = true
+
 
         if let error = self.loggedError?.error
         {
