@@ -15,10 +15,10 @@ index 46c4c89..5ed770f 100644
              var permissions = (externalAttributes >> 16) & 0x01FF
 diff --git a/Sources/Archiver/ArchivePathPolicy.swift b/Sources/Archiver/ArchivePathPolicy.swift
 new file mode 100644
-index 0000000..f8fa6d9
+index 0000000..0b3693c
 --- /dev/null
 +++ b/Sources/Archiver/ArchivePathPolicy.swift
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,28 @@
 +import Foundation
 +
 +/// Keep archive writes inside their extraction root, including existing symlinks.
@@ -29,7 +29,17 @@ index 0000000..f8fa6d9
 +            throw CocoaError(.fileReadCorruptFile)
 +        }
 +        let root = directory.standardizedFileURL.resolvingSymlinksInPath()
-+        let target = root.appendingPathComponent(filename).standardizedFileURL.resolvingSymlinksInPath()
++        var target = root
++        for component in filename.split(separator: "/") where component != "." {
++            target.appendPathComponent(String(component))
++            // Resolving a non-existent leaf does not reliably resolve its parent
++            // symlinks on every Foundation platform. Reject them before writing.
++            if let type = try? FileManager.default.attributesOfItem(atPath: target.path)[.type] as? FileAttributeType,
++               type == .typeSymbolicLink {
++                throw CocoaError(.fileReadCorruptFile)
++            }
++        }
++        target = target.standardizedFileURL
 +        let prefix = root.path.hasSuffix("/") ? root.path : root.path + "/"
 +        guard target.path.hasPrefix(prefix), target.path != root.path else {
 +            throw CocoaError(.fileReadCorruptFile)
