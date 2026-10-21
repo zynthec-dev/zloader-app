@@ -556,7 +556,6 @@ public extension UserDefaults
             #keyPath(UserDefaults._appImportSourceMode): AppImportSourceMode.prompt.rawValue,
             #keyPath(UserDefaults.isInstallConfirmationEnabled): true,
             #keyPath(UserDefaults.isClearCustomizationsOnUninstallEnabled): true,
-            #keyPath(UserDefaults.isAutoLaunchAppAfterInstallEnabled): false,
             #keyPath(UserDefaults.preferResignedIPA): true,
             #keyPath(UserDefaults.isVerboseOperationsLoggingEnabled): false,
             #keyPath(UserDefaults.isZLoaderVerboseLoggingEnabled): false,
