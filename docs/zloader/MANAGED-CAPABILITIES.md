@@ -45,3 +45,21 @@ macOS trust services were accessible. Earlier entitlement/trust diagnostics in
 the restricted execution sandbox were false positives, not a broken certificate
 chain. Its actual confirmed defect was missing CarPlay authorization in both
 profile and signature.
+
+## Dynamic portal editor
+
+App ID details load the selected team's capability catalog from Apple's Portal
+and combine it with the exact App ID's current capability graph. This exposes
+managed and future capabilities without a local feature allow-list. Apple's
+editable flag is respected; configured capabilities requiring additional input
+link to the portal rather than guessing configuration. Existing legacy controls
+remain available when the portal inventory cannot be loaded (including free
+accounts). Read failures are displayed; they are not treated as disabled rights.
+
+Each edit uses a fresh complete capability graph, preserves unrelated settings
+and relationships, rejects incomplete/paginated relationship graphs, and requires
+a fresh state read before reporting success. Catalog pagination stays on Apple's
+same HTTPS endpoint. Local synthetic tests cover these constraints. This newer
+portal route has not been exercised with a live account; a 421 or other portal
+session rejection is surfaced rather than concealed. Profile authorization and
+physical CarPlay behavior still require device/account validation.

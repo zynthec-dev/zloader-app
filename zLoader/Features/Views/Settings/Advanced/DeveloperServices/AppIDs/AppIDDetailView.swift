@@ -23,6 +23,62 @@ struct AppIDDetailView: View {
     @State private var editedFeatures: [Feature: String] = [:]
     @State private var hasModifiedFeatures = false
 
+    @State private var portalCapabilities: [PortalCapability] = []
+    @State private var editedPortalCapabilities: [String: Bool] = [:]
+    @State private var capabilityLoadError: String?
+    @State private var isLoadingCapabilities = false
+
+    private var hasPortalChanges: Bool { !editedPortalCapabilities.isEmpty }
+
+    private func loadPortalCapabilities() async {
+        guard !isSaving, viewModel.isPaidAccount else { return }
+        isLoadingCapabilities = true
+        defer { isLoadingCapabilities = false }
+        do {
+            let capabilities = try await DeveloperPortalProxy.shared.fetchPortalCapabilities(appID: appID.identifier)
+            try Task.checkCancellation()
+            portalCapabilities = capabilities
+            capabilityLoadError = nil
+        } catch is CancellationError {
+        } catch {
+            capabilityLoadError = error.localizedDescription
+        }
+    }
+
+    private var portalCapabilitiesSection: some View {
+        Section {
+            if isLoadingCapabilities { ProgressView("Loading Apple capabilities…") }
+            if let capabilityLoadError {
+                Text(capabilityLoadError).foregroundStyle(.secondary)
+                SwiftUI.Button("Reload Capabilities") { Task { await loadPortalCapabilities() } }
+            }
+            ForEach(portalCapabilities) { capability in
+                Toggle(isOn: Binding(
+                    get: { editedPortalCapabilities[capability.id] ?? capability.enabled },
+                    set: { value in
+                        if value == capability.enabled { editedPortalCapabilities.removeValue(forKey: capability.id) }
+                        else { editedPortalCapabilities[capability.id] = value }
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(capability.name)
+                        if !capability.editable {
+                            Text("Not editable for this App ID").font(.caption).foregroundStyle(.secondary)
+                        } else if capability.requiresConfiguration {
+                            Text("Configure in Apple Developer Portal").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .disabled(!capability.editable || capability.requiresConfiguration || isSaving || isLoadingCapabilities || viewModel.isActionLoading)
+            }
+        } header: {
+            Text("Apple Portal Capabilities (\(portalCapabilities.count))")
+        } footer: {
+            Text("Loaded from Apple for the selected team and App ID, including managed capabilities such as CarPlay. Unavailable or restricted capabilities cannot be enabled here. Save changes, then sign again to regenerate the profile.")
+        }
+        .zLoaderSettingsRows()
+    }
+
     init(appID: ALTAppID, viewModel: DeveloperServicesViewModel, presentingViewController: UIViewController? = nil) {
         self.appID = appID
         self.viewModel = viewModel
@@ -71,6 +127,9 @@ struct AppIDDetailView: View {
                 }
             }.zLoaderSettingsRows()
 
+            if viewModel.isPaidAccount { portalCapabilitiesSection }
+
+            if portalCapabilities.isEmpty {
             Section(header: Text("Capabilities & Features (\(currentAppID.features.count))")) {
                 ForEach(Array(viewModel.team?.type.allowedFeatures ?? []).sorted { $0.rawValue < $1.rawValue }, id: \.rawValue) { feature in
                     Toggle(displayName(for: feature), isOn: Binding(
@@ -102,6 +161,8 @@ struct AppIDDetailView: View {
                     }
                 }
             }.zLoaderSettingsRows()
+
+            }
 
             Section(header: Text("Associated App Groups"), footer: Text("The portal API does not return the current group assignments. No groups are preselected. Select the complete desired set before saving; this replaces the associations.")) {
                 if viewModel.appGroups.isEmpty {
@@ -179,11 +240,17 @@ struct AppIDDetailView: View {
                     }
                 }
                 .accessibilityLabel(Text("Save Changes"))
-                .disabled(isSaving || viewModel.isActionLoading || !(hasModifiedFeatures || hasModifiedGroups || hasModifiedName) || editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isSaving || viewModel.isActionLoading || !(hasModifiedFeatures || hasModifiedGroups || hasModifiedName || hasPortalChanges) || editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .disabled(isSaving)
         .labelStyle(.titleAndIcon)
+        .task(id: (viewModel.team?.identifier ?? "") + appID.identifier) {
+            portalCapabilities = []
+            editedPortalCapabilities = [:]
+            capabilityLoadError = nil
+            await loadPortalCapabilities()
+        }
         .onAppear {
             if !hasModifiedName { editedName = currentAppID.name }
             initializeSelectedGroups()
@@ -201,6 +268,17 @@ struct AppIDDetailView: View {
         guard !isSaving else { return }
         isSaving = true
         defer { isSaving = false }
+        for id in editedPortalCapabilities.keys.sorted() {
+            guard let enabled = editedPortalCapabilities[id] else { continue }
+            do {
+                portalCapabilities = try await DeveloperPortalProxy.shared.setPortalCapability(
+                    appID: appID.identifier, capabilityID: id, enabled: enabled)
+                editedPortalCapabilities.removeValue(forKey: id)
+            } catch {
+                viewModel.errorMessage = error.localizedDescription
+                return
+            }
+        }
         // Apple exposes separate mutations. Keep unsaved changes when either fails;
         // successfully saved capabilities are not submitted again on a retry.
         if hasModifiedFeatures || hasModifiedName {

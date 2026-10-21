@@ -108,6 +108,19 @@ public class DeveloperPortalProxy {
         try await self.fetchAppIDs(team: team)
     }
 
+    public func fetchPortalCapabilities(appID: String) async throws -> [PortalCapability] {
+        let session = try await getSession()
+        let team = try await getTeam()
+        return try await ALTAppleAPI.shared.fetchPortalCapabilities(appID: appID, team: team, session: session)
+    }
+
+    public func setPortalCapability(appID: String, capabilityID: String, enabled: Bool) async throws -> [PortalCapability] {
+        let session = try await getSession()
+        let team = try await getTeam()
+        return try await ALTAppleAPI.shared.setPortalCapability(appID: appID, capabilityID: capabilityID,
+                                                              enabled: enabled, team: team, session: session)
+    }
+
     @discardableResult
     public func addAppID(name: String, bundleIdentifier: String, team: ALTTeam? = nil) async throws -> ALTAppID {
         let session = try await self.getSession()

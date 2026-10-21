@@ -60,6 +60,7 @@ sh zLoader/scripts/test-source-ipa-file.sh
 sh zLoader/scripts/test-ipa-archive-metadata.sh
 sh zLoader/scripts/test-safe-archives.sh
 sh zLoader/scripts/test-portal-app-id.sh
+sh zLoader/scripts/test-portal-capabilities.sh
 sh zLoader/scripts/test-wireguard-config.sh
 sh zLoader/scripts/test-lan-installer.sh
 sh zLoader/scripts/build-unsigned.sh

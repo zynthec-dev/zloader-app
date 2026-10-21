@@ -19,6 +19,12 @@ for spec in 'minimuxer:minimuxer-warnings.patch' 'SideSign:sidesign-managed-sign
     git -C "Dependencies/$dependency" apply "$patch"
 done
 
+patch="$PWD/zLoader/Patches/sidesign-portal-capabilities.patch"
+if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; then
+    git -C Dependencies/SideSign apply --check "$patch"
+    git -C Dependencies/SideSign apply "$patch"
+fi
+
 # SwiftPM checkouts must be resolved before applying this runtime signing fix.
 code_sign_kit="$PWD/.build/SourcePackages/checkouts/CodeSignKit"
 if [ -d "$code_sign_kit" ]; then

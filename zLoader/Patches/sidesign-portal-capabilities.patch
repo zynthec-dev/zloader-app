@@ -1,0 +1,202 @@
+diff --git a/Sources/DeveloperPortal/PortalCapabilities.swift b/Sources/DeveloperPortal/PortalCapabilities.swift
+new file mode 100644
+index 00000000..43e4fa98
+--- /dev/null
++++ b/Sources/DeveloperPortal/PortalCapabilities.swift
+@@ -0,0 +1,196 @@
++// Dynamic Developer Portal capabilities. Apple remains the authorization authority.
++import Foundation
++
++public enum PortalJSON: Codable, Sendable, Equatable {
++    case object([String: PortalJSON]), array([PortalJSON]), string(String), bool(Bool), number(Double), null
++
++    public init(from decoder: Decoder) throws {
++        let c = try decoder.singleValueContainer()
++        if c.decodeNil() { self = .null }
++        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
++        else if let v = try? c.decode(String.self) { self = .string(v) }
++        else if let v = try? c.decode(Double.self) { self = .number(v) }
++        else if let v = try? c.decode([PortalJSON].self) { self = .array(v) }
++        else { self = .object(try c.decode([String: PortalJSON].self)) }
++    }
++    public func encode(to encoder: Encoder) throws {
++        var c = encoder.singleValueContainer()
++        switch self {
++        case .object(let v): try c.encode(v)
++        case .array(let v): try c.encode(v)
++        case .string(let v): try c.encode(v)
++        case .bool(let v): try c.encode(v)
++        case .number(let v): try c.encode(v)
++        case .null: try c.encodeNil()
++        }
++    }
++    public subscript(_ key: String) -> PortalJSON? { if case .object(let v) = self { return v[key] }; return nil }
++    public var string: String? { if case .string(let v) = self { return v }; return nil }
++    public var bool: Bool? { if case .bool(let v) = self { return v }; return nil }
++    public var array: [PortalJSON]? { if case .array(let v) = self { return v }; return nil }
++    public var object: [String: PortalJSON]? { if case .object(let v) = self { return v }; return nil }
++}
++
++public struct PortalCapability: Identifiable, Sendable {
++    public let id: String
++    public let name: String
++    public let entitlement: String?
++    public let enabled: Bool
++    public let editable: Bool
++    public let requiresConfiguration: Bool
++}
++
++public enum PortalCapabilityGraph {
++    public enum Failure: Error, LocalizedError {
++        case incomplete, unavailable, notEditable, configurationRequired, notConfirmed
++        public var errorDescription: String? {
++            switch self {
++            case .incomplete: return "Apple returned an incomplete capability inventory. No capability changes were sent."
++            case .unavailable: return "This capability is not available in the selected Apple team."
++            case .notEditable: return "Apple does not allow editing this capability for the selected App ID."
++            case .configurationRequired: return "Configure this capability in Apple's Developer Portal before enabling it here."
++            case .notConfirmed: return "Apple has not confirmed the capability change. Reload this App ID before retrying."
++            }
++        }
++    }
++
++    static func resources(in graph: PortalJSON, appID: String) throws -> [PortalJSON] {
++        guard graph["data"]?["id"]?.string == appID,
++              graph["data"]?["type"]?.string == "bundleIds",
++              let relationship = graph["data"]?["relationships"]?["bundleIdCapabilities"],
++              let refs = relationship["data"]?.array,
++              relationship["links"]?["next"]?.string == nil else { throw Failure.incomplete }
++        let included = graph["included"]?.array ?? []
++        var resources: [PortalJSON] = []
++        var seen = Set<String>()
++        for ref in refs {
++            guard let id = ref["id"]?.string, ref["type"]?.string == "bundleIdCapabilities", seen.insert(id).inserted,
++                  let resource = included.first(where: { $0["id"]?.string == id && $0["type"]?.string == "bundleIdCapabilities" }),
++                  resource["attributes"]?["enabled"]?.bool != nil,
++                  resource["relationships"]?["capability"]?["data"]?["id"]?.string != nil else { throw Failure.incomplete }
++            resources.append(resource)
++        }
++        if case .number(let count) = relationship["meta"]?["paging"]?["total"], count > Double(refs.count) { throw Failure.incomplete }
++        return resources
++    }
++
++    public static func inventory(metadata: [PortalJSON], graph: PortalJSON, appID: String) throws -> [PortalCapability] {
++        let resources = try resources(in: graph, appID: appID)
++        var all: [String: PortalJSON] = [:]
++        for item in metadata + (graph["included"]?.array ?? []).filter({ $0["type"]?.string == "capabilities" }) {
++            guard let id = item["id"]?.string, item["type"]?.string == "capabilities" else { continue }
++            // The account catalog is authoritative for availability/editability.
++            if all[id] == nil { all[id] = item }
++        }
++        for resource in resources {
++            guard let id = resource["relationships"]?["capability"]?["data"]?["id"]?.string else { throw Failure.incomplete }
++            if all[id] == nil { all[id] = .object(["id": .string(id)]) }
++        }
++        return all.map { id, item in
++            let states = resources.filter { $0["relationships"]?["capability"]?["data"]?["id"]?.string == id }
++            let enabled = states.contains { $0["attributes"]?["enabled"]?.bool == true }
++            let configurable = !(item["attributes"]?["settings"]?.array ?? []).isEmpty || !(item["attributes"]?["inputs"]?.array ?? []).isEmpty
++            return PortalCapability(id: id, name: item["attributes"]?["name"]?.string ?? id,
++                entitlement: item["attributes"]?["entitlement"]?.string, enabled: enabled,
++                editable: item["attributes"]?["editable"]?.bool == true && !states.contains { $0["attributes"]?["editable"]?.bool == false },
++                requiresConfiguration: configurable && !enabled && states.isEmpty)
++        }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
++    }
++
++    public static func patch(metadata: [PortalJSON], graph: PortalJSON, appID: String, capabilityID: String, enabled: Bool) throws -> PortalJSON {
++        let catalog = try inventory(metadata: metadata, graph: graph, appID: appID)
++        guard let capability = catalog.first(where: { $0.id == capabilityID }) else { throw Failure.unavailable }
++        guard capability.editable else { throw Failure.notEditable }
++        guard !enabled || !capability.requiresConfiguration else { throw Failure.configurationRequired }
++        var resources = try resources(in: graph, appID: appID)
++        var found = false
++        for index in resources.indices {
++            guard resources[index]["relationships"]?["capability"]?["data"]?["id"]?.string == capabilityID else { continue }
++            guard var object = resources[index].object, var attributes = object["attributes"]?.object else { throw Failure.incomplete }
++            attributes["enabled"] = .bool(enabled)
++            object["attributes"] = .object(attributes)
++            // Only relationships with actual data belong in a write, never navigation-only links.
++            if let relationships = object["relationships"]?.object {
++                object["relationships"] = .object(relationships.filter { $0.value["data"] != nil }.mapValues { .object(["data": $0["data"]!]) })
++            }
++            object.removeValue(forKey: "links"); object.removeValue(forKey: "meta"); object.removeValue(forKey: "context")
++            resources[index] = .object(object); found = true
++        }
++        if !found && enabled {
++            resources.append(.object(["type": .string("bundleIdCapabilities"),
++                "attributes": .object(["enabled": .bool(true), "settings": .array([])]),
++                "relationships": .object(["capability": .object(["data": .object(["type": .string("capabilities"), "id": .string(capabilityID)])])])]))
++        }
++        var attributes: [String: PortalJSON] = [:]
++        for key in ["name", "identifier", "seedId"] { if let v = graph["data"]?["attributes"]?[key] { attributes[key] = v } }
++        resources = try resources.map { resource in
++            guard var object = resource.object, let attributes = object["attributes"]?.object else { throw Failure.incomplete }
++            object["attributes"] = .object(attributes.filter { ["enabled", "settings", "inputs"].contains($0.key) })
++            if let relationships = object["relationships"]?.object {
++                for relationship in relationships.values {
++                    if relationship["links"]?["next"]?.string != nil { throw Failure.incomplete }
++                    if case .number(let count) = relationship["meta"]?["paging"]?["total"],
++                       let data = relationship["data"]?.array, count > Double(data.count) { throw Failure.incomplete }
++                }
++                object["relationships"] = .object(relationships.filter { $0.value["data"] != nil }.mapValues { .object(["data": $0["data"]!]) })
++            }
++            object.removeValue(forKey: "links"); object.removeValue(forKey: "meta"); object.removeValue(forKey: "context")
++            return .object(object)
++        }
++        return .object(["data": .object(["type": .string("bundleIds"), "id": .string(appID),
++            "attributes": .object(attributes), "relationships": .object(["bundleIdCapabilities": .object(["data": .array(resources)])])])])
++    }
++}
++
++#if !PORTAL_CAPABILITY_TESTS
++public extension DeveloperPortal {
++    private func capabilityInputs(appID: String, session: Session, team: Team) async throws -> ([PortalJSON], PortalJSON) {
++        let base = Constants.URLs.developerPortalV1Base
++        var url = URL(string: "capabilities", relativeTo: base)!.absoluteURL
++        var metadata: [PortalJSON] = []
++        var seen = Set<URL>()
++        for page in 0..<20 {
++            guard seen.insert(url).inserted else { throw PortalCapabilityGraph.Failure.incomplete }
++            var request = URLRequest(url: url); request.httpMethod = "GET"
++            let result: PortalJSON = try await sendServicesRequest(request,
++                additionalParameters: page == 0 ? ["filter[capabilityType]": "capability,service", "filter[includeRequestable]": "true", "limit": "1000"] : nil,
++                session: session, team: team)
++            guard let entries = result["data"]?.array else { throw PortalCapabilityGraph.Failure.incomplete }
++            metadata += entries
++            guard let next = result["links"]?["next"]?.string else { break }
++            guard page < 19, let nextURL = URL(string: next, relativeTo: url)?.absoluteURL,
++                  nextURL.scheme == "https", nextURL.host == base.host, nextURL.path == url.path else { throw PortalCapabilityGraph.Failure.incomplete }
++            url = nextURL
++        }
++        guard !appID.isEmpty, appID.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }) else { throw PortalCapabilityGraph.Failure.incomplete }
++        var request = URLRequest(url: URL(string: "bundleIds/" + appID, relativeTo: base)!); request.httpMethod = "GET"
++        let graph: PortalJSON = try await sendServicesRequest(request, additionalParameters: [
++            "include": "bundleIdCapabilities,bundleIdCapabilities.capability,bundleIdCapabilities.appGroups,bundleIdCapabilities.merchantIds,bundleIdCapabilities.cloudContainers,bundleIdCapabilities.certificates,bundleIdCapabilities.appConsentBundleId,bundleIdCapabilities.parentBundleId,bundleIdCapabilities.associatedBundleIds,bundleIdCapabilities.macBundleId,bundleIdCapabilities.relatedAppConsentBundleIds,bundleIdCapabilities.mediaSharingProtocolIds",
++            "limit[bundleIdCapabilities]": "50"], session: session, team: team)
++        return (metadata, graph)
++    }
++
++    func fetchPortalCapabilities(appID: String, team: Team, session: Session) async throws -> [PortalCapability] {
++        let (metadata, graph) = try await capabilityInputs(appID: appID, session: session, team: team)
++        return try PortalCapabilityGraph.inventory(metadata: metadata, graph: graph, appID: appID)
++    }
++
++    func setPortalCapability(appID: String, capabilityID: String, enabled: Bool, team: Team, session: Session) async throws -> [PortalCapability] {
++        let (metadata, graph) = try await capabilityInputs(appID: appID, session: session, team: team)
++        let before = try PortalCapabilityGraph.inventory(metadata: metadata, graph: graph, appID: appID)
++        if before.first(where: { $0.id == capabilityID })?.enabled == enabled { return before }
++        let patch = try PortalCapabilityGraph.patch(metadata: metadata, graph: graph, appID: appID, capabilityID: capabilityID, enabled: enabled)
++        guard var payload = patch.object else { throw PortalCapabilityGraph.Failure.incomplete }
++        payload["teamId"] = .string(team.identifier)
++        var request = URLRequest(url: URL(string: "bundleIds/" + appID, relativeTo: Constants.URLs.developerPortalV1Base)!)
++        request.httpMethod = "PATCH"; request.httpBody = try JSONEncoder().encode(PortalJSON.object(payload))
++        let _: EmptyResponse = try await sendServicesRequest(request, session: session, team: team)
++        // Never infer success from a successful HTTP mutation alone.
++        for _ in 0..<3 {
++            let fresh = try await fetchPortalCapabilities(appID: appID, team: team, session: session)
++            if fresh.first(where: { $0.id == capabilityID })?.enabled == enabled { return fresh }
++        }
++        throw PortalCapabilityGraph.Failure.notConfirmed
++    }
++}
++#endif
