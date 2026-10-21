@@ -33,6 +33,16 @@ import Foundation
         {"data":{"type":"bundleIds","id":"SYNTHETIC","relationships":{"bundleIdCapabilities":{"data":[{"id":"missing","type":"bundleIdCapabilities"}],"links":{"next":"page2"}}}}}
         """)
         do { _ = try PortalCapabilityGraph.patch(metadata: metadata, graph: partial, appID: "SYNTHETIC", capabilityID: "CARPLAY_AUDIO", enabled: true); preconditionFailure("incomplete graph") } catch { }
+        var nestedGraph = graph.object!
+        var existing = graph["included"]!.array![0].object!
+        var relations = existing["relationships"]!.object!
+        relations["appGroups"] = .object(["data": .array([]), "links": .object(["next": .string("more-groups")])])
+        existing["relationships"] = .object(relations)
+        nestedGraph["included"] = .array([.object(existing)])
+        let existingMetadata = try json("""
+        [{"type":"capabilities","id":"UNKNOWN_ENABLED","attributes":{"name":"Existing","editable":true}}]
+        """).array!
+        do { _ = try PortalCapabilityGraph.patch(metadata: existingMetadata, graph: .object(nestedGraph), appID: "SYNTHETIC", capabilityID: "UNKNOWN_ENABLED", enabled: false); preconditionFailure("partial target relationships") } catch { }
         print("PASS dynamic CarPlay/unknown capability inventory, Apple edit restrictions, configuration requirements, exact App ID, complete graphs and preservation of unrelated settings/groups")
     }
 }

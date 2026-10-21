@@ -1,9 +1,9 @@
 diff --git a/Sources/DeveloperPortal/PortalCapabilities.swift b/Sources/DeveloperPortal/PortalCapabilities.swift
 new file mode 100644
-index 00000000..43e4fa98
+index 00000000..50c6eb91
 --- /dev/null
 +++ b/Sources/DeveloperPortal/PortalCapabilities.swift
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,191 @@
 +// Dynamic Developer Portal capabilities. Apple remains the authorization authority.
 +import Foundation
 +
@@ -115,11 +115,6 @@ index 00000000..43e4fa98
 +            guard var object = resources[index].object, var attributes = object["attributes"]?.object else { throw Failure.incomplete }
 +            attributes["enabled"] = .bool(enabled)
 +            object["attributes"] = .object(attributes)
-+            // Only relationships with actual data belong in a write, never navigation-only links.
-+            if let relationships = object["relationships"]?.object {
-+                object["relationships"] = .object(relationships.filter { $0.value["data"] != nil }.mapValues { .object(["data": $0["data"]!]) })
-+            }
-+            object.removeValue(forKey: "links"); object.removeValue(forKey: "meta"); object.removeValue(forKey: "context")
 +            resources[index] = .object(object); found = true
 +        }
 +        if !found && enabled {
