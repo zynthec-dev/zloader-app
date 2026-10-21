@@ -35,8 +35,6 @@ struct UserCustomizationsView: View {
     @State private var isInstallConfirmationEnabled: Bool = UserDefaults.standard.isInstallConfirmationEnabled
     @State private var isClearCustomizationsOnUninstallEnabled: Bool = UserDefaults.standard
         .isClearCustomizationsOnUninstallEnabled
-    @State private var isAutoLaunchAppAfterInstallEnabled: Bool = UserDefaults.standard
-        .isAutoLaunchAppAfterInstallEnabled
     @State private var autoFixAppGroupIDs: Bool = UserDefaults.standard.autoFixAppGroupIDs
     @State private var preferResignedIPA: Bool = UserDefaults.standard.preferResignedIPA
     @State private var pendingPreferIPAOngoing: Bool = false
@@ -570,18 +568,6 @@ struct UserCustomizationsView: View {
                     set: { newValue in
                         isClearCustomizationsOnUninstallEnabled = newValue
                         UserDefaults.standard.isClearCustomizationsOnUninstallEnabled = newValue
-                    }
-                )
-            )
-
-            toggleRow(
-                title: "Auto-Launch App After Install",
-                subtitle: "Automatically open apps after installation completes",
-                isOn: Binding(
-                    get: { isAutoLaunchAppAfterInstallEnabled },
-                    set: { newValue in
-                        isAutoLaunchAppAfterInstallEnabled = newValue
-                        UserDefaults.standard.isAutoLaunchAppAfterInstallEnabled = newValue
                     }
                 )
             )

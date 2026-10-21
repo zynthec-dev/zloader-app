@@ -158,10 +158,6 @@ public extension UserDefaults
         }
         set { self.set(newValue, forKey: #function) }
     }
-    @objc var isAutoLaunchAppAfterInstallEnabled: Bool {
-        get { self.bool(forKey: #function) }
-        set { self.set(newValue, forKey: #function) }
-    }
     @objc var deviceProbeTimeoutOverride: Int {
         get { self.integer(forKey: #function) }
         set { self.set(newValue, forKey: #function) }

@@ -465,16 +465,7 @@ final class AppManager: ObservableObject, @unchecked Sendable
             .install(app),
             handler: pipelineHandler,
             dbContext: dbContext,
-            completionHandler: { result in
-                if case .success(let installedApp) = result,
-                   UserDefaults.standard.isAutoLaunchAppAfterInstallEnabled,
-                   installedApp.bundleIdentifier != StoreApp.zloaderAppID {
-                    Task { @MainActor in
-                        UIApplication.shared.open(installedApp.openAppURL)
-                    }
-                }
-                completionHandler(result)
-            }
+            completionHandler: completionHandler
         )
     }
 
