@@ -1,0 +1,65 @@
+--- a/Sources/Models/AppID.swift
++++ b/Sources/Models/AppID.swift
+@@ -16,6 +16,8 @@
+     public var expirationDate: Date?
+     public var features: [Feature: String]
+     public var entitlements: [String: String]
++    /// Explicit managed capability requests; Apple remains the authority.
++    public var managedEntitlements: [String: any Sendable] = [:]
+ 
+     public init(identifier: String,
+                 name: String,
+@@ -50,6 +52,7 @@
+         for (key, value) in entitlements {
+             requestedEntitlements[key] = Self.portalValue(value)
+         }
++        requestedEntitlements.merge(managedEntitlements) { _, requested in requested }
+         for (feature, value) in changedFeatures(comparedTo: current) {
+             let entitlement: Entitlement?
+             switch feature {
+--- a/Sources/Models/AppBundle.swift
++++ b/Sources/Models/AppBundle.swift
+@@ -142,7 +142,13 @@
+     }
+ 
+     private func loadEntitlementsString() -> String {
+-        (try? MachOParser.entitlements(at: fileURL)) ?? ""
++        let signatureXML = (try? MachOParser.entitlements(at: fileURL)) ?? ""
++        // Preserve original requests in decrypted/re-signed IPAs. A previous
++        // signer may have dropped a capability before Apple approved it.
++        // Actual signed values override the sidecar; Apple profiles still decide
++        // which requested rights can be signed for the selected identity.
++        let sidecar = fileURL.appendingPathComponent("cyan.entitlements")
++        return EntitlementMetadata.mergedXML(signature: signatureXML, sidecar: try? Data(contentsOf: sidecar))
+     }
+ }
+ 
+--- /dev/null
++++ b/Sources/Models/EntitlementMetadata.swift
+@@ -0,0 +1,15 @@
++import Foundation
++
++/// Sidecar requests are input metadata, never proof of Apple authorization.
++public enum EntitlementMetadata {
++    public static func mergedXML(signature: String, sidecar: Data?) -> String {
++        guard let sidecar,
++              var requests = try? PropertyListSerialization.propertyList(from: sidecar, format: nil) as? [String: Any] else { return signature }
++        if let data = signature.data(using: .utf8),
++           let signed = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] {
++            requests.merge(signed) { _, actual in actual }
++        }
++        guard let xml = try? PropertyListSerialization.data(fromPropertyList: requests, format: .xml, options: 0) else { return signature }
++        return String(data: xml, encoding: .utf8) ?? signature
++    }
++}
+--- a/Sources/DeveloperPortal/AppIDs.swift
++++ b/Sources/DeveloperPortal/AppIDs.swift
+@@ -76,7 +76,7 @@
+             throw DeveloperPortalError.appIDDoesNotExist(identifier: appID.identifier)
+         }
+         let changes = appID.changedFeatures(comparedTo: current)
+-        guard !changes.isEmpty || appID.name != current.name else { return current }
++        guard !changes.isEmpty || !appID.managedEntitlements.isEmpty || !appID.entitlements.isEmpty || appID.name != current.name else { return current }
+         let parameters = appID.capabilityUpdateParameters(comparedTo: current)
+ 
+         let response: AppIDResponse = try await sendRequest(url: Constants.URLs.updateAppID, additionalParameters: parameters, session: session, team: team)

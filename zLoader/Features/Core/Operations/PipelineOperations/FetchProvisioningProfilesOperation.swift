@@ -380,16 +380,12 @@ private extension FetchProvisioningProfilesOperation{
                 bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier, expiresAt: profile.expirationDate,
                 certificates: profile.certificates.map { $0.rawDER }, devices: profile.deviceIDs, entitlements: profile.entitlements
             )
-            let omitted = EmbeddedProfileReuse.optionalCapabilityOmissions(snapshot, for: target)
-            let reduced = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
-                certificate: target.certificate, deviceID: target.deviceID,
-                entitlements: target.entitlements.filter { !omitted.contains($0.key) })
-            guard EmbeddedProfileReuse.accepts(snapshot, for: reduced, requiredDevices: registeredUDIDs) else { return false }
-            if !omitted.isEmpty {
-                context.recordOptionalEntitlementOmissions(omitted, for: app.bundleIdentifier)
-            }
-            return true
+            // Reuse only a profile authorizing the complete request. Otherwise
+            // renew/create before considering optional omissions: a cached profile
+            // cannot tell us whether Apple has since approved a capability.
+            return EmbeddedProfileReuse.accepts(snapshot, for: target, requiredDevices: registeredUDIDs)
         }
+
         let preferredUUID = app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier
             ? context.overrideProvisioningProfile?.uuid : nil
         let profile = try await PortalProfileResolver.resolve(list: {
@@ -489,6 +485,10 @@ private extension FetchProvisioningProfilesOperation{
         var targetFeatures: [ALTFeature: String] = [:]
         var droppedFeatures: Set<ALTFeature> = []
         
+        let managedRequests = ManagedCapabilityRequests.requests(from: entitlements.filter {
+            ALTFeature(entitlement: ALTEntitlement(rawValue: $0.key)) == nil
+        })
+
         // Filter applicable features
         for (key, value) in entitlements {
             guard let feature = ALTFeature(entitlement: ALTEntitlement(rawValue: key)) else { 
@@ -525,7 +525,7 @@ private extension FetchProvisioningProfilesOperation{
             let currentValue = currentFeatures[feature] ?? "false"
             return currentValue != targetValue
         }
-        guard needsUpdate else { 
+        guard needsUpdate || !managedRequests.isEmpty else {
             self.debugLog("[FetchProvisioningProfiles] Features for App ID \(appID.bundleIdentifier) are already satisfied. Skipping portal update.")
             return appID 
         }
@@ -535,7 +535,23 @@ private extension FetchProvisioningProfilesOperation{
         appID.features.merge(targetFeatures) { _, requested in requested }
         
         do {
-            let updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team, requireFeatureReadback: false)
+            var updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team, requireFeatureReadback: false)
+            // Managed entitlements are not limited to the static legacy service
+            // list. Ask Apple separately so one unavailable right cannot prevent
+            // another approved capability from being enabled.
+            if team.type.isPaid {
+                for (key, value) in managedRequests.sorted(by: { $0.key < $1.key }) {
+                    var request = updated
+                    request.managedEntitlements = [key: value]
+                    do {
+                        updated = try await DeveloperPortalProxy.shared.updateAppID(request, team: team, requireFeatureReadback: false)
+                        updated.managedEntitlements = [:]
+                    } catch ServerError.underlyingError(let code, let message) where code != 401 && code != 429 && !(500...599).contains(code) {
+                        // A newly issued Apple profile decides authorization.
+                        self.debugLog("[FetchProvisioningProfiles] Apple rejected managed capability \(key): \(message)")
+                    }
+                }
+            }
             self.verboseLog("[FetchProvisioningProfiles] Updated features for App ID \(updated.bundleIdentifier).")
             return updated
         } catch {

@@ -125,7 +125,7 @@ public class DeveloperPortalProxy {
         }
         let changes = appID.changedFeatures(comparedTo: current)
         let rename = appID.name != current.name
-        guard !changes.isEmpty || rename else { return current }
+        guard !changes.isEmpty || !appID.managedEntitlements.isEmpty || !appID.entitlements.isEmpty || rename else { return current }
         let accepted = try await ALTAppleAPI.shared.updateAppID(appID, team: team, session: session)
         // Signing verifies the Apple-signed profile, which is authoritative for
         // entitlements. The service flag list does not expose every entitlement.

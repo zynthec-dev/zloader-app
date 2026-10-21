@@ -77,7 +77,9 @@ enum EmbeddedProfileReuse {
         // Signature identity is generated from Apple's profile. Unsupported
         // application capabilities are omitted, never invented in the profile.
         var protected: Set<String> = ["application-identifier", "com.apple.developer.team-identifier", "get-task-allow",
-            "com.apple.developer.networking.networkextension"]
+            "com.apple.developer.networking.networkextension", "com.apple.developer.carplay-audio",
+            "com.apple.developer.carplay-maps", "com.apple.developer.playable-content"]
+        protected.formUnion(target.entitlements.keys.filter { $0.hasPrefix("com.apple.developer.carplay-") })
         if target.bundleID.hasPrefix("com.zynthec.zLoader") {
             protected.insert("com.apple.security.application-groups")
         }
@@ -114,5 +116,18 @@ enum ManagedProfileNaming {
 
     static func uniqueName(base: String, identity: String) -> String {
         base + " [" + identity + "]"
+    }
+}
+
+/// Unknown/new managed capabilities must reach Apple rather than disappear at a
+/// local allow-list. Known service capabilities keep their legacy service IDs.
+enum ManagedCapabilityRequests {
+    static func requests(from entitlements: [String: any Sendable]) -> [String: any Sendable] {
+        entitlements.filter { key, value in
+            guard key.hasPrefix("com.apple.developer."), key != "com.apple.developer.team-identifier" else { return false }
+            if let flag = value as? Bool, !flag { return false }
+            if let values = value as? [Any], values.isEmpty { return false }
+            return true
+        }
     }
 }

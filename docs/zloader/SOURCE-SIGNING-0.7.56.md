@@ -7,7 +7,7 @@ Future releases use the new source as recorded in `RELEASE-PUBLISHING.md`.
 
 The managed SideSign patch referenced `SigningEntitlements`, but its implementation
 was missing from the dependency patches. The additional
-`sidesign-signing-entitlements.patch` supplies the public helper used by SideSign
+`sidesign-managed-signing.patch` (including the consolidated entitlement patch) supplies the public helper used by SideSign
 and the host app. The patch application script installs it idempotently without
 changing the pinned submodule commit.
 

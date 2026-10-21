@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/../.."
+sh zLoader/scripts/apply-dependency-patches.sh
 # Uses the actual pinned checkouts from a resolved Xcode build; no new dependencies.
 root=$(pwd)
 package="$root/.build/CertificateCompatibility"
@@ -26,4 +27,16 @@ work=$(mktemp -d /tmp/zloader-codesignkit-test.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$work/private.pem" -out "$work/certificate.pem" -subj '/CN=zLoader Signing Parser Test' -days 1 > /dev/null 2>&1
 openssl x509 -in "$work/certificate.pem" -outform DER -out "$work/certificate.der"
+lipo /bin/echo -thin arm64e -output "$work/fixture"
 SWIFTCI_USE_LOCAL_DEPS=1 swift run --package-path "$package" Compatibility "$work"
+
+codesign -d --entitlements - --xml "$work/fixture" > "$work/decoded.plist" 2> "$work/diagnostics"
+if rg -q 'invalid entitlements' "$work/diagnostics"; then cat "$work/diagnostics"; exit 1; fi
+codesign --verify --strict "$work/fixture"
+python3 - "$work/decoded.plist" <<'PYTEST'
+import plistlib, sys
+values = plistlib.load(open(sys.argv[1], 'rb'))
+assert values['com.apple.developer.carplay-audio'] is True
+assert values['test-array'] == ['one', 'two']
+print('PASS Apple codesign reads and verifies the generated DER signature without entitlement warnings')
+PYTEST

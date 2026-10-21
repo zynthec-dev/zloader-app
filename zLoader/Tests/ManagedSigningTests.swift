@@ -8,6 +8,18 @@ struct ManagedSigningTests {
         precondition(CertificateType.distribution.portalType == "DISTRIBUTION")
         precondition(CertificateType.iosDistribution.portalType == "IOS_DISTRIBUTION")
         precondition(CertificateType.developerID.portalType == nil)
+        let originalRequests = try PropertyListSerialization.data(fromPropertyList: [
+            "com.apple.developer.carplay-audio": true, "com.apple.developer.future": ["value"],
+            "application-identifier": "OLD.app"], format: .xml, options: 0)
+        let signedRequests = try PropertyListSerialization.data(fromPropertyList: [
+            "application-identifier": "TEAM.app", "com.apple.developer.future": false], format: .xml, options: 0)
+        let xml = String(data: signedRequests, encoding: .utf8)!
+        let mergedXML = EntitlementMetadata.mergedXML(signature: xml, sidecar: originalRequests)
+        let merged = try PropertyListSerialization.propertyList(from: Data(mergedXML.utf8), format: nil) as! [String: Any]
+        precondition(merged["com.apple.developer.carplay-audio"] as? Bool == true)
+        precondition(merged["application-identifier"] as? String == "TEAM.app")
+        precondition(merged["com.apple.developer.future"] as? Bool == false)
+        precondition(EntitlementMetadata.mergedXML(signature: xml, sidecar: Data([0, 1])) == xml)
         // Regression: human-readable capability keys were ignored by Apple's legacy API.
         precondition(Feature(entitlement: .networkExtensions)?.rawValue == "NWEXT04537")
         precondition(Feature(entitlement: .vpn)?.rawValue == "V66P55NK2I")

@@ -3,6 +3,10 @@
 set -eu
 cd "$(dirname "$0")/../.."
 sh zLoader/scripts/apply-dependency-patches.sh
+# Resolve first so dependency patches also apply on a clean checkout.
+xcodebuild -resolvePackageDependencies -project zLoader.xcodeproj -scheme zLoader \
+  -clonedSourcePackagesDirPath .build/SourcePackages -skipPackageUpdates
+sh zLoader/scripts/apply-dependency-patches.sh
 xcodebuild -project zLoader.xcodeproj -scheme zLoader -configuration Release \
   -destination 'generic/platform=iOS' -derivedDataPath .build/Device \
   -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution \

@@ -58,6 +58,19 @@ struct EmbeddedProfileReuseTests {
         print("PASS certificate rotation requires a newly authorized profile; original Xcode key is not required")
         precondition(EmbeddedProfileReuse.accepts(profile(devices: ["SYNTHETIC-DEVICE"]), for: target, now: now))
         print("PASS embedded profile reuse: exact identity/team/certificate, expiry/device and all required capabilities; seven incompatible cases rejected")
+        let carplay = "com.apple.developer.carplay-audio"
+        let carplayTarget = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+            certificate: original, deviceID: target.deviceID, entitlements: [carplay: true])
+        let futureExpiry = Date().addingTimeInterval(3600).timeIntervalSince1970
+        precondition(!EmbeddedProfileReuse.accepts(profile(expiry: futureExpiry), for: carplayTarget))
+        precondition(EmbeddedProfileReuse.optionalCapabilityOmissions(profile(expiry: futureExpiry), for: carplayTarget).isEmpty)
+        precondition(EmbeddedProfileReuse.accepts(profile(expiry: futureExpiry, entitlements: [carplay: true]), for: carplayTarget))
+        let requests = ManagedCapabilityRequests.requests(from: [carplay: true,
+            "com.apple.developer.future-capability": ["value"], "com.apple.developer.disabled": false,
+            "com.apple.developer.empty": [String](), "application-identifier": "OTHER.app",
+            "com.apple.developer.team-identifier": "OTHER", "get-task-allow": true])
+        precondition(Set(requests.keys) == [carplay, "com.apple.developer.future-capability"])
+        print("PASS CarPlay cannot be stripped; later Apple grants and unknown managed entitlement requests are preserved")
         let memoryKey = "com.apple.developer.kernel.increased-memory-limit"
         var memoryRequirements = values
         memoryRequirements[memoryKey] = true

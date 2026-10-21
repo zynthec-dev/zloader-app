@@ -71,8 +71,12 @@ For data-preserving Xcode installation, copy `CodeSigning.xcconfig.sample` to th
 ignored `CodeSigning.xcconfig` and keep the installed host ID and App Group.
 See [the audited Xcode setup](docs/zloader/PROJECT-AUDIT.md).
 
-Open `zLoader.xcodeproj`, scheme `zLoader`. The dependency patch must also be
-applied before a direct Xcode build. It is tracked separately, idempotent and
+Open `zLoader.xcodeproj`, scheme `zLoader`. Resolve packages into
+`.build/SourcePackages` first, then run `apply-dependency-patches.sh` before a
+direct Xcode build. This also patches CodeSignKit's DER entitlement encoder;
+`build-unsigned.sh` performs both steps automatically. SideSign changes are
+consolidated in `sidesign-managed-signing.patch` so overlapping patches can be
+applied repeatedly. It is tracked separately, idempotent and
 leaves the original dependency gitlinks intact.
 
 The single sideloading release is `outputs/zLoader-resignable.ipa` (also aliased as

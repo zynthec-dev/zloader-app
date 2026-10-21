@@ -1,8 +1,50 @@
-diff --git a/Sources/CodeSigning/CodeSignerAPI.swift b/Sources/CodeSigning/CodeSignerAPI.swift
-index c43fd90..697a28a 100644
+--- /dev/null
++++ b/Sources/Archiver/ArchivePathPolicy.swift
+@@ -0,0 +1,28 @@
++import Foundation
++
++/// Keep archive writes inside their extraction root, including existing symlinks.
++public enum ArchivePathPolicy {
++    public static func destination(for filename: String, in directory: URL) throws -> URL {
++        guard !filename.isEmpty, !filename.hasPrefix("/"), !filename.contains("\\"),
++              !filename.contains("\0"), !filename.split(separator: "/").contains("..") else {
++            throw CocoaError(.fileReadCorruptFile)
++        }
++        let root = directory.standardizedFileURL.resolvingSymlinksInPath()
++        var target = root
++        for component in filename.split(separator: "/") where component != "." {
++            target.appendPathComponent(String(component))
++            // Resolving a non-existent leaf does not reliably resolve its parent
++            // symlinks on every Foundation platform. Reject them before writing.
++            if let type = try? FileManager.default.attributesOfItem(atPath: target.path)[.type] as? FileAttributeType,
++               type == .typeSymbolicLink {
++                throw CocoaError(.fileReadCorruptFile)
++            }
++        }
++        target = target.standardizedFileURL
++        let prefix = root.path.hasSuffix("/") ? root.path : root.path + "/"
++        guard target.path.hasPrefix(prefix), target.path != root.path else {
++            throw CocoaError(.fileReadCorruptFile)
++        }
++        return target
++    }
++}
+--- a/Sources/Archiver/FileManagerZip.swift
++++ b/Sources/Archiver/FileManagerZip.swift
+@@ -32,8 +32,8 @@
+                 continue
+             }
+ 
+-            let outputURL =
+-                directoryURL.appendingPathComponent(name)
++            try Task.checkCancellation()
++            let outputURL = try ArchivePathPolicy.destination(for: name, in: directoryURL)
+ 
+             let externalAttributes = archive.currentFileExternalAttributes()
+             var permissions = (externalAttributes >> 16) & 0x01FF
 --- a/Sources/CodeSigning/CodeSignerAPI.swift
 +++ b/Sources/CodeSigning/CodeSignerAPI.swift
-@@ -25,6 +25,7 @@ public extension CodeSignerAPI {
+@@ -25,6 +25,7 @@
  public struct AppBundleSigner: CodeSignerAPI, Sendable {
      public let team: Team
      public let keyStore: KeyStore
@@ -10,7 +52,7 @@ index c43fd90..697a28a 100644
  
      private enum SigningTargetType: CustomStringConvertible {
          case mainAppBundleDirectory
-@@ -55,9 +56,10 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+@@ -55,9 +56,10 @@
          }
      }
  
@@ -22,24 +64,25 @@ index c43fd90..697a28a 100644
      }
  
      public func signApp(at appURL: URL, provisioningProfiles profiles: [ProvisioningProfile], progress: Progress? = nil) async throws
-@@ -75,10 +77,13 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+@@ -75,10 +77,13 @@
          verboseLog("[SideSign] BundleID: \(appBundle.bundleIdentifier)")
  
          func profile(for app: AppBundle) -> ProvisioningProfile? {
 -            for p in profiles where p.bundleIdentifier == app.bundleIdentifier {
 -                return p
+-            }
+-            return profiles.first
 +            let candidates = profiles.filter {
 +                SigningEntitlements.matchesBundleIdentifier($0.bundleIdentifier, bundleIdentifier: app.bundleIdentifier)
 +            }.sorted { $0.bundleIdentifier.count > $1.bundleIdentifier.count }
 +            return candidates.first {
 +                (try? SigningEntitlements.prepare(application: entitlementOverrides[app.bundleIdentifier] ?? app.entitlements,
 +                    profile: $0.entitlements, teamID: $0.teamIdentifier, bundleIdentifier: app.bundleIdentifier)) != nil
-             }
--            return profiles.first
++            }
          }
  
          var entitlementsByURL: [URL: String] = [:]
-@@ -92,35 +97,12 @@ public struct AppBundleSigner: CodeSignerAPI, Sendable {
+@@ -92,35 +97,12 @@
                  throw SignerError.missingProvisioningProfile(bundleIdentifier: app.bundleIdentifier)
              }
  
@@ -81,11 +124,100 @@ index c43fd90..697a28a 100644
  
              verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
  
-diff --git a/Sources/DeveloperPortal/AppIDs.swift b/Sources/DeveloperPortal/AppIDs.swift
-index efb5c44..65701c7 100644
+--- /dev/null
++++ b/Sources/CodeSigning/SigningEntitlements.swift
+@@ -0,0 +1,88 @@
++import Foundation
++import CoreFoundation
++
++/// Derive signing rights from the selected Apple profile without granting
++/// capabilities that the profile does not authorize.
++public enum SigningEntitlements {
++    public enum Failure: LocalizedError {
++        case unauthorized(String)
++
++        public var errorDescription: String? {
++            switch self {
++            case .unauthorized(let key):
++                return "The provisioning profile does not authorize entitlement '\(key)'."
++            }
++        }
++    }
++
++    public static func matchesBundleIdentifier(_ rule: String, bundleIdentifier: String) -> Bool {
++        guard !bundleIdentifier.isEmpty, !bundleIdentifier.contains("*") else { return false }
++        if rule == bundleIdentifier || rule == "*" { return true }
++        guard rule.hasSuffix(".*"), rule.filter({ $0 == "*" }).count == 1 else { return false }
++        let prefix = String(rule.dropLast())
++        return bundleIdentifier.hasPrefix(prefix) && bundleIdentifier.count > prefix.count
++    }
++
++    public static func prepare(application: [String: Any], profile: [String: Any], teamID: String,
++                        bundleIdentifier: String? = nil) throws -> [String: Any] {
++        let identityKeys: Set<String> = ["application-identifier", "com.apple.developer.team-identifier", "get-task-allow"]
++        var result = profile.filter { identityKeys.contains($0.key) }
++
++        if let bundleIdentifier {
++            guard let identity = profile["application-identifier"] as? String,
++                  let dot = identity.firstIndex(of: "."), dot != identity.startIndex,
++                  matchesBundleIdentifier(String(identity[identity.index(after: dot)...]), bundleIdentifier: bundleIdentifier) else {
++                throw Failure.unauthorized("application-identifier")
++            }
++            result["application-identifier"] = String(identity[...dot]) + bundleIdentifier
++        } else if let identity = profile["application-identifier"] as? String, identity.contains("*") {
++            // Wildcard profiles need the actual target ID before signing.
++            throw Failure.unauthorized("application-identifier")
++        }
++        if let profileTeam = profile["com.apple.developer.team-identifier"] {
++            guard profileTeam as? String == teamID else {
++                throw Failure.unauthorized("com.apple.developer.team-identifier")
++            }
++        }
++
++        for key in application.keys.sorted() where !identityKeys.contains(key) {
++            guard let requested = application[key] else { continue }
++            if let number = requested as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID(), !number.boolValue { continue }
++            if let values = requested as? [Any], values.isEmpty { continue }
++
++            let value: Any
++            if key == "keychain-access-groups", let groups = requested as? [String] {
++                value = try groups.map { group in
++                    guard let dot = group.firstIndex(of: "."), dot != group.startIndex else {
++                        throw Failure.unauthorized(key)
++                    }
++                    return teamID + group[dot...]
++                }
++            } else if key == "com.apple.security.application-groups", let groups = requested as? [String],
++                      let allowed = profile[key] as? [String] {
++                value = groups.map { allowed.contains($0) ? $0 : $0 + "." + teamID }
++            } else {
++                value = requested
++            }
++            guard authorizes(profile[key], requested: value) else { throw Failure.unauthorized(key) }
++            result[key] = value
++        }
++        return result
++    }
++
++    private static func authorizes(_ allowed: Any?, requested: Any) -> Bool {
++        guard let allowed else { return false }
++        if let values = requested as? [Any] {
++            guard let rules = allowed as? [Any] else { return false }
++            return values.allSatisfy { value in rules.contains { authorizes($0, requested: value) } }
++        }
++        if let value = requested as? String, let rule = allowed as? String {
++            let pattern = "^" + NSRegularExpression.escapedPattern(for: rule).replacingOccurrences(of: "\\*", with: ".*") + "$"
++            return value.range(of: pattern, options: .regularExpression) != nil
++        }
++        if let value = requested as? NSNumber, let rule = allowed as? NSNumber {
++            guard (CFGetTypeID(value) == CFBooleanGetTypeID()) == (CFGetTypeID(rule) == CFBooleanGetTypeID()) else { return false }
++        }
++        return (requested as? NSObject)?.isEqual(allowed) == true
++    }
++}
 --- a/Sources/DeveloperPortal/AppIDs.swift
 +++ b/Sources/DeveloperPortal/AppIDs.swift
-@@ -69,20 +69,15 @@ public extension DeveloperPortal {
+@@ -69,20 +69,15 @@
          debugLog("[SideSign] updateAppID starting...")
          verboseLog("[SideSign] AppID: \(appID.bundleIdentifier), Team: \(team.name)")
  
@@ -109,16 +241,282 @@ index efb5c44..65701c7 100644
 +            throw DeveloperPortalError.appIDDoesNotExist(identifier: appID.identifier)
          }
 +        let changes = appID.changedFeatures(comparedTo: current)
-+        guard !changes.isEmpty || appID.name != current.name else { return current }
++        guard !changes.isEmpty || !appID.managedEntitlements.isEmpty || !appID.entitlements.isEmpty || appID.name != current.name else { return current }
 +        let parameters = appID.capabilityUpdateParameters(comparedTo: current)
  
          let response: AppIDResponse = try await sendRequest(url: Constants.URLs.updateAppID, additionalParameters: parameters, session: session, team: team)
  
-diff --git a/Sources/DeveloperPortal/Certificates.swift b/Sources/DeveloperPortal/Certificates.swift
-index 6127e16..e1caa37 100644
+--- /dev/null
++++ b/Sources/DeveloperPortal/AppleLoginCompatibility.swift
+@@ -0,0 +1,69 @@
++import Foundation
++
++// Adapted from SideStore/SideSign PR #5 (NiceAesth) and SideStore commit
++// 34f61f2. Keep the Android ADI identity scoped to GrandSlam endpoints;
++// Apple's /auth/verify endpoints still require the original anisette identity.
++enum AppleLoginCompatibility {
++    @TaskLocal static var pushedCodeHandled = false
++    @TaskLocal static var useWindowsIdentity = false
++
++    enum Phase: String, Sendable {
++        case initialization = "init"
++        case proof = "complete"
++        case appTokens = "apptokens"
++        case other
++    }
++
++    struct HTTPFailure: LocalizedError, Sendable {
++        let statusCode: Int
++        let phase: Phase
++        let retryAfter: TimeInterval?
++
++        var errorDescription: String? {
++            let step: String
++            switch phase {
++            case .initialization: step = "starting sign-in"
++            case .proof: step = "verifying sign-in"
++            case .appTokens: step = "requesting the app token"
++            case .other: step = "contacting Apple"
++            }
++            return "Apple returned HTTP \(statusCode) while \(step). Please wait a moment and try again."
++        }
++    }
++
++    // One fresh SRP attempt, scoped to this login, only after an HTTP 503
++    // at initialization or proof. Never replay a proof or a verification code.
++    static func retryHandshake503<Result: Sendable>(after error: any Error,
++                                       pause: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) },
++                                       attempt: @Sendable () async throws -> Result) async throws -> Result {
++        guard let failure = error as? HTTPFailure, failure.statusCode == 503,
++              (failure.phase == .initialization || failure.phase == .proof), !useWindowsIdentity else { throw error }
++        if let retryAfter = failure.retryAfter,
++           !retryAfter.isFinite || retryAfter < 0 || retryAfter > 30 { throw error }
++        let seconds = max(5, failure.retryAfter ?? 5)
++        try await pause(seconds)
++        try Task.checkCancellation()
++        return try await $useWindowsIdentity.withValue(true) {
++            try await attempt()
++        }
++    }
++
++    private static let androidClientInfo = "<Pixel 7> <Android;14;UQ1A.240205.002> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
++
++    // Windows descriptor reported working where the Android descriptor yields
++    // non-plist 503 responses: Dadoum/anisette-v3-server issue #61 (2026-10-16).
++    private static let windowsClientInfo = "<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
++
++    static func clientInfo(for url: URL, anisetteClientInfo: String) -> String {
++        if url.scheme == "https", url.host == "gsa.apple.com", url.path.hasPrefix("/grandslam/") {
++            return useWindowsIdentity ? windowsClientInfo : androidClientInfo
++        }
++        return anisetteClientInfo
++    }
++
++    static func authenticationType(response: [String: any Sendable], status: [String: any Sendable]?) -> String? {
++        (status?["au"] as? String)
++            ?? (response["au"] as? String)
++            ?? ((status?["hsc"] as? Int) == 409 ? "pushedCode" : nil)
++    }
++}
+--- a/Sources/DeveloperPortal/Authentication.swift
++++ b/Sources/DeveloperPortal/Authentication.swift
+@@ -60,7 +60,17 @@
+         ]
+ 
+         debugLog("[SideSign] Sending authentication 'init' request...")
+-        let initResponse = try await sendAuthenticationRequest(parameters: initParameters, anisetteData: anisetteData)
++        let initResponse: [String: any Sendable]
++        do {
++            initResponse = try await sendAuthenticationRequest(parameters: initParameters, anisetteData: anisetteData)
++        } catch {
++            return try await AppleLoginCompatibility.retryHandshake503(after: error) {
++                try await authenticate(appleID: unsanitizedAppleID, password: password,
++                    anisetteData: anisetteData, xcodeVersion: xcodeVersion,
++                    machinePassword: machinePassword, accountRepairHandler: accountRepairHandler,
++                    verificationHandler: verificationHandler)
++            }
++        }
+ 
+         guard let c = initResponse["c"] as? String,
+               let salt = initResponse["s"] as? Data,
+@@ -123,7 +133,19 @@
+             "u": sanitizedAppleID
+         ]
+ 
+-        let completeResponseDictionary = try await sendAuthenticationRequest(parameters: completeParameters, anisetteData: anisetteData)
++        let completeResponseDictionary: [String: any Sendable]
++        do {
++            completeResponseDictionary = try await sendAuthenticationRequest(parameters: completeParameters, anisetteData: anisetteData)
++        } catch {
++            // Start a fresh SRP exchange: the old public key, challenge and proof
++            // must not be replayed when changing the client identity.
++            return try await AppleLoginCompatibility.retryHandshake503(after: error) {
++                try await authenticate(appleID: unsanitizedAppleID, password: password,
++                    anisetteData: anisetteData, xcodeVersion: xcodeVersion,
++                    machinePassword: machinePassword, accountRepairHandler: accountRepairHandler,
++                    verificationHandler: verificationHandler)
++            }
++        }
+         debugLog("[SideSign] SRP complete step finished.")
+ 
+         guard let encryptedData = completeResponseDictionary["spd"] as? Data else {
+@@ -185,40 +207,45 @@
+         }
+ 
+         verboseLog("[SideSign] Parse complete. dsid: \(dsid), token: \(idmsToken)")
+-        
++
+         // 2FA auth type
+         let statusDictionary = completeResponseDictionary["Status"] as? [String: any Sendable]
+-        let authType = (statusDictionary?["au"] as? String)
+-           ?? (completeResponseDictionary["au"] as? String)
++        let authType = AppleLoginCompatibility.authenticationType(response: completeResponseDictionary, status: statusDictionary)
+         verboseLog("[SideSign] Authentication status type: \(authType ?? "nil")")
+ 
+         let twoFactorAuthContext = TwoFactorAuthContext(
+-            dsid: dsid, 
+-            idmsToken: idmsToken, 
+-            anisetteData: anisetteData, 
++            dsid: dsid,
++            idmsToken: idmsToken,
++            anisetteData: anisetteData,
+             xcodeVersion: xcodeVersion
+         )
+ 
+         switch authType {
+-            case "trustedDeviceSecondaryAuth", "trustedDevice", "secondaryAuth", "sms", "voice", "phone":
+-                let isTrustedDevice = (authType == "trustedDeviceSecondaryAuth" || authType == "trustedDevice")
++            case "trustedDeviceSecondaryAuth", "trustedDevice", "secondaryAuth", "sms", "voice", "phone", "pushedCode":
++                let pushedCode = authType == "pushedCode"
++                guard !pushedCode || !AppleLoginCompatibility.pushedCodeHandled else {
++                    throw DeveloperPortalError.requiresTwoFactorAuthentication
++                }
++                let isTrustedDevice = pushedCode || authType == "trustedDeviceSecondaryAuth" || authType == "trustedDevice"
+                 try await handle2FARequest(
+                     isTrustedDevice: isTrustedDevice,
+                     completeResponseDictionary: completeResponseDictionary,
+                     statusDictionary: statusDictionary,
+                     context: twoFactorAuthContext,
+-                    verificationHandler: verificationHandler
++                    verificationHandler: verificationHandler,
++                    codeAlreadySent: pushedCode
+                 )
+-                // recur coz we just solved 2FA above and this invocation shouldn't come to this case
+-                return try await authenticate(
+-                    appleID: unsanitizedAppleID, 
+-                    password: password, 
+-                    anisetteData: anisetteData, 
+-                    xcodeVersion: xcodeVersion, 
+-                    machinePassword: machinePassword, 
+-                    accountRepairHandler: accountRepairHandler, 
+-                    verificationHandler: verificationHandler
+-                )
++                return try await AppleLoginCompatibility.$pushedCodeHandled.withValue(AppleLoginCompatibility.pushedCodeHandled || pushedCode) {
++                    try await authenticate(
++                        appleID: unsanitizedAppleID,
++                        password: password,
++                        anisetteData: anisetteData,
++                        xcodeVersion: xcodeVersion,
++                        machinePassword: machinePassword,
++                        accountRepairHandler: accountRepairHandler,
++                        verificationHandler: verificationHandler
++                    )
++                }
+ 
+             case "repair":
+                 let directRepairURL = completeResponseDictionary["repairUrl"] as? String
+@@ -308,7 +335,7 @@
+ 
+         let headers: [String: String] = [
+             "Content-Type": "text/x-xml-plist",
+-            "X-MMe-Client-Info": anisetteData.clientInfo,
++            "X-MMe-Client-Info": AppleLoginCompatibility.clientInfo(for: requestURL, anisetteClientInfo: anisetteData.clientInfo),
+             "Accept": "*/*",
+             "User-Agent": h.grandSlam.userAgent,
+             "Connection": "close"
+@@ -329,13 +356,18 @@
+ 
+         let httpResponse = response as? HTTPURLResponse
+         let statusCode = httpResponse?.statusCode ?? 0
++        let phase = AppleLoginCompatibility.Phase(rawValue: requestParameters["o"] as? String ?? "") ?? .other
++        let httpFailure = AppleLoginCompatibility.HTTPFailure(statusCode: statusCode, phase: phase,
++            retryAfter: httpResponse?.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init))
+ 
+         guard !data.isEmpty else {
++            if !(200..<300).contains(statusCode) { throw httpFailure }
+             debugLog("[SideSign] Auth endpoint returned 0 bytes (HTTP \(statusCode))")
+             throw ServerError.badServerResponse(reason: "Auth endpoint returned empty response (0 bytes)", jsonPayload: "0 bytes")
+         }
+ 
+         guard let responseDictionary = parsePlistOrJSON(data) else {
++            if !(200..<300).contains(statusCode) { throw httpFailure }
+             let rawStr = String(data: data, encoding: .utf8) ?? data.hexEncodedString()
+             debugLog("[SideSign] Auth endpoint returned invalid response format: \(rawStr)")
+             throw ServerError.invalidResponseFormat(rawPayload: rawStr)
+@@ -572,7 +604,8 @@
+                             completeResponseDictionary: [String: any Sendable],
+                             statusDictionary: [String: any Sendable]?,
+                             context: TwoFactorAuthContext,
+-                            verificationHandler: VerificationHandler?) async throws 
++                            verificationHandler: VerificationHandler?,
++                            codeAlreadySent: Bool = false) async throws
+     {
+         guard let verificationHandler else {
+             debugLog("[SideSign] 2FA required but no verificationHandler provided")
+@@ -586,11 +619,10 @@
+ 
+         let preferredMode: TwoFactorDeliveryMode = isTrustedDevice ? .trustedDevice : .sms
+ 
+-        var currentRequest: TwoFactorRequest = .selectDeliveryMethod(
+-            preferredMode: preferredMode,
+-            phoneNumbers: phoneNumbers
+-        )
+-        var activeChannel: TwoFactorAuthChannel? = nil
++        var currentRequest: TwoFactorRequest = codeAlreadySent
++            ? .trustedDevice(error: nil)
++            : .selectDeliveryMethod(preferredMode: preferredMode, phoneNumbers: phoneNumbers)
++        var activeChannel: TwoFactorAuthChannel? = codeAlreadySent ? .trustedDevice : nil
+ 
+         while true {
+             debugLog("[SideSign] Prompting user with 2FA request (\(currentRequest))...")
+@@ -720,9 +752,9 @@
+         let errorMsg = (responseDict?["em"] as? String)
+                    ?? ((responseDict?["Status"] as? [String: any Sendable])?["em"] as? String)
+ 
+-        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts 
+-            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested 
+-            || errorCode == GrandSlamAuthErrorCodes.rateLimited 
++        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts
++            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested
++            || errorCode == GrandSlamAuthErrorCodes.rateLimited
+             || statusCode == HTTPStatusCodes.tooManyRequests
+         {
+             let msg = errorMsg ?? "Verification codes cannot be sent to this phone number at this time. Please try again later."
+@@ -839,9 +871,9 @@
+                     ?? xmluiMessage
+                     ?? xmluiTitle
+ 
+-        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts 
+-            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested 
+-            || errorCode == GrandSlamAuthErrorCodes.rateLimited 
++        if errorCode == GrandSlamAuthErrorCodes.tooManyAttempts
++            || errorCode == GrandSlamAuthErrorCodes.tooManyCodesRequested
++            || errorCode == GrandSlamAuthErrorCodes.rateLimited
+             || statusCode == HTTPStatusCodes.tooManyRequests
+         {
+             let msg = errorMsg ?? "Too many verification code attempts. Please try again later."
+@@ -900,7 +932,7 @@
+             "X-Apple-I-MD": a.oneTimePassword,
+             "X-Apple-I-MD-M": a.machineID,
+             "X-Mme-Device-Id": a.deviceID,
+-            "X-MMe-Client-Info": a.clientInfo,
++            "X-MMe-Client-Info": AppleLoginCompatibility.clientInfo(for: url, anisetteClientInfo: a.clientInfo),
+             "X-Apple-I-MD-LU": a.localUserID,
+             "X-Apple-I-MD-RINFO": a.routingInfo,
+             "X-Apple-I-SRL-NO": a.serialNumber,
 --- a/Sources/DeveloperPortal/Certificates.swift
 +++ b/Sources/DeveloperPortal/Certificates.swift
-@@ -16,7 +16,17 @@ public extension DeveloperPortal {
+@@ -16,7 +16,17 @@
          verboseLog("[SideSign] Team: \(team.name) (\(team.identifier)), Type: \(team.type)")
  
          let endpoint: X509Certificate.CertificateEndpoint = (team.type != .free) ? .developerPortal : .developerServices2
@@ -136,7 +534,7 @@ index 6127e16..e1caa37 100644
          var request = URLRequest(url: endpoint.url)
          request.httpMethod = "GET"
  
-@@ -58,55 +68,29 @@ public extension DeveloperPortal {
+@@ -58,55 +68,29 @@
  
          let csrString = String(decoding: certRequest.csrData, as: UTF8.self)
  
@@ -213,7 +611,7 @@ index 6127e16..e1caa37 100644
  
          debugLog("[SideSign] addCertificate succeeded")
          verboseLog("[SideSign] SerialNumber: \(cert.serialNumber)")
-@@ -114,24 +98,59 @@ public extension DeveloperPortal {
+@@ -114,24 +98,59 @@
      }
  
      func revokeCertificate(_ certificate: X509Certificate, for team: Team, session: Session) async throws -> Bool {
@@ -275,16 +673,14 @@ index 6127e16..e1caa37 100644
 +        let _: EmptyResponse = try await sendServicesRequest(request, additionalParameters: nil, session: session, team: team)
 +    }
 +
-+}
+ }
 +
 +private struct CreatedCertificateResponse: Decodable {
 +    let data: CertificatesResponseDeveloperPortal.Item
- }
-diff --git a/Sources/DeveloperPortal/DeveloperPortalAPI.swift b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
-index dfea7cc..e999075 100644
++}
 --- a/Sources/DeveloperPortal/DeveloperPortalAPI.swift
 +++ b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
-@@ -308,7 +308,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -308,7 +308,7 @@
          )
  
          let url = URL(string: "\(requestURL.absoluteString)?clientId=\(h.developerServices.clientID)")!
@@ -293,7 +689,7 @@ index dfea7cc..e999075 100644
          request.httpMethod = "POST"
          request.httpBody = bodyData
  
-@@ -318,6 +318,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -318,6 +318,7 @@
              "User-Agent": h.developerServices.userAgent,
              "Accept": "text/x-xml-plist",
              "Accept-Language": "en-us",
@@ -301,7 +697,7 @@ index dfea7cc..e999075 100644
              "X-Apple-App-Info": h.grandSlam.authApp,
              "X-Xcode-Version": apiSession.xcodeVersion,
              "X-Apple-I-Identity-Id": apiSession.dsid,
-@@ -352,6 +353,10 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -352,6 +353,10 @@
          let httpResponse = response as? HTTPURLResponse
          let statusCode = httpResponse?.statusCode ?? 0
  
@@ -312,7 +708,7 @@ index dfea7cc..e999075 100644
          guard !data.isEmpty else {
              if statusCode == HTTPStatusCodes.noContent || T.self == EmptyResponse.self {
                  if let empty = EmptyResponse() as? T {
-@@ -379,7 +384,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -379,7 +384,7 @@
                      throw customError
                  }
                  debugLog("[SideSign] processResponse error: \(message) (code: \(code))")
@@ -321,7 +717,7 @@ index dfea7cc..e999075 100644
              }
          }
  
-@@ -404,6 +409,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -404,6 +409,7 @@
                                             resultCodeHandler: ((Int, String) -> Error?)? = nil) async throws -> T
      {
          var request = originalRequest
@@ -329,7 +725,7 @@ index dfea7cc..e999075 100644
  
          var items = [URLQueryItem(name: "teamId", value: team.identifier)]
          additionalParameters?.forEach { items.append(.init(name: $0, value: $1)) }
-@@ -412,7 +418,10 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -412,7 +418,10 @@
          comps.queryItems = items
          let query = comps.query ?? ""
  
@@ -341,7 +737,7 @@ index dfea7cc..e999075 100644
          let methodOverride = request.httpMethod ?? "GET"
  
          request.httpMethod = "POST"
-@@ -425,6 +434,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -425,6 +434,7 @@
              "User-Agent": h.developerServices.userAgent,
              "Accept": "application/vnd.api+json",
              "Accept-Language": "en-us",
@@ -349,7 +745,7 @@ index dfea7cc..e999075 100644
              "X-Apple-App-Info": h.grandSlam.authApp,
              "X-Xcode-Version": apiSession.xcodeVersion,
              "X-Apple-I-Identity-Id": apiSession.dsid,
-@@ -466,6 +476,15 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -466,6 +476,15 @@
          let isDelete = methodOverride == "DELETE"
          let isNoContent = statusCode == HTTPStatusCodes.noContent
  
@@ -365,7 +761,7 @@ index dfea7cc..e999075 100644
          guard !data.isEmpty else {
              if isDelete || isNoContent || T.self == EmptyResponse.self {
                  verboseLog("[SideSign] sendServicesRequest: successful empty response for DELETE or \(HTTPStatusCodes.noContent)")
-@@ -493,7 +512,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+@@ -493,7 +512,7 @@
                      throw customError
                  }
                  debugLog("[SideSign] processResponse error: \(message) (code: \(code))")
@@ -374,14 +770,40 @@ index dfea7cc..e999075 100644
              }
          }
  
-diff --git a/Sources/Models/AppID.swift b/Sources/Models/AppID.swift
-index 62b2f78..5c0707d 100644
---- a/Sources/Models/AppID.swift
-+++ b/Sources/Models/AppID.swift
-@@ -32,6 +32,51 @@ public struct AppID: Sendable, Codable, Identifiable {
-         self.entitlements = entitlements
+--- a/Sources/Models/AppBundle.swift
++++ b/Sources/Models/AppBundle.swift
+@@ -142,7 +142,13 @@
      }
  
+     private func loadEntitlementsString() -> String {
+-        (try? MachOParser.entitlements(at: fileURL)) ?? ""
++        let signatureXML = (try? MachOParser.entitlements(at: fileURL)) ?? ""
++        // Preserve original requests in decrypted/re-signed IPAs. A previous
++        // signer may have dropped a capability before Apple approved it.
++        // Actual signed values override the sidecar; Apple profiles still decide
++        // which requested rights can be signed for the selected identity.
++        let sidecar = fileURL.appendingPathComponent("cyan.entitlements")
++        return EntitlementMetadata.mergedXML(signature: signatureXML, sidecar: try? Data(contentsOf: sidecar))
+     }
+ }
+ 
+--- a/Sources/Models/AppID.swift
++++ b/Sources/Models/AppID.swift
+@@ -16,6 +16,8 @@
+     public var expirationDate: Date?
+     public var features: [Feature: String]
+     public var entitlements: [String: String]
++    /// Explicit managed capability requests; Apple remains the authority.
++    public var managedEntitlements: [String: any Sendable] = [:]
+ 
+     public init(identifier: String,
+                 name: String,
+@@ -30,6 +32,52 @@
+         self.expirationDate = expirationDate
+         self.features = features
+         self.entitlements = entitlements
++    }
++
 +    /// Only changed service values belong in updateAppId.action. The list API
 +    /// also returns metadata and legacy capabilities which are not writable flags.
 +    public func changedFeatures(comparedTo current: AppID) -> [Feature: String] {
@@ -400,6 +822,7 @@ index 62b2f78..5c0707d 100644
 +        for (key, value) in entitlements {
 +            requestedEntitlements[key] = Self.portalValue(value)
 +        }
++        requestedEntitlements.merge(managedEntitlements) { _, requested in requested }
 +        for (feature, value) in changedFeatures(comparedTo: current) {
 +            let entitlement: Entitlement?
 +            switch feature {
@@ -425,12 +848,10 @@ index 62b2f78..5c0707d 100644
 +        case "false": return false
 +        default: return trimmed
 +        }
-+    }
-+
-     public func copy() -> AppID {
-         self
      }
-@@ -51,13 +96,10 @@ public struct AppID: Sendable, Codable, Identifiable {
+ 
+     public func copy() -> AppID {
+@@ -51,13 +99,10 @@
          self.bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? ""
          self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
  
@@ -448,7 +869,7 @@ index 62b2f78..5c0707d 100644
          self.entitlements = [:]
      }
  
-@@ -69,3 +111,21 @@ public struct AppID: Sendable, Codable, Identifiable {
+@@ -69,3 +114,21 @@
          try container.encodeIfPresent(expirationDate, forKey: .expirationDate)
      }
  }
@@ -470,11 +891,9 @@ index 62b2f78..5c0707d 100644
 +        }
 +    }
 +}
-diff --git a/Sources/Models/CertificateType.swift b/Sources/Models/CertificateType.swift
-index 5bb6fcc..7b3e500 100644
 --- a/Sources/Models/CertificateType.swift
 +++ b/Sources/Models/CertificateType.swift
-@@ -118,6 +118,20 @@ public struct CertificateType: RawRepresentable, Sendable, Codable, Equatable, H
+@@ -118,6 +118,20 @@
          rawValue
      }
  
@@ -495,11 +914,27 @@ index 5bb6fcc..7b3e500 100644
      public var submitEndpointAction: String {
          switch self.category {
          case .development:  return "ios/submitDevelopmentCSR.action"
-diff --git a/Sources/Models/Feature.swift b/Sources/Models/Feature.swift
-index 554fc75..5b10eab 100644
+--- /dev/null
++++ b/Sources/Models/EntitlementMetadata.swift
+@@ -0,0 +1,15 @@
++import Foundation
++
++/// Sidecar requests are input metadata, never proof of Apple authorization.
++public enum EntitlementMetadata {
++    public static func mergedXML(signature: String, sidecar: Data?) -> String {
++        guard let sidecar,
++              var requests = try? PropertyListSerialization.propertyList(from: sidecar, format: nil) as? [String: Any] else { return signature }
++        if let data = signature.data(using: .utf8),
++           let signed = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] {
++            requests.merge(signed) { _, actual in actual }
++        }
++        guard let xml = try? PropertyListSerialization.data(fromPropertyList: requests, format: .xml, options: 0) else { return signature }
++        return String(data: xml, encoding: .utf8) ?? signature
++    }
++}
 --- a/Sources/Models/Feature.swift
 +++ b/Sources/Models/Feature.swift
-@@ -53,24 +53,26 @@ public struct Feature: RawRepresentable, Hashable, Codable, Sendable, Expressibl
+@@ -53,24 +53,26 @@
  }
  
  public extension Feature {

@@ -60,6 +60,12 @@ struct PortalAppIDDecodingTests {
         precondition(renameRequest["appIdId"] as? String == app.identifier)
         precondition(renamed.changedFeatures(comparedTo: app).isEmpty)
         precondition(app.capabilityUpdateParameters(comparedTo: app)["name"] == nil)
+        var managed = app
+        managed.managedEntitlements = ["com.apple.developer.carplay-audio": true,
+            "com.apple.developer.future-capability": ["approved-value"]]
+        let managedWire = managed.capabilityUpdateParameters(comparedTo: app)["entitlements"] as! [String: any Sendable]
+        precondition(managedWire["com.apple.developer.carplay-audio"] as? Bool == true)
+        precondition(managedWire["com.apple.developer.future-capability"] as? [String] == ["approved-value"])
         let encoded = try PropertyListSerialization.data(fromPropertyList: wire, format: .xml, options: 0)
         let decoded = try PropertyListSerialization.propertyList(from: encoded, format: nil) as! [String: Any]
         precondition((decoded["entitlements"] as? [String: Any])?[Entitlement.increasedMemoryLimit.rawValue] as? Bool == true)

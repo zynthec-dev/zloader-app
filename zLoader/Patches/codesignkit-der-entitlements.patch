@@ -1,0 +1,69 @@
+--- a/Sources/DEREncoder.swift
++++ b/Sources/DEREncoder.swift
+@@ -7,6 +7,7 @@
+ //
+ 
+ import Foundation
++import CoreFoundation
+ 
+ public enum DEREncoder {
+ 
+@@ -29,11 +30,11 @@
+ 
+     public static func encodeValue(_ value: any Sendable) -> Data? {
+         if type(of: value) == Bool.self, let b = value as? Bool {
+-            return encodeTLV(tag: 0x01, value: Data([b ? 0x01 : 0x00]))
++            return encodeTLV(tag: 0x01, value: Data([b ? 0xff : 0x00]))
+         } else if let num = value as? NSNumber {
+             #if canImport(Darwin)
+-            if num.objCType.pointee == 0x63 /* 'c' for char/bool */ {
+-                return encodeTLV(tag: 0x01, value: Data([num.boolValue ? 0x01 : 0x00]))
++            if CFGetTypeID(num) == CFBooleanGetTypeID() {
++                return encodeTLV(tag: 0x01, value: Data([num.boolValue ? 0xff : 0x00]))
+             }
+             #endif
+             let intVal = num.int64Value
+@@ -47,7 +48,7 @@
+             }
+             return encodeTLV(tag: 0x02, value: Data(rawBytes))
+         } else if let b = value as? Bool {
+-            return encodeTLV(tag: 0x01, value: Data([b ? 0x01 : 0x00]))
++            return encodeTLV(tag: 0x01, value: Data([b ? 0xff : 0x00]))
+         } else if let str = value as? String {
+             let utf8 = str.data(using: .utf8) ?? Data()
+             return encodeTLV(tag: 0x0C, value: utf8)
+@@ -62,19 +63,19 @@
+             return encodeTLV(tag: 0x30, value: payload)
+         } else if let dict = value as? [String: any Sendable] {
+             var elements: [Data] = []
+-            for (k, v) in dict {
++            for k in dict.keys.sorted(by: { $0.utf8.lexicographicallyPrecedes($1.utf8) }) {
++                guard let v = dict[k] else { return nil }
+                 let kData = encodeTLV(tag: 0x0C, value: k.data(using: .utf8) ?? Data())
+                 guard let vData = encodeValue(v) else { return nil }
+                 let pairData = encodeTLV(tag: 0x30, value: kData + vData)
+                 elements.append(pairData)
+             }
+-            // Sort by DER byte representation (lexicographical)
+-            elements.sort { $0.lexicographicallyPrecedes($1) }
++            // Entitlement dictionaries use key order, not SET OF DER length order.
+             var dictPayload = Data()
+             for el in elements {
+                 dictPayload.append(el)
+             }
+-            return encodeTLV(tag: 0x31, value: dictPayload)
++            return encodeTLV(tag: 0xb0, value: dictPayload)
+         }
+ 
+         return nil
+@@ -85,6 +86,9 @@
+         guard let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: any Sendable] else {
+             return nil
+         }
+-        return encodeValue(plist)
++        guard let dictionary = encodeValue(plist) else { return nil }
++        // Apple's versioned DER entitlement representation: application 16,
++        // version INTEGER 1, followed by a context-specific dictionary (16).
++        return encodeTLV(tag: 0x70, value: Data([0x02, 0x01, 0x01]) + dictionary)
+     }
+ }
