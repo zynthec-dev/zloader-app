@@ -43,6 +43,7 @@ sh zLoader/scripts/test-transport.sh
 sh zLoader/scripts/test-transport-status.sh
 sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/test-context.sh
+sh zLoader/scripts/test-installation-presentation.sh
 sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 sh zLoader/scripts/test-embedded-profile-reuse.sh
 sh zLoader/scripts/test-pairing-import.sh

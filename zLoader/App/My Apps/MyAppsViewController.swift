@@ -26,6 +26,25 @@ private final class LauncherDataSource: CompositeCollectionViewPrefetchingDataSo
     override var isDynamic: Bool { true }
 }
 
+/// The underlying fetch keeps expiration ordering; only the displayed launcher
+/// moves the running store first. Active-app changes already reload this grid.
+private final class PinnedStoreAppsDataSource: FetchedResultsCollectionViewPrefetchingDataSource<InstalledApp, UIImage> {
+    private var orderedApps: [InstalledApp] {
+        let apps = fetchedResultsController.fetchedObjects ?? []
+        return AppInstallationPresentation.pinnedFirst(apps) {
+            $0.resignedBundleIdentifier == Bundle.main.bundleIdentifier
+        }
+    }
+
+    override func item(at indexPath: IndexPath) -> InstalledApp {
+        orderedApps[indexPath.item]
+    }
+
+    func displayIndexPath(for app: InstalledApp) -> IndexPath? {
+        orderedApps.firstIndex(where: { $0.objectID == app.objectID }).map { IndexPath(item: $0, section: 0) }
+    }
+}
+
 extension MyAppsViewController
 {
     private enum Section: Int, CaseIterable
@@ -612,7 +631,7 @@ private extension MyAppsViewController
         return dataSource
     }
     
-    func makeActiveAppsDataSource() -> FetchedResultsCollectionViewPrefetchingDataSource<InstalledApp, UIImage>
+    private func makeActiveAppsDataSource() -> PinnedStoreAppsDataSource
     {
         let fetchRequest = InstalledApp.activeAppsFetchRequest()
         fetchRequest.relationshipKeyPathsForPrefetching = [#keyPath(InstalledApp.storeApp)]
@@ -621,7 +640,7 @@ private extension MyAppsViewController
                                         NSSortDescriptor(keyPath: \InstalledApp.name, ascending: true)]
         fetchRequest.returnsObjectsAsFaults = false
         
-        let dataSource = FetchedResultsCollectionViewPrefetchingDataSource<InstalledApp, UIImage>(fetchRequest: fetchRequest, managedObjectContext: DatabaseManager.shared.viewContext)
+        let dataSource = PinnedStoreAppsDataSource(fetchRequest: fetchRequest, managedObjectContext: DatabaseManager.shared.viewContext)
         dataSource.cellIdentifierHandler = { _ in "AppCell" }
         dataSource.cellConfigurationHandler = { (cell, installedApp, indexPath) in
             let tintColor = installedApp.storeApp?.tintColor ?? .altPrimary
@@ -2153,7 +2172,7 @@ private extension MyAppsViewController
         self.activeAppsDataSource.prefetchItemCache.removeObject(forKey: zLoaderApp)
         self.inactiveAppsDataSource.prefetchItemCache.removeObject(forKey: zLoaderApp)
         
-        if let indexPath = self.activeAppsDataSource.fetchedResultsController.indexPath(forObject: zLoaderApp)
+        if let indexPath = self.activeAppsDataSource.displayIndexPath(for: zLoaderApp)
         {
             let indexPath = IndexPath(item: indexPath.item, section: Section.activeApps.rawValue)
             

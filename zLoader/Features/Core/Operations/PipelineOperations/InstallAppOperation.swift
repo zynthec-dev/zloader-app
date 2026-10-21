@@ -151,7 +151,8 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             // This preserves our data in a serilized format that will be restored at boot onyl if installtion actually completed indicated by embedded provision uuid being different.
             // The actual installation target identifies a self-update, even when
             // its source record is missing or came from an imported IPA.
-            let isSelfReinstall = resignedAppBundle.bundleIdentifier == Bundle.main.bundleIdentifier
+            let isSelfReinstall = AppInstallationPresentation.isSelfReplacement(
+                runningBundleID: Bundle.main.bundleIdentifier ?? "", resignedBundleID: resignedAppBundle.bundleIdentifier)
             if isSelfReinstall {
                 if let _ = provisioningProfiles[self.context.targetBundleIdentifier],
                    let appGroup = Bundle.main.zloaderAppGroup,
