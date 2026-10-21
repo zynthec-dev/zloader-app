@@ -1,0 +1,69 @@
+diff --git a/idevice/src/services/installation_proxy.rs b/idevice/src/services/installation_proxy.rs
+index a461c58..f3d764b 100644
+--- a/idevice/src/services/installation_proxy.rs
++++ b/idevice/src/services/installation_proxy.rs
+@@ -423,15 +423,19 @@ impl InstallationProxyClient {
+         loop {
+             let mut res = self.idevice.read_plist().await?;
+ 
+-            if let Some(e) = res.remove("ErrorDescription").and_then(|x| x.into_string()) {
+-                return Err(InstallationProxyError::OperationFailed(e.to_string()).into());
++            if res.contains_key("Error") || res.contains_key("ErrorDescription") {
++                let error = res.get("ErrorDescription")
++                    .or_else(|| res.get("Error"))
++                    .and_then(|v| v.as_string())
++                    .unwrap_or("Installation was rejected by the device");
++                return Err(InstallationProxyError::OperationFailed(error.to_string()).into());
+             }
+ 
+-            if let Some(c) = res
+-                .remove("PercentComplete")
+-                .and_then(|x| x.as_unsigned_integer())
+-            {
+-                callback((c, state.clone())).await;
++            // Some iOS releases acknowledge Install with Status only. Waiting
++            // exclusively for PercentComplete can deadlock self-replacement:
++            // installd waits for the old host, and the host waits for progress.
++            if let Some(progress) = installation_progress(&res) {
++                callback((progress, state.clone())).await;
+             }
+ 
+             if let Some(c) = res.remove("Status").and_then(|x| x.into_string())
+@@ -455,3 +459,37 @@ impl crate::RsdService for InstallationProxyClient {
+         Ok(Self::new(idevice))
+     }
+ }
++
++// A response is an acknowledgement only after its error fields were checked.
++fn installation_progress(response: &Dictionary) -> Option<u64> {
++    if response.contains_key("Error") || response.contains_key("ErrorDescription") {
++        return None;
++    }
++    response.get("PercentComplete").and_then(|v| v.as_unsigned_integer()).or_else(|| {
++        response.get("Status").and_then(|v| v.as_string()).filter(|s| !s.is_empty()).map(|status| {
++            if status == "Complete" { 100 } else { 0 }
++        })
++    })
++}
++
++#[cfg(test)]
++mod zloader_installation_tests {
++    use super::*;
++    #[test]
++    fn acknowledges_status_without_percentage_but_never_errors() {
++        let mut response = Dictionary::new();
++        response.insert("Status".into(), "CreatingStagingDirectory".into());
++        assert_eq!(installation_progress(&response), Some(0));
++        response.insert("PercentComplete".into(), 42u64.into());
++        assert_eq!(installation_progress(&response), Some(42));
++        response.insert("Error".into(), "ApplicationVerificationFailed".into());
++        assert_eq!(installation_progress(&response), None);
++        response.remove("Error"); response.remove("PercentComplete");
++        response.insert("ErrorDescription".into(), "Rejected".into());
++        assert_eq!(installation_progress(&response), None);
++        response.clear();
++        assert_eq!(installation_progress(&response), None);
++        response.insert("Status".into(), "Complete".into());
++        assert_eq!(installation_progress(&response), Some(100));
++    }
++}

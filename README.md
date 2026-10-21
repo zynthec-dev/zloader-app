@@ -44,6 +44,7 @@ sh zLoader/scripts/test-transport-status.sh
 sh zLoader/scripts/test-app-groups.sh
 sh zLoader/scripts/test-context.sh
 sh zLoader/scripts/test-installation-presentation.sh
+sh zLoader/scripts/test-install-acknowledgement.sh
 sh zLoader/scripts/test-packet-tunnel-provisioning.sh
 sh zLoader/scripts/test-embedded-profile-reuse.sh
 sh zLoader/scripts/test-pairing-import.sh
@@ -67,6 +68,12 @@ sh zLoader/scripts/test-lan-installer.sh
 sh zLoader/scripts/build-unsigned.sh
 python3 zLoader/scripts/test-bootstrap-package.py
 ```
+
+The canonical build also rebuilds the pinned iDevice installer with the tracked
+status-acknowledgement fix. Rust 1.99.1 is installed only inside the ignored
+`.build/RustToolchain` directory when absent. Before direct simulator or tvOS
+builds, resolve packages and run `prepare-patched-idevice.sh ios-simulator`,
+`tvos`, or `tvos-simulator` for that destination. Serialize these builds.
 
 Requires iOS 26.5+ to match the pinned binary dependencies.
 For data-preserving Xcode installation, copy `CodeSigning.xcconfig.sample` to the

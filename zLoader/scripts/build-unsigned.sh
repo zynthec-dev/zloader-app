@@ -7,6 +7,7 @@ sh zLoader/scripts/apply-dependency-patches.sh
 xcodebuild -resolvePackageDependencies -project zLoader.xcodeproj -scheme zLoader \
   -clonedSourcePackagesDirPath .build/SourcePackages -skipPackageUpdates
 sh zLoader/scripts/apply-dependency-patches.sh
+sh zLoader/scripts/prepare-patched-idevice.sh ios
 xcodebuild -project zLoader.xcodeproj -scheme zLoader -configuration Release \
   -destination 'generic/platform=iOS' -derivedDataPath .build/Device \
   -clonedSourcePackagesDirPath .build/SourcePackages -disableAutomaticPackageResolution \
