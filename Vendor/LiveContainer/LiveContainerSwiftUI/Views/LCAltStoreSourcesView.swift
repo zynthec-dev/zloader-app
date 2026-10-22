@@ -952,18 +952,18 @@ private struct LCSourceAppBanner: View {
     @Environment(\.colorScheme) var colorScheme
     
     private var primaryColor: Color {
-        guard dynamicColors else { return Color("FontColor") }
-        return app.tintColor ?? source.tintColor ?? Color("FontColor")
+        guard dynamicColors else { return Color("FontColor", bundle: LCSharedUtils.resourceBundle()) }
+        return app.tintColor ?? source.tintColor ?? Color("FontColor", bundle: LCSharedUtils.resourceBundle())
     }
     
     private var textColor: Color {
         _ = colorScheme == .dark // trigger refresh
-        let color = dynamicColors ? primaryColor : Color("FontColor")
+        let color = dynamicColors ? primaryColor : Color("FontColor", bundle: LCSharedUtils.resourceBundle())
         return color.readableTextColor()
     }
     
     private var backgroundColor: Color {
-        dynamicColors ? primaryColor.opacity(0.5) : Color("AppBannerBG")
+        dynamicColors ? primaryColor.opacity(0.5) : Color("AppBannerBG", bundle: LCSharedUtils.resourceBundle())
     }
     
     private var metadataText: String {
@@ -1035,7 +1035,7 @@ private struct LCSourceAppBanner: View {
             .frame(height: 32)
             .fixedSize()
             .background(
-                Capsule().fill(dynamicColors ? primaryColor : Color("FontColor"))
+                Capsule().fill(dynamicColors ? primaryColor : Color("FontColor", bundle: LCSharedUtils.resourceBundle()))
             )
             .clipShape(Capsule())
         }
@@ -1071,7 +1071,7 @@ private struct SourceIconView: View {
     }
     
     private var placeholder: some View {
-        Image("DefaultIcon")
+        Image("DefaultIcon", bundle: LCSharedUtils.resourceBundle())
             .resizable()
             .scaledToFill()
     }

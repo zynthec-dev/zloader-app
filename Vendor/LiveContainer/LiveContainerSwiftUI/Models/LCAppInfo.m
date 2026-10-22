@@ -245,13 +245,14 @@
 }
 
 - (NSDictionary *)generateWebClipConfigWithContainerId:(NSString*)containerId iconStyle:(GeneratedIconStyle)style{
-    NSString* appClipUrl;
-    if(containerId) {
-        appClipUrl = [NSString stringWithFormat:@"livecontainer://livecontainer-launch?bundle-name=%@&container-folder-name=%@", self.bundlePath.lastPathComponent, containerId];
-    } else {
-        appClipUrl = [NSString stringWithFormat:@"livecontainer://livecontainer-launch?bundle-name=%@", self.bundlePath.lastPathComponent];
-    }
-    
+    NSURLComponents *components = [NSURLComponents new];
+    components.scheme = NSUserDefaults.lcAppUrlScheme ?: @"livecontainer";
+    components.host = @"livecontainer-launch";
+    NSMutableArray *query = [NSMutableArray arrayWithObject:[NSURLQueryItem queryItemWithName:@"bundle-name" value:self.bundlePath.lastPathComponent]];
+    if (containerId) [query addObject:[NSURLQueryItem queryItemWithName:@"container-folder-name" value:containerId]];
+    components.queryItems = query;
+    NSString *appClipUrl = components.URL.absoluteString;
+
     UIImage* icon = [self generateLiveContainerWrappedIconWithStyle:style];
     
     NSDictionary *payload = @{

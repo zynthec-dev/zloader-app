@@ -94,7 +94,7 @@ class SharedModel: ObservableObject {
     public static let keychainAccessGroupCount = 128
     
     func updateMultiLCStatus() {
-        if LCUtils.appUrlScheme()?.lowercased() != "livecontainer" {
+        if LCUtils.appUrlScheme()?.lowercased() != "livecontainer", Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool != true {
             multiLCStatus = 2
         } else {
             multiLCStatus = 0
@@ -161,13 +161,13 @@ extension String: @retroactive LocalizedError {
         
     private static var enBundle : Bundle? = {
         let language = "en"
-        let path = Bundle.main.path(forResource:language, ofType: "lproj")
+        let path = LCSharedUtils.resourceBundle().path(forResource:language, ofType: "lproj")
         let bundle = Bundle(path: path!)
         return bundle
     }()
     
     var loc: String {
-        let message = NSLocalizedString(self, comment: "")
+        let message = NSLocalizedString(self, bundle: LCSharedUtils.resourceBundle(), comment: "")
         if message != self {
             return message
         }

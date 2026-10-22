@@ -28,17 +28,30 @@ struct MultitaskAppInfo {
         DataManager.shared.model.enableMultipleWindow = true
         DataManager.shared.model.pidCallback = pidCallback
         appDict[dataUUID] = MultitaskAppInfo(displayName: displayName, dataUUID: dataUUID, bundleId: bundleId)
-        openWindow(id: "appView", value: dataUUID)
+        activateWindow(dataUUID)
     }
     
     @objc class func openExistingAppWindow(dataUUID: String) -> Bool {
         for a in appDict {
             if a.value.dataUUID == dataUUID {
-                openWindow(id: "appView", value: a.key)
+                activateWindow(a.key)
                 return true
             }
         }
         return false
+    }
+
+    private static func activateWindow(_ identifier: String) {
+        guard Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true else {
+            openWindow(id: "appView", value: identifier)
+            return
+        }
+        let existing = UIApplication.shared.openSessions.first {
+            $0.stateRestorationActivity?.userInfo?["container"] as? String == identifier
+        }
+        let activity = NSUserActivity(activityType: "de.zloader.container-window")
+        activity.userInfo = ["container": identifier]
+        UIApplication.shared.requestSceneSessionActivation(existing, userActivity: activity, options: nil)
     }
 }
 

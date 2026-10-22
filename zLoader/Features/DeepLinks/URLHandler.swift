@@ -16,6 +16,15 @@ class URLHandler {
     
     @discardableResult
     func handle(_ url: URL) -> Bool {
+        #if !os(tvOS)
+        if ["zloader", "zloader-container"].contains(url.scheme?.lowercased() ?? ""),
+           ["livecontainer-launch", "open-url", "container-import", "container-certificate"].contains(url.host?.lowercased() ?? ""),
+           ZLoaderHandleContainerURL(url) {
+            UserDefaults.standard.set(true, forKey: "zLoader.pendingContainerPage")
+            NotificationCenter.default.post(name: .init("ZLoaderShowContainers"), object: nil)
+            return true
+        }
+        #endif
         debugLog("[URLHandler] handle(_:) called with URL: \(url.absoluteString)")
         if OperationShortcutHooks.shared.handle(url) { return true }
         if url.isFileURL {

@@ -58,7 +58,7 @@ extension AppDelegate
     }
 }
 
-@UIApplicationMain
+@objc(ZLoaderAppDelegate)
 final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
@@ -284,6 +284,13 @@ extension AppDelegate
 {
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration
     {
+        if connectingSceneSession.stateRestorationActivity?.activityType == "de.zloader.container-window" ||
+            options.userActivities.contains(where: { $0.activityType == "de.zloader.container-window" }) {
+            let configuration = UISceneConfiguration(name: "Container", sessionRole: connectingSceneSession.role)
+            configuration.delegateClass = NSClassFromString("ZLoaderContainerWindowSceneDelegate")
+            configuration.storyboard = nil
+            return configuration
+        }
         // Called when a new scene session is being created.
         // Use this method to select a configuration to create the new scene with.
         return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)

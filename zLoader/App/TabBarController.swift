@@ -35,6 +35,7 @@ final class TabBarController: UITabBarController
         NotificationCenter.default.addObserver(self, selector: #selector(TabBarController.importApp(_:)), name: AppDelegate.importAppDeepLinkNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(TabBarController.presentSources(_:)), name: AppDelegate.addSourceDeepLinkNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(TabBarController.openErrorLog(_:)), name: ToastView.openErrorLogNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(showContainers), name: .init("ZLoaderShowContainers"), object: nil)
     }
     
     override func viewDidLoad() 
@@ -59,6 +60,13 @@ final class TabBarController: UITabBarController
 
         let sourcesNavigationController = self.viewControllers![Tab.sources.rawValue] as! UINavigationController
         self.sourcesViewController = sourcesNavigationController.viewControllers.first as? SourcesViewController
+        #if !os(tvOS)
+        if let navigation = viewControllers?[Tab.myApps.rawValue] as? UINavigationController,
+           let installed = navigation.viewControllers.first as? MyAppsViewController {
+            navigation.setViewControllers([MyAppsPagesViewController(installed: installed)], animated: false)
+        }
+        if UserDefaults.standard.bool(forKey: "zLoader.pendingContainerPage") { showContainers() }
+        #endif
     }
     
     override func viewDidAppear(_ animated: Bool)
@@ -110,9 +118,20 @@ extension TabBarController
 
 private extension TabBarController
 {
+    @objc func showContainers() {
+        #if !os(tvOS)
+        selectedIndex = Tab.myApps.rawValue
+        let navigation = viewControllers?[Tab.myApps.rawValue] as? UINavigationController
+        (navigation?.viewControllers.first as? MyAppsPagesViewController)?.showContainers()
+        UserDefaults.standard.removeObject(forKey: "zLoader.pendingContainerPage")
+        #endif
+    }
     @objc func importApp(_ notification: Notification)
     {
         self.selectedIndex = Tab.myApps.rawValue
+        #if !os(tvOS)
+        ((viewControllers?[Tab.myApps.rawValue] as? UINavigationController)?.viewControllers.first as? MyAppsPagesViewController)?.showInstalled()
+        #endif
     }
 
     @objc func openErrorLog(_ notification: Notification)

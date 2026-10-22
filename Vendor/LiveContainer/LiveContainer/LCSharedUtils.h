@@ -1,6 +1,10 @@
 @import Foundation;
 
 @interface LCSharedUtils : NSObject
++ (NSBundle *)resourceBundle;
++ (NSData *)containerCertificateData;
++ (BOOL)storeContainerCertificate:(NSData *)data password:(NSString *)password error:(NSError **)error;
++ (void)removeContainerCertificate;
 + (NSString*) teamIdentifier;
 + (NSString *)appGroupID;
 + (NSURL*) appGroupPath;

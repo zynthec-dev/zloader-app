@@ -29,12 +29,18 @@ struct ZLoaderAboutView: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }.zLoaderSettingsRows()
             Section("Original Authors & Licenses") {
+                Text("Container runtime: LiveContainer by Duy Tran, hugeBlack and the LiveContainer contributors (AGPL-3.0). Includes their guest loader, container management, multitasking and tweak support. Original litehook, CFastFind, ZSign/Feather and dependency credits remain in the corresponding source.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Link(destination: URL(string: "https://github.com/LiveContainer/LiveContainer")!) {
+                    SettingsEntryLabel(title: "LiveContainer – Original Project")
+                }
                 Text("SideStore and AltStore authors retain their original credits and copyrights. Original design: Fabian (thdev) and Chris (LitRitt). Local transport work: Stossy11, the SideStore Team and jkcoxson. zLoader includes Minimuxer, SideSign and their dependencies.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Link(destination: URL(string: "https://github.com/jkcoxson/LocalDevVPN")!) {
                     SettingsEntryLabel(title: "Original Local Tunnel Source")
                 }
-                ForEach([("SideStore-License", "SideStore License"),
+                ForEach([("LiveContainer-License", "LiveContainer License"),
+                         ("SideStore-License", "SideStore License"),
                          ("LocalDevVPN-License", "Original Local Tunnel License"),
                          ("LocalDevVPN-License-old", "Original Local Tunnel License (Earlier Version)")], id: \.0) { name, title in
                     DisclosureGroup {

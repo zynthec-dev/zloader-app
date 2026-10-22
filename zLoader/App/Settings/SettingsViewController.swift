@@ -969,7 +969,7 @@ extension SettingsViewController
 
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
-        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count { return 0 }
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row >= TechyThingsRow.allCases.count { return 0 }
         if Section.allCases[indexPath.section] == .account && indexPath.row >= 3 {
             return 0
         }
@@ -995,7 +995,7 @@ extension SettingsViewController
         case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 5 : 6)
         case .display: return 1
         case .appRefresh: return AppRefreshRow.allCases.count
-        case .techyThings: return TechyThingsRow.allCases.count + 1
+        case .techyThings: return TechyThingsRow.allCases.count + (UIDevice.current.userInterfaceIdiom == .tv ? 1 : 2)
         case .advancedSettings: return AdvancedSettingsRow.allCases.count
         default: return super.tableView(tableView, numberOfRowsInSection: section.rawValue)
         }
@@ -1003,6 +1003,15 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
+        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count + 1 {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.isSelectable = true
+            cell.textLabel?.text = "Container"
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+            cell.accessoryType = .disclosureIndicator
+            decorateSettingsCell(cell)
+            return cell
+        }
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count {
             let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
             cell.style = .bottom
@@ -1214,6 +1223,10 @@ extension SettingsViewController
             }
             
         case .techyThings:
+            if indexPath.row == TechyThingsRow.allCases.count + 1 {
+                navigationController?.pushViewController(ContainerSettingsViewController(), animated: true)
+                return
+            }
             if indexPath.row == TechyThingsRow.allCases.count {
                 navigationController?.pushViewController(ZLoaderHostingController(rootView: ShortcutsSettingsView(), usesGlass: false), animated: true)
                 return

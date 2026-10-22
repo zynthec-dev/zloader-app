@@ -82,6 +82,14 @@ struct LCSettingsView: View {
     var body: some View {
         NavigationView {
             Form {
+                if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+                    Section("Container in zLoader") {
+                        NavigationLink("Geräteidentität") { LCVirtualDeviceSettingsView() }
+                            .accessibilityIdentifier("container-device-identity-settings")
+                        NavigationLink("Tweaks verwalten") { LCTweaksView() }
+                        NavigationLink("Container-Quellen") { LCSourcesView() }
+                    }
+                }
                 if sharedModel.multiLCStatus != 2 {
                     Section{
                         if !certificateDataFound {
@@ -285,19 +293,19 @@ struct LCSettingsView: View {
                 
                 Section {
                     HStack {
-                        Image("GitHub")
+                        Image("GitHub", bundle: LCSharedUtils.resourceBundle())
                         Button("LiveContainer/LiveContainer") {
                             openGitHub()
                         }
                     }
                     HStack {
-                        Image("Twitter")
+                        Image("Twitter", bundle: LCSharedUtils.resourceBundle())
                         Button("khanhduytran0") {
                             openTwitter()
                         }
                     }
                     HStack {
-                        Image("GitHub")
+                        Image("GitHub", bundle: LCSharedUtils.resourceBundle())
                         Button("Huge_Black") {
                             openGitHub2()
                         }
@@ -443,6 +451,9 @@ struct LCSettingsView: View {
                 }
             )
         }
+        .onReceive(NotificationCenter.default.publisher(for: .init("ZLoaderContainerIdentityChanged"))) { _ in
+            certificateDataFound = LCUtils.certificateData() != nil
+        }
         .navigationViewStyle(StackNavigationViewStyle())
         .onAppear() {
             if !isViewAppeared {
@@ -574,8 +585,8 @@ struct LCSettingsView: View {
             return
         }
 
-        LCUtils.appGroupUserDefault.set(certificateData, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(certificatePassword, forKey: "LCCertificatePassword")
+        do { try LCSharedUtils.storeContainerCertificate(certificateData, password: certificatePassword) }
+        catch { errorInfo = error.localizedDescription; errorShow = true; return }
         LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
         certificateDataFound = true
 
@@ -653,8 +664,8 @@ struct LCSettingsView: View {
         await UIApplication.shared.open(url)
     }
     func onSideStoreCertificateCallback(certificateData: Data, password: String) {
-        LCUtils.appGroupUserDefault.set(certificateData, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(password, forKey: "LCCertificatePassword")
+        do { try LCSharedUtils.storeContainerCertificate(certificateData, password: password) }
+        catch { errorInfo = error.localizedDescription; errorShow = true; return }
         LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
         certificateDataFound = true
     }
@@ -664,8 +675,7 @@ struct LCSettingsView: View {
             return
         }
 
-        LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificatePassword")
+        LCSharedUtils.removeContainerCertificate()
         LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificateUpdateDate")
         certificateDataFound = false
 

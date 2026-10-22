@@ -86,6 +86,14 @@
 				<string>zloader-$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>zLoader Containers</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>zloader-container</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -329,5 +337,84 @@
 			</dict>
 		</dict>
 	</array>
+	<key>ZLoaderContainerHost</key>
+	<true/>
+	<key>GCSupportedGameControllers</key>
+	<array>
+		<dict>
+			<key>ProfileName</key>
+			<string>DirectionalGamepad</string>
+		</dict>
+		<dict>
+			<key>ProfileName</key>
+			<string>ExtendedGamepad</string>
+		</dict>
+		<dict>
+			<key>ProfileName</key>
+			<string>MicroGamepad</string>
+		</dict>
+	</array>
+	<key>GCSupportsControllerUserInteraction</key>
+	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSFallDetectionUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSGKFriendListUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSHomeKitUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSIdentityUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSNearbyInteractionAllowOnceUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSNearbyInteractionUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSSensorKitUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSSiriUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Eine Container-App fordert Zugriff an.</string>
 </dict>
 </plist>

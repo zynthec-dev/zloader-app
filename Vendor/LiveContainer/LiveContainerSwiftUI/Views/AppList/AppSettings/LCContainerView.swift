@@ -94,7 +94,7 @@ struct LCContainerView : View {
                     Text("lc.container.defaultContainerDesc".loc)
                 }
                 
-                Section {
+                if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool != true { Section {
                     Toggle(isOn: $container.spoofIdentifierForVendor) {
                         Text("lc.container.spoofIdentifierForVendor".loc)
                     }
@@ -112,7 +112,7 @@ struct LCContainerView : View {
                                 }
                         }
                     }
-                }
+                } }
 
                 Section {
                     if inUse {

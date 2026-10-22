@@ -253,8 +253,8 @@ final class PipelineRunner: Sendable
         for operation in operations {
             let steps = PipelineStepDefinition.steps(for: operation)
             let installsApp = steps.contains { $0.step == .installApp }
-            let refreshResignsApp = group.sharedContext.importedSigningMaterial != nil && steps.contains { $0.step == .refreshApp }
-            guard installsApp || refreshResignsApp else { continue }
+            let refreshesApp = steps.contains { $0.step == .refreshApp }
+            guard installsApp || refreshesApp else { continue }
             let bundleID = operation.bundleIdentifier
             guard case .success(let app) = group.results[bundleID] else { continue }
             do {

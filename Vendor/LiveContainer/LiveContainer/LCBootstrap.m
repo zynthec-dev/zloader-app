@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include "../litehook/src/litehook.h"
 #import "Tweaks/Tweaks.h"
+#import "Tweaks/ZLoaderGuestURLPolicy.h"
 #include <mach-o/ldsyms.h>
 
 extern char **environ;
@@ -510,6 +511,7 @@ static NSString* invokeAppMain(NSString *selectedApp, NSString *selectedContaine
     }
     
     // hook NSUserDefault before running libraries' initializers
+    ZLoaderGuestBrowserHooksInit();
     NUDGuestHooksInit();
     if(!isSideStore) {
         SecItemGuestHooksInit();
@@ -525,7 +527,11 @@ static NSString* invokeAppMain(NSString *selectedApp, NSString *selectedContaine
     BOOL hookDlopen = !isSideStore && !isSharedBundle && LCSharedUtils.certificatePassword && isLiveProcess;
     DyldHooksInit([guestAppInfo[@"hideLiveContainer"] boolValue], hookDlopen, [guestAppInfo[@"spoofSDKVersion"] unsignedIntValue]);
     
-    if([guestContainerInfo[@"spoofIdentifierForVendor"] boolValue]) {
+    if ([lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue]) {
+        if ([lcSharedDefaults boolForKey:@"ZLoaderUseVirtualDevice"]) {
+            ZLoaderVirtualDeviceHooksInit([lcSharedDefaults dictionaryForKey:@"ZLoaderVirtualDeviceIdentity"]);
+        }
+    } else if([guestContainerInfo[@"spoofIdentifierForVendor"] boolValue]) {
         NSString* idForVendorStr = guestContainerInfo[@"spoofedIdentifierForVendor"];
         if([idForVendorStr isKindOfClass:NSString.class]) {
             NSUUID* idForVendorUUID = [[NSUUID UUID] initWithUUIDString:idForVendorStr];
@@ -667,6 +673,9 @@ int LiveContainerMain(int argc, char *argv[]) {
     lcUserDefaults = NSUserDefaults.standardUserDefaults;
     
     lcSharedDefaults = [[NSUserDefaults alloc] initWithSuiteName: [LCSharedUtils appGroupID]];
+    // Snapshot before guest Keychain hooks are installed. Signing material is
+    // stored in Keychain, never in the preferences visible to guest apps.
+    (void)[LCSharedUtils certificatePassword];
     lcAppUrlScheme = NSBundle.mainBundle.infoDictionary[@"CFBundleURLTypes"][0][@"CFBundleURLSchemes"][0];
     lcAppGroupPath = [[NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:[NSClassFromString(@"LCSharedUtils") appGroupID]] path];
     isLiveProcess = [lcAppUrlScheme isEqualToString:@"liveprocess"];
@@ -847,6 +856,12 @@ int LiveContainerMain(int argc, char *argv[]) {
         }
     }
     
+    // zLoader owns the host UI. Guest launch still uses the original bootstrap
+    // before UIApplicationMain; its normal launch returns to zLoader's delegate.
+    if ([lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue]) {
+        return UIApplicationMain(argc, argv, nil, @"ZLoaderAppDelegate");
+    }
+
     void *LiveContainerSwiftUIHandle = dlopen("@executable_path/Frameworks/LiveContainerSwiftUI.framework/LiveContainerSwiftUI", RTLD_LAZY);
     NSCAssert(LiveContainerSwiftUIHandle, @"%s", dlerror());
     

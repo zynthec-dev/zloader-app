@@ -122,9 +122,9 @@ void SecItemGuestHooksInit(void)  {
     int keychainGroupId = [infoDict[@"keychainGroupId"] intValue];
     NSString* groupId = [LCSharedUtils teamIdentifier];
     if(keychainGroupId == 0) {
-        accessGroup = [NSString stringWithFormat:@"%@.com.kdt.livecontainer.shared", groupId];
+        accessGroup = [NSString stringWithFormat:@"%@.com.zynthec.zLoader.container", groupId];
     } else {
-        accessGroup = [NSString stringWithFormat:@"%@.com.kdt.livecontainer.shared.%d", groupId, keychainGroupId];
+        accessGroup = [NSString stringWithFormat:@"%@.com.zynthec.zLoader.container.%d", groupId, keychainGroupId];
     }
     
     // check if the keychain access group is available

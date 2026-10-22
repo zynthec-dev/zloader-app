@@ -218,6 +218,12 @@ class MyAppsViewController: UICollectionViewController
             self?.activeTeam = try? await AuthManager.shared.getAuthenticatedTeam()
         }
     }
+
+    func presentInstallationPicker() {
+        loadViewIfNeeded()
+        guard let button = navigationItem.leftBarButtonItems?.first else { return }
+        sideloadApp(button)
+    }
     
     override func viewIsAppearing(_ animated: Bool)
     {
@@ -924,7 +930,20 @@ private extension MyAppsViewController
                     }
                 }
                 
-                guard !failures.isEmpty else { return }
+                guard !failures.isEmpty else {
+                    let apps = results.values.compactMap { try? $0.get() }
+                    guard !apps.isEmpty else { return }
+                    let detail: String
+                    if SigningIdentityStore.shared.pipelineIdentityID != nil {
+                        detail = "Mit der importierten Identität neu signiert. Die von Apple festgelegte Ablaufzeit des Profils oder Zertifikats kann dadurch nicht verlängert werden."
+                    } else if apps.contains(where: { $0.effectiveExpirationDate < $0.expirationDate }) {
+                        detail = "Profile aktualisiert. Die verbleibenden Tage werden durch die frühere Ablaufzeit eines Zertifikats oder einer App-Erweiterung begrenzt."
+                    } else {
+                        detail = "Profile auf dem Gerät aktualisiert. Angezeigt wird die von Apple erlaubte verbleibende Laufzeit."
+                    }
+                    ToastView(text: "Refresh abgeschlossen", detailText: detail).show(in: self)
+                    return
+                }
                 
                 if let failure = failures.first, results.count == 1
                 {
@@ -1159,7 +1178,7 @@ private extension MyAppsViewController
                 #endif
             },
             onConfirm: { [weak self] url in
-                self?.sideloadApp(at: url) { _ in }
+                self?.presentImportDialog(for: url)
             },
             onChooseLibrary: { [weak self] in self?.showIPALibrary() }
         )
@@ -2063,6 +2082,21 @@ private extension MyAppsViewController
 
     private func presentImportDialog(for url: URL)
     {
+        #if !os(tvOS)
+        let controller = ZLoaderHostingController(rootView: IPAInstallDestinationView(filename: url.lastPathComponent,
+            installOnDevice: { [weak self] in
+                self?.dismiss(animated: true) {
+                    guard let self else { return }
+                    InstallAppDialog.present(ipaURL: url, from: self) { [weak self] in self?.sideloadApp(at: url) { _ in } }
+                }
+            }, installInContainer: { [weak self] in
+                self?.dismiss(animated: true) {
+                    ZLoaderImportContainerIPA(url)
+                    NotificationCenter.default.post(name: .init("ZLoaderShowContainers"), object: nil)
+                }
+            }, cancel: { [weak self] in self?.dismiss(animated: true) }))
+        present(controller, animated: true)
+        #else
         InstallAppDialog.present(
             ipaURL: url,
             from: self,
@@ -2071,6 +2105,7 @@ private extension MyAppsViewController
             },
             onCancel: {}
         )
+        #endif
     }
     
     #if !os(tvOS)
@@ -3155,11 +3190,7 @@ extension MyAppsViewController: UIDocumentPickerDelegate
     {
         guard let fileURL = urls.first else { return }
         
-        InstallAppDialog.present(ipaURL: fileURL, from: self) { [weak self] in
-            self?.sideloadApp(at: fileURL) { (result) in
-                debugLog("Sideloaded app at \(fileURL) with result: \(result)")
-            }
-        }
+        self.presentImportDialog(for: fileURL)
     }
 }
 #endif

@@ -45,6 +45,7 @@ group = 'group.' + info['CFBundleIdentifier']
 app_groups_key = 'com.apple.security.application-groups'
 def requested_entitlements(relative_path):
     raw = (root / relative_path).read_text().replace('$(APP_GROUP_IDENTIFIER)', info['CFBundleIdentifier'])
+    raw = raw.replace('$(APP_GROUP_SIDESTORE)', group).replace('$(APP_GROUP_ALTSTORE)', group)
     result = plistlib.loads(raw.encode('utf-8'))
     assert '$(' not in str(result), 'Unexpanded entitlement build setting'
     return result
@@ -53,6 +54,10 @@ expected = {
     app: requested_entitlements('zLoader/Host.entitlements'),
     app / 'PlugIns/zLoaderWidget.appex': requested_entitlements('zLoader/Widget/zLoaderWidget.entitlements'),
 }
+for name in ['LiveProcess', 'LaunchAppExtension', 'ShareExtension']:
+    path = app / 'PlugIns' / (name + '.appex')
+    assert path.is_dir(), 'Missing embedded container extension: ' + name
+    expected[path] = requested_entitlements('Vendor/LiveContainer/' + name + '/' + name + '.entitlements')
 assert expected[app][app_groups_key] == [group]
 assert expected[app / 'PlugIns/zLoaderWidget.appex'][app_groups_key] == [group]
 
@@ -120,7 +125,7 @@ manifest = {
     'capabilitiesByBundle': {str(path.relative_to(staging / 'Payload')): requirements for path, requirements in expected.items()},
     'signing': 'ad-hoc capability metadata only; not authorized or directly installable on iOS',
     'internalProviderInstalled': False, 'bootstrapPayloadIncluded': False,
-    'required': 'Matching Apple profiles for host and widget. An external local VPN tunnel is required.',
+    'required': 'Matching Apple profiles for host, widget and container extensions. An external local VPN tunnel is required for device installation. Container execution requires compatible host signing or supported JIT.',
 }
 ipa.with_suffix('.json').write_text(json.dumps(manifest, indent=2) + '\n')
 # No Apple signing identity is used. iLoader replaces these local metadata

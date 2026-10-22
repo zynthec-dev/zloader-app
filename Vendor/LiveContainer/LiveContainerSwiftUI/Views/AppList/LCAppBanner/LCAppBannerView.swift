@@ -133,7 +133,7 @@ final class LCAppBannerRootView: UIView {
     ) {
         let icon = appInfo.iconIsDarkIcon(darkModeIcon) ?? UIImage()
         let mainColor = Self.extractMainHueColor(appInfo: appInfo, icon: icon, darkModeIcon: darkModeIcon)
-        let accentColor = dynamicColors ? mainColor : (UIColor(named: "FontColor") ?? .systemBlue)
+        let accentColor = dynamicColors ? mainColor : (UIColor(named: "FontColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemBlue)
         let textColor = Self.readableTextColor(for: accentColor, traitCollection: traitCollection)
 
         iconImageView.image = icon
@@ -148,17 +148,17 @@ final class LCAppBannerRootView: UIView {
         containerLabel.textColor = textColor
 
         sharedBadge.isHidden = !model.uiIsShared
-        sharedBadge.backgroundColor = UIColor(named: "BadgeColor") ?? .systemOrange
+        sharedBadge.backgroundColor = UIColor(named: "BadgeColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemOrange
         jitBadge.isHidden = !model.uiIsJITNeeded || model.uiIs32bit
-        jitBadge.backgroundColor = UIColor(named: "JITBadgeColor") ?? .systemPurple
+        jitBadge.backgroundColor = UIColor(named: "JITBadgeColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemPurple
         lockBadge.isHidden = !model.uiIsLocked || model.uiIsHidden
-        lockBadge.backgroundColor = UIColor(named: "BadgeColor") ?? .systemOrange
+        lockBadge.backgroundColor = UIColor(named: "BadgeColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemOrange
         bit32Badge.isHidden = !model.uiIs32bit
-        bit32Badge.backgroundColor = UIColor(named: "32BitBadgeColor") ?? .systemBlue
+        bit32Badge.backgroundColor = UIColor(named: "32BitBadgeColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemBlue
 
         visualBackgroundView.backgroundColor = dynamicColors
             ? mainColor.withAlphaComponent(0.5)
-            : (UIColor(named: "AppBannerBG") ?? .secondarySystemBackground)
+            : (UIColor(named: "AppBannerBG", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .secondarySystemBackground)
         runControl.update(
             color: accentColor,
             isSigning: model.isSigningInProgress,

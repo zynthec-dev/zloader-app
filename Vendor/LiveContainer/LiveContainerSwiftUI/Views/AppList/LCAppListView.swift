@@ -116,7 +116,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
     }
     
-    init() {
+    private let embeddedInZLoader: Bool
+    init(embeddedInZLoader: Bool = false) {
+        self.embeddedInZLoader = embeddedInZLoader
         _installOptions = State(initialValue: [])
     }
     
@@ -211,7 +213,8 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 }
             }
             
-            .navigationTitle("lc.appList.myApps".loc)
+            .navigationTitle(embeddedInZLoader ? "Container" : "lc.appList.myApps".loc)
+            .navigationBarTitleDisplayMode(embeddedInZLoader ? .inline : .large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if sharedModel.multiLCStatus != 2 {
@@ -219,7 +222,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                             Menu {
                                 
                                 Button("lc.appList.installFromIpa".loc, systemImage: "doc.badge.plus", action: {
-                                    choosingIPA = true
+                                    if embeddedInZLoader {
+                                        NotificationCenter.default.post(name: .init("ZLoaderChooseIPA"), object: nil)
+                                    } else {
+                                        choosingIPA = true
+                                    }
                                 })
                                 Button("lc.appList.installFromUrl".loc, systemImage: "link.badge.plus", action: {
                                     Task{ await startInstallFromUrl() }
@@ -402,10 +409,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                     UserDefaults.standard.set(nil, forKey: "webPageToOpen")
                 }
                 
-                guard sharedModel.selectedTab == .apps, let link = sharedModel.deepLink else { return }
+                isViewAppeared = true
+            }
+            if sharedModel.selectedTab == .apps, let link = sharedModel.deepLink {
                 sharedModel.deepLink = nil
                 handleURL(url: link)
-                isViewAppeared = true
             }
         }
         .onChange(of: sharedModel.deepLink) { link in
@@ -599,13 +607,16 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
         let decompressProgress = Progress.discreteProgress(totalUnitCount: 100)
         installProgress.addChild(decompressProgress, withPendingUnitCount: 80)
-        let payloadPath = fm.temporaryDirectory.appendingPathComponent("Payload")
+        let extractionRoot = fm.temporaryDirectory.appendingPathComponent("ContainerImport-" + UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: extractionRoot, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: extractionRoot) }
+        let payloadPath = extractionRoot.appendingPathComponent("Payload")
         if fm.fileExists(atPath: payloadPath.path) {
             try fm.removeItem(at: payloadPath)
         }
         
         // decompress
-        guard await decompress(url.path, fm.temporaryDirectory.path, decompressProgress) == 0 else {
+        guard await decompress(url.path, extractionRoot.path, decompressProgress) == 0 else {
             throw "lc.appList.urlFileIsNotIpaError".loc
         }
 
@@ -625,6 +636,10 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         
         guard let newAppInfo = LCAppInfo(bundlePath: appFolderPath.path) else {
             throw "lc.appList.infoPlistCannotReadError".loc
+        }
+        guard let identifier = newAppInfo.bundleIdentifier(), !identifier.isEmpty,
+              identifier.rangeOfCharacter(from: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-").inverted) == nil else {
+            throw "Die IPA enthält keine gültige App-Kennung."
         }
 
         var appRelativePath = "\(newAppInfo.bundleIdentifier()!.sanitizeNonACSII()).app"
@@ -1186,6 +1201,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
     
     func handleURL(url : URL) {
+        if url.host == "container-import",
+           let value = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "url" })?.value {
+            Task { await installFromUrl(urlStr: value) }
+            return
+        }
         if url.isFileURL {
             Task { await installFromUrl(urlStr: url.absoluteString) }
             return

@@ -3,6 +3,7 @@
 #import "UIKitPrivate.h"
 #import "utils.h"
 @import MachO;
+@import Security;
 
 extern NSUserDefaults *lcUserDefaults;
 extern NSString *lcAppUrlScheme;
@@ -11,7 +12,65 @@ extern NSBundle *lcMainBundle;
 NSString* FBSOpenApplicationOptionKeyActivateAsClassic = @"__ActivateAsClassic";
 NSString* FBSOpenApplicationOptionKeyPayloadURL = @"__PayloadURL";
 
+static NSDictionary *containerCredential;
+static BOOL credentialLoaded;
+static NSMutableDictionary *credentialQuery(void) {
+    NSMutableDictionary *query = [@{(__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: @"de.zloader.container-signing",
+        (__bridge id)kSecAttrAccount: @"signing-identity"} mutableCopy];
+    NSString *team = [LCSharedUtils teamIdentifier];
+    if (team.length) query[(__bridge id)kSecAttrAccessGroup] = [team stringByAppendingString:@".com.zynthec.zLoader.container"];
+    return query;
+}
+static NSDictionary *readCredential(void) {
+    if (credentialLoaded) return containerCredential;
+    NSMutableDictionary *query = credentialQuery();
+    query[(__bridge id)kSecReturnData] = @YES;
+    CFTypeRef result = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+    if (status == errSecSuccess && result) {
+        NSData *data = CFBridgingRelease(result);
+        containerCredential = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:nil error:nil];
+    }
+    credentialLoaded = YES;
+    return containerCredential;
+}
+
 @implementation LCSharedUtils
++ (NSData *)containerCertificateData { return readCredential()[@"certificate"]; }
++ (BOOL)storeContainerCertificate:(NSData *)data password:(NSString *)password error:(NSError **)error {
+    NSDictionary *value = @{@"certificate": data, @"password": password};
+    NSData *encoded = [NSPropertyListSerialization dataWithPropertyList:value format:NSPropertyListBinaryFormat_v1_0 options:0 error:error];
+    if (!encoded) return NO;
+    NSMutableDictionary *query = credentialQuery();
+    NSDictionary *attributes = @{(__bridge id)kSecValueData: encoded,
+        (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly};
+    OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)query, (__bridge CFDictionaryRef)attributes);
+    if (status == errSecItemNotFound) {
+        [query addEntriesFromDictionary:attributes];
+        status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
+    }
+    if (status != errSecSuccess) {
+        if (error) *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:status userInfo:@{NSLocalizedDescriptionKey:
+            @"Die Signieridentität konnte nicht im Schlüsselbund gespeichert werden. Prüfe die Keychain-Berechtigungen der zLoader-Signierung."}];
+        return NO;
+    }
+    containerCredential = value; credentialLoaded = YES;
+    for (NSUserDefaults *defaults in @[NSUserDefaults.standardUserDefaults, NSUserDefaults.lcSharedDefaults ?: NSUserDefaults.standardUserDefaults]) {
+        [defaults removeObjectForKey:@"LCCertificateData"];
+        [defaults removeObjectForKey:@"LCCertificatePassword"];
+    }
+    return YES;
+}
++ (void)removeContainerCertificate {
+    SecItemDelete((__bridge CFDictionaryRef)credentialQuery());
+    containerCredential = nil; credentialLoaded = YES;
+}
++ (NSBundle *)resourceBundle {
+    NSBundle *host = NSUserDefaults.lcMainBundle ?: NSBundle.mainBundle;
+    NSURL *url = [host URLForResource:@"LiveContainerResources" withExtension:@"bundle"];
+    return url ? [NSBundle bundleWithURL:url] : host;
+}
 
 + (NSString*) teamIdentifier {
     static NSString* ans = nil;
@@ -119,8 +178,7 @@ NSString* FBSOpenApplicationOptionKeyPayloadURL = @"__PayloadURL";
 }
 
 + (NSString *)certificatePassword {
-    NSUserDefaults* nud = NSUserDefaults.lcSharedDefaults ?: NSUserDefaults.standardUserDefaults;
-    return [nud objectForKey:@"LCCertificatePassword"];
+    return readCredential()[@"password"];
 }
 
 + (BOOL)launchToGuestAppWithClassicMode:(NSUInteger)classicMode {
@@ -149,7 +207,7 @@ NSString* FBSOpenApplicationOptionKeyPayloadURL = @"__PayloadURL";
         }
     }
 
-    int tries = 2;
+    int tries = 1;
     _LSOpenConfiguration *configuration = [[PrivClass(_LSOpenConfiguration) alloc] init];
     if(classicMode) {
         NSMutableDictionary* dict = [NSMutableDictionary new];
@@ -244,6 +302,7 @@ NSString* FBSOpenApplicationOptionKeyPayloadURL = @"__PayloadURL";
 }
 
 + (NSString*)getContainerUsingLCSchemeWithFolderName:(NSString*)folderName {
+    if (folderName.length == 0) return nil;
     NSURL* infoPath = [self containerLockPath];
     NSMutableDictionary *info = [NSMutableDictionary dictionaryWithContentsOfFile:infoPath.path];
     if (!info) {

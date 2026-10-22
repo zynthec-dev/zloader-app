@@ -5,6 +5,7 @@
 //  Created by s s on 2024/9/21.
 //
 #import "Localization.h"
+#import "LCSharedUtils.h"
 
 @implementation NSString (Localization)
 
@@ -14,7 +15,7 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSString *language = @"en";
-        NSString *path = [[NSUserDefaults lcMainBundle] pathForResource:language ofType:@"lproj"];
+        NSString *path = [[NSClassFromString(@"LCSharedUtils") resourceBundle] pathForResource:language ofType:@"lproj"];
         enBundle = [NSBundle bundleWithPath:path];
     });
     return enBundle;
@@ -22,7 +23,7 @@
 
 // Instance method to return a localized string
 - (NSString *)localized {
-    NSString *message = [[NSUserDefaults lcMainBundle] localizedStringForKey:self value:@"" table:nil];
+    NSString *message = [[NSClassFromString(@"LCSharedUtils") resourceBundle] localizedStringForKey:self value:@"" table:nil];
     
     if (![message isEqualToString:self]) {
         return message;
