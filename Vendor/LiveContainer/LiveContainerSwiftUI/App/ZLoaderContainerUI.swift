@@ -11,9 +11,35 @@ import SwiftUI
         prepared = true
     }
 
-    @objc public static func appsController() -> UIViewController {
+    @objc(appsControllerWithBackground:) public static func appsController(background: UIColor) -> UIViewController {
         prepare()
-        return UIHostingController(rootView: ZLoaderContainerRoot(settings: false))
+        let controller = UIHostingController(rootView: ZLoaderContainerRoot(settings: false, hostBackground: background))
+        controller.view.backgroundColor = .clear
+        return controller
+    }
+
+    @objc public static func toolbarItems() -> [UIBarButtonItem] {
+        prepare()
+        let help = UIBarButtonItem(image: UIImage(systemName: "questionmark.circle"), primaryAction: UIAction(title: "Hilfe") { _ in action("help") })
+        help.accessibilityLabel = "Container-Hilfe"
+        let link = UIBarButtonItem(image: UIImage(systemName: "link"), primaryAction: UIAction(title: "Link öffnen") { _ in action("link") })
+        link.accessibilityLabel = "Link im Container öffnen"
+        let sort = UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal.decrease.circle"), menu: UIMenu(children: [UIDeferredMenuElement.uncached { completion in
+            let search = UIAction(title: "Container suchen", image: UIImage(systemName: "magnifyingglass")) { _ in action("search-open") }
+            let sorting = AppSortType.allCases.map { type in
+                UIAction(title: type.displayName, image: UIImage(systemName: type.systemImage), state: LCAppSortManager.shared.appSortType == type ? .on : .off) { _ in
+                    LCAppSortManager.shared.appSortType = type
+                    if type == .custom { action("sort") }
+                }
+            }
+            completion([search, UIMenu(options: .displayInline, children: sorting)])
+        }]))
+        sort.accessibilityLabel = "Container sortieren"
+        return [sort, link, help]
+    }
+
+    private static func action(_ name: String) {
+        NotificationCenter.default.post(name: .init("ZLoaderContainerAction"), object: name)
     }
 
     @objc public static func settingsController() -> UIViewController {
@@ -51,6 +77,7 @@ import SwiftUI
 
 private struct ZLoaderContainerRoot: View {
     let settings: Bool
+    var hostBackground: UIColor? = nil
     @StateObject private var downloadHelper = DownloadHelper()
     @StateObject private var sceneDelegate = SceneDelegate()
     @State private var launchError: String?
@@ -60,7 +87,7 @@ private struct ZLoaderContainerRoot: View {
             if settings {
                 LCSettingsView()
             } else {
-                LCAppListView(embeddedInZLoader: true)
+                LCAppListView(embeddedInZLoader: true, hostBackground: hostBackground)
             }
         }
         .environmentObject(DataManager.shared.model)

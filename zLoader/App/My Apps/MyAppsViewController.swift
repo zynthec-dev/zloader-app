@@ -133,10 +133,6 @@ class MyAppsViewController: UICollectionViewController
         let sign = UIBarButtonItem(image: UIImage(systemName: "signature"), style: .plain, target: self, action: #selector(openSigning(_:)))
         sign.accessibilityLabel = NSLocalizedString("Sign IPA", comment: "")
         navigationItem.leftBarButtonItems = [add, sign]
-        let library = UIBarButtonItem(image: UIImage(systemName: "books.vertical"), style: .plain, target: self, action: #selector(openIPALibrary(_:)))
-        library.accessibilityLabel = NSLocalizedString("IPA Library", comment: "")
-        navigationItem.rightBarButtonItem = library
-        
         // Allows us to intercept delegate callbacks.
         self.updatesDataSource.fetchedResultsController.delegate = self
         self.activeAppsDataSource.fetchedResultsController.delegate = self
@@ -218,6 +214,9 @@ class MyAppsViewController: UICollectionViewController
             self?.activeTeam = try? await AuthManager.shared.getAuthenticatedTeam()
         }
     }
+
+    weak var importHost: UIViewController?
+    private var importPresenter: UIViewController { importHost ?? self }
 
     func presentInstallationPicker() {
         loadViewIfNeeded()
@@ -1167,7 +1166,7 @@ private extension MyAppsViewController
     @IBAction func sideloadApp(_ sender: UIBarButtonItem)
     {
         InstallAppDialog.presentSourceSelection(
-            from: self,
+            from: importPresenter,
             barButtonItem: sender,
             mode: .prompt,
             onChooseFiles: { [weak self] in
@@ -1192,7 +1191,7 @@ private extension MyAppsViewController
 
     private func showIPALibrary() {
         let library = CacheManagementView(signedIPAsOnly: true, onInstall: { [weak self] url in self?.installFromLibrary(url) })
-        navigationController?.pushViewController(ZLoaderHostingController(rootView: library), animated: true)
+        (importHost?.navigationController ?? navigationController)?.pushViewController(ZLoaderHostingController(rootView: library), animated: true)
     }
 
     private func installFromLibrary(_ url: URL) {
@@ -1218,7 +1217,7 @@ private extension MyAppsViewController
         
         let documentPickerViewController = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: true)
         documentPickerViewController.delegate = self
-        self.present(documentPickerViewController, animated: true, completion: nil)
+        importPresenter.present(documentPickerViewController, animated: true, completion: nil)
     }
     #else
     private func presentTVWebTransfer()
@@ -2091,18 +2090,33 @@ private extension MyAppsViewController
     {
         #if !os(tvOS)
         let controller = ZLoaderHostingController(rootView: IPAInstallDestinationView(filename: url.lastPathComponent,
+            checkDeviceAvailability: { [weak self] in
+                guard SigningIdentityStore.shared.pipelineIdentityID == nil,
+                      AuthManager.shared.isAuthenticated else { return false }
+                guard let team = (try? await AuthManager.shared.getAuthenticatedTeam()) ?? self?.activeTeam,
+                      team.type == .free else { return false }
+                // Check the portal for each import. A cached zero remains blocked
+                // if the portal is temporarily unreachable.
+                if let ids = try? await DeveloperPortalProxy.shared.fetchAppIDs(team: team) {
+                    return AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: Set(ids.map(\.identifier)).count)
+                }
+                let managed = Team.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Team.identifier), team.identifier), in: DatabaseManager.shared.viewContext)
+                return AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: managed?.appIDs.count)
+            },
             installOnDevice: { [weak self] in
-                self?.dismiss(animated: true) {
+                self?.importPresenter.dismiss(animated: true) {
                     guard let self else { return }
-                    InstallAppDialog.present(ipaURL: url, from: self) { [weak self] in self?.sideloadApp(at: url) { _ in } }
+                    (self.importHost as? MyAppsPagesViewController)?.showInstalled()
+                    InstallAppDialog.present(ipaURL: url, from: self.importPresenter) { [weak self] in self?.sideloadApp(at: url) { _ in } }
                 }
             }, installInContainer: { [weak self] in
-                self?.dismiss(animated: true) {
+                self?.importPresenter.dismiss(animated: true) {
                     ZLoaderImportContainerIPA(url)
                     NotificationCenter.default.post(name: .init("ZLoaderShowContainers"), object: nil)
                 }
-            }, cancel: { [weak self] in self?.dismiss(animated: true) }))
-        present(controller, animated: true)
+            }, cancel: { [weak self] in self?.importPresenter.dismiss(animated: true) }))
+        controller.modalPresentationStyle = .fullScreen
+        importPresenter.present(controller, animated: true)
         #else
         InstallAppDialog.present(
             ipaURL: url,

@@ -37,7 +37,7 @@ public enum InstallAppDialog {
     public static func presentSourceSelection(
         from presentingVC: UIViewController,
         barButtonItem: UIBarButtonItem? = nil,
-        mode: AppImportSourceMode = UserDefaults.standard.appImportSourceMode,
+        mode: AppImportSourceMode = .prompt,
         onChooseFiles: @escaping () -> Void,
         onConfirm: @escaping (URL) -> Void,
         onChooseLibrary: (() -> Void)? = nil

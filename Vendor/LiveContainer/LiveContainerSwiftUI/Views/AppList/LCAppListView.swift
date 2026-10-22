@@ -117,12 +117,29 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
     }
     
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let embeddedInZLoader: Bool
-    init(embeddedInZLoader: Bool = false) {
+    private let hostBackground: UIColor?
+    init(embeddedInZLoader: Bool = false, hostBackground: UIColor? = nil) {
         self.embeddedInZLoader = embeddedInZLoader
+        self.hostBackground = hostBackground
         _installOptions = State(initialValue: [])
     }
     
+    @ViewBuilder private func appTiles(_ apps: [LCAppModel]) -> some View {
+        if embeddedInZLoader {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: dynamicTypeSize.isAccessibilitySize ? 1 : 4), alignment: .leading, spacing: 12) {
+                ForEach(apps, id: \.self) { app in
+                    LCAppBanner(appModel: app, delegate: self, launcherStyle: true)
+                }
+            }.padding(.horizontal, 16)
+        } else {
+            LazyVStack {
+                ForEach(apps, id: \.self) { app in LCAppBanner(appModel: app, delegate: self) }
+            }.padding()
+        }
+    }
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -134,61 +151,27 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 })
                 .hidden()
                 
-                LazyVStack {
-                    ForEach(filteredApps, id: \.self) { app in
-                        LCAppBanner(appModel: app, delegate: self)
-                    }
-                    .transition(.scale)
+                if embeddedInZLoader && installprogressVisible {
+                    ProgressView(value: installProgressPercentage).padding(.horizontal, 16)
                 }
-                .padding()
-                .animation(searchContext.isTyping ? nil : .easeInOut, value: filteredApps)
+                appTiles(filteredApps)
 
                 VStack {
-                    if LCUtils.appGroupUserDefault.bool(forKey: "LCStrictHiding") {
+                    let strict = LCUtils.appGroupUserDefault.bool(forKey: "LCStrictHiding")
+                    if sharedModel.isHiddenAppUnlocked || (!strict && !sharedModel.hiddenApps.isEmpty) {
+                        HStack {
+                            Text("lc.appList.hiddenApps".loc).font(.system(.title2).bold())
+                            Spacer()
+                        }.padding(.horizontal, 16)
                         if sharedModel.isHiddenAppUnlocked {
-                            LazyVStack {
-                                HStack {
-                                    Text("lc.appList.hiddenApps".loc)
-                                        .font(.system(.title2).bold())
-                                    Spacer()
-                                }
-                                
-                                ForEach(filteredHiddenApps, id: \.self) { app in
-                                    LCAppBanner(appModel: app, delegate: self)
-                                }
-                                .transition(.scale)
-                                
-                            }
-                            .padding()
-                            .transition(.opacity)
-                            .animation(searchContext.isTyping ? nil : .easeInOut, value: filteredHiddenApps)
-                            
-                            if sharedModel.hiddenApps.count == 0 {
-                                Text("lc.appList.hideAppTip".loc)
-                                    .foregroundStyle(.gray)
-                            }
-                        }
-                    } else if sharedModel.hiddenApps.count > 0 {
-                        LazyVStack {
-                            HStack {
-                                Text("lc.appList.hiddenApps".loc)
-                                    .font(.system(.title2).bold())
-                                Spacer()
-                            }
-                            ForEach(filteredHiddenApps, id: \.self) { app in
-                                if sharedModel.isHiddenAppUnlocked {
-                                    LCAppBanner(appModel: app, delegate: self)
-                                } else {
-                                    LCAppSkeletonBanner()
-                                }
-                            }
-                            .animation(.easeInOut, value: sharedModel.isHiddenAppUnlocked)
-                            .onTapGesture {
+                            appTiles(filteredHiddenApps)
+                        } else {
+                            Button {
                                 Task { await authenticateUser() }
-                            }
+                            } label: {
+                                Label("lc.appList.hiddenApps".loc, systemImage: "lock.fill")
+                            }.padding()
                         }
-                        .padding()
-                        .animation(searchContext.isTyping ? nil : .easeInOut, value: filteredHiddenApps)
                     }
 
                     let appCount = sharedModel.isHiddenAppUnlocked ? filteredApps.count + filteredHiddenApps.count : filteredApps.count
@@ -206,6 +189,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 }
 
             }
+            .background(LCAppListBackground(color: hostBackground ?? .clear).ignoresSafeArea())
             .navigationBarProgressBar(show:$installprogressVisible, progress: $installProgressPercentage)
             .coordinateSpace(name: "scroll")
             .onAppear {
@@ -216,7 +200,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             
             .navigationTitle(embeddedInZLoader ? "Container" : "lc.appList.myApps".loc)
             .navigationBarTitleDisplayMode(embeddedInZLoader ? .inline : .large)
+            .navigationBarHidden(embeddedInZLoader && !isNavigationActive)
             .toolbar {
+                if !embeddedInZLoader {
                 ToolbarItem(placement: .topBarLeading) {
                     if sharedModel.multiLCStatus != 2 {
                         if !installprogressVisible {
@@ -291,9 +277,20 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         Label("Sort by", systemImage: "line.3.horizontal.decrease.circle")
                     }
                 }
+                }
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .onReceive(NotificationCenter.default.publisher(for: .init("ZLoaderContainerAction"))) { notification in
+            guard embeddedInZLoader, let action = notification.object as? String else { return }
+            switch action {
+            case "help": helpPresent = true
+            case "link": Task { await onOpenWebViewTapped() }
+            case "sort": customSortViewPresent = true
+            case "search": searchContext.query = notification.userInfo?["query"] as? String ?? ""
+            default: break
+            }
+        }
         .alert("lc.common.error".loc, isPresented: $errorShow){
             Button("lc.common.ok".loc, action: {
             })
@@ -1285,4 +1282,16 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
 
 extension View {
     func apply<V: View>(@ViewBuilder _ block: (Self) -> V) -> V { block(self) }
+}
+
+/// UIKit preserves the host's dynamic patterned material color exactly.
+private struct LCAppListBackground: UIViewRepresentable {
+    let color: UIColor
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = color
+        return view
+    }
+    func updateUIView(_ view: UIView, context: Context) { view.backgroundColor = color }
 }

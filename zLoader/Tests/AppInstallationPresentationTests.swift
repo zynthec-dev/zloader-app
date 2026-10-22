@@ -12,6 +12,11 @@ import Foundation
                 }
             }
         }
+        precondition(!AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: 9))
+        precondition(AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: 10))
+        precondition(AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: 11))
+        precondition(!AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: false, registeredCount: 10))
+        precondition(!AppIDInstallationPolicy.blocksDeviceInstall(isFreeTeam: true, registeredCount: nil))
         let order = ["expires-today", "running-store", "expires-next-week", "other-store"]
         precondition(AppInstallationPresentation.pinnedFirst(order) { $0 == "running-store" } == ["running-store", "expires-today", "expires-next-week", "other-store"])
         precondition(AppInstallationPresentation.pinnedFirst(order) { $0 == "missing" } == order)

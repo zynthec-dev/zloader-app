@@ -67,6 +67,10 @@ class FeaturedViewController: UICollectionViewController
         super.viewDidLoad()
         
         self.title = NSLocalizedString("Browse", comment: "")
+        let library = UIBarButtonItem(image: UIImage(systemName: "books.vertical"), style: .plain, target: self, action: #selector(openIPALibrary))
+        library.accessibilityLabel = NSLocalizedString("IPA Library", comment: "")
+        library.accessibilityIdentifier = "discover-ipa-library"
+        navigationItem.rightBarButtonItem = library
         
         let layout = Self.makeLayout()
         self.collectionView.collectionViewLayout = layout
@@ -105,6 +109,15 @@ class FeaturedViewController: UICollectionViewController
         #endif
     }
     
+    @objc private func openIPALibrary() {
+        let library = CacheManagementView(signedIPAsOnly: true, onInstall: { [weak self] url in
+            self?.navigationController?.popToRootViewController(animated: false)
+            NotificationCenter.default.post(name: AppDelegate.importAppDeepLinkNotification, object: nil,
+                userInfo: [AppDelegate.importAppDeepLinkURLKey: url])
+        })
+        navigationController?.pushViewController(ZLoaderHostingController(rootView: library), animated: true)
+    }
+
     override func viewDidAppear(_ animated: Bool) 
     {
         super.viewDidAppear(animated)

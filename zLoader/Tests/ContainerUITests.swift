@@ -28,14 +28,20 @@ final class ContainerUITests: XCTestCase {
         let pages = app.segmentedControls["my-apps-pages"]
         XCTAssertTrue(pages.waitForExistence(timeout: 10))
         pages.buttons["Apps in Containern"].tap()
-        XCTAssertTrue(app.navigationBars["Container"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Container sortieren"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label IN %@", ["Install App", "App installieren"])).count, 1)
         attach("container-page")
         pages.buttons["Installierte Apps"].tap()
-        XCTAssertTrue(app.buttons["IPA Library"].exists || app.buttons["IPA-Bibliothek"].exists)
+        XCTAssertFalse(app.buttons["discover-ipa-library"].exists)
         app.swipeLeft()
         XCTAssertTrue(pages.buttons["Apps in Containern"].isSelected)
         app.swipeRight()
         XCTAssertTrue(pages.buttons["Installierte Apps"].isSelected)
+        app.tabBars.buttons["Entdecken"].tap()
+        XCTAssertTrue(app.buttons["discover-ipa-library"].waitForExistence(timeout: 5))
+        app.buttons["discover-ipa-library"].tap()
+        attach("discover-ipa-library")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Einstellungen"].tap()
         let container = app.staticTexts["Container"].firstMatch
         for _ in 0..<8 where !container.isHittable { app.swipeUp() }
@@ -76,6 +82,8 @@ final class ContainerUITests: XCTestCase {
             let container = app.buttons["install-destination-container"]
             XCTAssertTrue(device.waitForExistence(timeout: 10))
             XCTAssertTrue(container.exists)
+            XCTAssertTrue(device.isEnabled)
+            XCTAssertLessThan(app.navigationBars["Installation wählen"].frame.minY, app.frame.height * 0.1)
             attach("ipa-destination-" + name)
             container.tap()
             let info = app.otherElements["container-app-info-de.zloader.acceptance." + name.lowercased()]
@@ -151,6 +159,22 @@ final class ContainerUITests: XCTestCase {
         XCTAssertFalse(app.alerts["Fehler"].exists)
         attach("home-screen-shortcut-configuration")
         close.tap()
+    }
+
+    func test005SharedPlusAndURLField() throws {
+        app.tabBars.buttons["Meine Apps"].tap()
+        let pages = app.segmentedControls["my-apps-pages"]
+        pages.buttons["Apps in Containern"].tap()
+        let plus = app.buttons.matching(NSPredicate(format: "label IN %@", ["Install App", "App installieren"])).firstMatch
+        plus.tap()
+        app.buttons.matching(NSPredicate(format: "label IN %@", ["Install from URL", "Von URL installieren"])).firstMatch.tap()
+        let field = app.alerts.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("https://example.com/app.ipa")
+        XCTAssertEqual(field.value as? String, "https://example.com/app.ipa")
+        attach("rounded-url-input")
+        app.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Abbrechen"])).firstMatch.tap()
+        XCTAssertTrue(pages.buttons["Apps in Containern"].isSelected)
     }
 
     @discardableResult private func selectIdentity(virtual: Bool) -> String {

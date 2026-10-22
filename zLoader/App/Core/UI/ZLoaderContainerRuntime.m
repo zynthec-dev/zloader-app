@@ -33,8 +33,19 @@ static UIViewController *controller(SEL selector) {
     fallback.view = label;
     return fallback;
 }
-UIViewController *ZLoaderContainerAppsController(void) { return controller(NSSelectorFromString(@"appsController")); }
+UIViewController *ZLoaderContainerAppsController(UIColor *background) {
+    Class ui = containerUI();
+    SEL selector = NSSelectorFromString(@"appsControllerWithBackground:");
+    return ui && [ui respondsToSelector:selector]
+        ? ((UIViewController *(*)(id, SEL, UIColor *))objc_msgSend)(ui, selector, background)
+        : controller(NSSelectorFromString(@"appsController"));
+}
 UIViewController *ZLoaderContainerSettingsController(void) { return controller(NSSelectorFromString(@"settingsController")); }
+NSArray<UIBarButtonItem *> *ZLoaderContainerToolbarItems(void) {
+    Class ui = containerUI();
+    SEL selector = NSSelectorFromString(@"toolbarItems");
+    return ui && [ui respondsToSelector:selector] ? ((NSArray *(*)(id, SEL))objc_msgSend)(ui, selector) : @[];
+}
 BOOL ZLoaderHandleContainerURL(NSURL *url) {
     Class ui = containerUI();
     return ui && ((BOOL (*)(id, SEL, NSURL *))objc_msgSend)(ui, NSSelectorFromString(@"openURL:"), url);

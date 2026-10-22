@@ -11,19 +11,21 @@ struct LCAppBannerConfiguration {
     let model: LCAppModel
     let dynamicColors: Bool
     let darkModeIcon: Bool
+    var launcherStyle = false
 }
 
 
 final class LCAppBannerViewController: UIViewController, UIContextMenuInteractionDelegate, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
         
     private let delegate: LCAppBannerDelegate
-    private let bannerView = LCAppBannerRootView()
+    private let bannerView: LCAppBannerRootView
     private var configuration: LCAppBannerConfiguration
     private var exportTemporaryDirectory: URL?
     
     init(delegate: LCAppBannerDelegate, config: LCAppBannerConfiguration) {
         self.delegate = delegate
         self.configuration = config
+        self.bannerView = LCAppBannerRootView(launcherStyle: config.launcherStyle)
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -45,7 +47,10 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
         let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(bannerDoubleTapped))
         doubleTapGesture.numberOfTapsRequired = 2
         doubleTapGesture.cancelsTouchesInView = false
-        bannerView.addGestureRecognizer(doubleTapGesture)
+        if configuration.launcherStyle {
+            let tap = UITapGestureRecognizer(target: self, action: #selector(runButtonTapped))
+            bannerView.addGestureRecognizer(tap)
+        } else { bannerView.addGestureRecognizer(doubleTapGesture) }
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -68,7 +73,8 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
         configuration = LCAppBannerConfiguration(
             model: model,
             dynamicColors: dynamicColors,
-            darkModeIcon: darkModeIcon
+            darkModeIcon: darkModeIcon,
+            launcherStyle: configuration.launcherStyle
         )
         refreshView()
     }

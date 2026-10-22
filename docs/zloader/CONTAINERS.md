@@ -88,15 +88,15 @@ server and runs the suite with an xcresult bundle. It replaces prior Alpha/Beta
 fixture app bundles only. Simulator guest patching renews the local ad-hoc Mach-O
 seal; the device path still requires Apple's real signing or supported JIT.
 
-Release 0.8.0 acceptance on 22 October 2026 passed all four UI tests on the
+Release 0.8.0 acceptance on 22 October 2026 passed all five UI tests on the
 dedicated iOS 27.0 Simulator: onboarding without an Apple account; segment/swipe
 navigation and settings; both synthetic IPA imports; automatic guest launch;
 shared virtual IDFV and iPhone17,2 machine reports; WKWebView, public Safari,
 legacy ASWebAuthenticationSession and modern Callback return handling while a
 native app owns the same scheme; shared-identity regeneration with persistent
 guest app data; returning to host identity; shortcut menu and loopback landing
-page. The harness separately verified the copied URL's guest and data-container
-identity. The four-test suite completed successfully with an xcresult bundle.
+page; full-screen import selection; the shared Plus menu and rounded URL input. The harness separately verified the copied URL's guest and data-container
+identity. The five-test suite completed successfully with an xcresult bundle.
 The documented 28 local regression scripts passed, with the expanded shortcut
 server/profile checks repeated after the latest changes.
 
@@ -106,3 +106,19 @@ JIT-less signatures or real self replacement. Physical iPhone acceptance remains
 required for those operations, cellular-only transport, real OAuth providers and
 LiveProcess/PiP system integration. A compiled runtime or passing UI test must not
 be presented as proof that every third-party IPA works on a physical device.
+
+## Host navigation
+
+My Apps uses adjacent, horizontally swipeable device/container pages selected
+by app/box symbols with accessible names. Both pages share the top-left Plus
+and the same four-column icon/name grid (one column at accessibility text sizes).
+The container context menu retains its data folders, runtime, shortcuts, settings
+and uninstall actions; help, browser and sort controls live in the host toolbar.
+IPA selection opens a full-screen destination chooser. Free teams with ten
+registered App IDs cannot select device installation; container import remains
+available. Each chooser checks current portal inventory, falling back to the
+cached count when offline. Paid teams and imported signing identities remain
+unaffected. The IPA Library is in Discover's top-right toolbar. The obsolete
+Default Import Mode preference is no longer shown or consulted by the Plus menu.
+Native rounded input containers draw their own backgrounds; inner text fields
+remain transparent in alerts and form rows.

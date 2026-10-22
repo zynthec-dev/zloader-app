@@ -18,6 +18,7 @@ protocol LCAppBannerDelegate {
 
 struct LCAppBanner: UIViewControllerRepresentable {
     var delegate: LCAppBannerDelegate
+    let launcherStyle: Bool
 
     @ObservedObject var model: LCAppModel
 
@@ -25,13 +26,14 @@ struct LCAppBanner: UIViewControllerRepresentable {
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) private var darkModeIcon = false
     private let sharedModel = DataManager.shared.model
 
-    init(appModel: LCAppModel, delegate: LCAppBannerDelegate) {
+    init(appModel: LCAppModel, delegate: LCAppBannerDelegate, launcherStyle: Bool = false) {
+        self.launcherStyle = launcherStyle
         _model = ObservedObject(wrappedValue: appModel)
         self.delegate = delegate
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
-        let viewController = LCAppBannerViewController(delegate: delegate, config: LCAppBannerConfiguration(model: model, dynamicColors: dynamicColors, darkModeIcon: darkModeIcon))
+        let viewController = LCAppBannerViewController(delegate: delegate, config: LCAppBannerConfiguration(model: model, dynamicColors: dynamicColors, darkModeIcon: darkModeIcon, launcherStyle: launcherStyle))
         return viewController
     }
 
@@ -50,6 +52,13 @@ struct LCAppBanner: UIViewControllerRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiViewController: UIViewController, context: Context) -> CGSize? {
         guard let width = proposal.width else {
             return nil
+        }
+        if launcherStyle {
+            let font = UIFont.preferredFont(forTextStyle: .footnote)
+            let nameHeight = (model.displayName as NSString).boundingRect(
+                with: CGSize(width: max(1, width - 4), height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font], context: nil).height
+            return CGSize(width: width, height: min(112, width - 4) + 4 + ceil(max(font.lineHeight * 2, nameHeight)) + 2 + ceil(UIFont.preferredFont(forTextStyle: .caption2).lineHeight) + 16)
         }
         return CGSize(width: width, height: LCAppBannerRootView.bannerHeight)
     }

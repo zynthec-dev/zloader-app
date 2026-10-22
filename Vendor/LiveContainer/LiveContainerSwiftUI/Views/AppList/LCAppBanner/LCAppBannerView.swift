@@ -10,6 +10,7 @@ final class LCAppBannerRootView: UIView {
     static let bannerHeight: CGFloat = 88
 
     let runControl = LCAppBannerRunControl()
+    let launcherStyle: Bool
 
     private let visualBackgroundView = UIView()
     private let iconImageView = UIImageView()
@@ -29,17 +30,20 @@ final class LCAppBannerRootView: UIView {
         CGSize(width: UIView.noIntrinsicMetric, height: Self.bannerHeight)
     }
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(launcherStyle: Bool = false) {
+        self.launcherStyle = launcherStyle
+        super.init(frame: .zero)
         setupView()
     }
 
     required init?(coder: NSCoder) {
+        launcherStyle = false
         super.init(coder: coder)
         setupView()
     }
 
     private func setupView() {
+        if launcherStyle { setupLauncher(); return }
         isOpaque = false
         backgroundColor = .clear
         layer.cornerRadius = 22
@@ -117,6 +121,55 @@ final class LCAppBannerRootView: UIView {
         ])
     }
 
+    private func setupLauncher() {
+        backgroundColor = .clear
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.layer.cornerCurve = .continuous
+        iconImageView.clipsToBounds = true
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        configureLabel(nameLabel, font: .preferredFont(forTextStyle: .footnote))
+        nameLabel.numberOfLines = 0
+        nameLabel.lineBreakMode = .byWordWrapping
+        nameLabel.textAlignment = .center
+        nameLabel.adjustsFontForContentSizeCategory = true
+        configureLabel(versionLabel, font: .preferredFont(forTextStyle: .caption2))
+        versionLabel.textAlignment = .center
+        versionLabel.adjustsFontForContentSizeCategory = true
+        detailStack.axis = .vertical
+        detailStack.spacing = 2
+        detailStack.isAccessibilityElement = true
+        detailStack.translatesAutoresizingMaskIntoConstraints = false
+        detailStack.addArrangedSubview(nameLabel)
+        detailStack.addArrangedSubview(versionLabel)
+        addSubview(iconImageView)
+        addSubview(detailStack)
+        addSubview(runControl)
+        runControl.launcherStyle = true
+        runControl.translatesAutoresizingMaskIntoConstraints = false
+        let preferredWidth = iconImageView.widthAnchor.constraint(equalToConstant: 112)
+        preferredWidth.priority = .defaultHigh
+        preferredWidth.isActive = true
+        NSLayoutConstraint.activate([
+            iconImageView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            iconImageView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            iconImageView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, constant: -4),
+            iconImageView.widthAnchor.constraint(lessThanOrEqualToConstant: 112),
+            iconImageView.heightAnchor.constraint(equalTo: iconImageView.widthAnchor),
+            detailStack.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 4),
+            detailStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
+            detailStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
+            runControl.leadingAnchor.constraint(equalTo: iconImageView.leadingAnchor),
+            runControl.trailingAnchor.constraint(equalTo: iconImageView.trailingAnchor),
+            runControl.topAnchor.constraint(equalTo: iconImageView.topAnchor),
+            runControl.bottomAnchor.constraint(equalTo: iconImageView.bottomAnchor)
+        ])
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if launcherStyle { iconImageView.layer.cornerRadius = iconImageView.bounds.width * 0.225 }
+    }
+
     private func configureLabel(_ label: UILabel, font: UIFont) {
         label.font = font
         label.numberOfLines = 1
@@ -167,6 +220,15 @@ final class LCAppBannerRootView: UIView {
             progress: model.signProgress,
             isEnabled: !model.isAppRunning
         )
+
+        if launcherStyle {
+            nameLabel.font = .preferredFont(forTextStyle: .footnote)
+            versionLabel.font = .preferredFont(forTextStyle: .caption2)
+            versionLabel.text = model.version
+            versionLabel.textColor = .secondaryLabel
+            runControl.accessibilityLabel = model.displayName
+            // Progress remains over the icon, matching installed-app tiles.
+        }
 
         var accessibilityParts = [model.displayName, "\(model.version) - \(model.bundleIdentifier)"]
         if !model.uiRemark.isEmpty {
@@ -314,6 +376,7 @@ private final class LCAppBannerBadgeView: UIView {
 }
 
 final class LCAppBannerRunControl: UIControl {
+    var launcherStyle = false
     private let baseLayer = CALayer()
     private let progressCircleLayer = CALayer()
     private let titleLabel = UILabel()
@@ -371,7 +434,7 @@ final class LCAppBannerRunControl: UIControl {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        layer.cornerRadius = bounds.height / 2
+        layer.cornerRadius = bounds.height * (launcherStyle ? 0.225 : 0.5)
         baseLayer.frame = bounds
 
         let width = bounds.width
@@ -412,6 +475,11 @@ final class LCAppBannerRunControl: UIControl {
         } else {
             activityIndicator.stopAnimating()
             accessibilityValue = nil
+        }
+        if launcherStyle {
+            baseLayer.isHidden = !isSigning
+            baseLayer.backgroundColor = UIColor.black.withAlphaComponent(0.55).cgColor
+            titleLabel.isHidden = true
         }
         accessibilityTraits = isEnabled ? .button : [.button, .notEnabled]
         setNeedsLayout()
