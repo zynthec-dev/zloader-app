@@ -11,16 +11,35 @@ import Foundation
         """).array!
         let graph = try json("""
         {"data":{"type":"bundleIds","id":"SYNTHETIC","attributes":{"name":"Synthetic app","identifier":"example.test","seedId":"TEST"},"relationships":{"bundleIdCapabilities":{"data":[{"id":"existing","type":"bundleIdCapabilities"}]}}},
-         "included":[{"id":"existing","type":"bundleIdCapabilities","attributes":{"enabled":true,"editable":true,"settings":[{"key":"retain","options":[{"key":"value","enabled":true}]}]},"relationships":{"capability":{"data":{"type":"capabilities","id":"UNKNOWN_ENABLED"}},"appGroups":{"data":[{"type":"appGroups","id":"retain-group"}]}}}]}
+         "included":[{"id":"existing","type":"bundleIdCapabilities","attributes":{"enabled":true,"editable":true,"inputs":[{"readOnly":"metadata"}],"settings":[{"key":"retain","options":[{"key":"value","enabled":true}]}]},"relationships":{"capability":{"data":{"type":"capabilities","id":"UNKNOWN_ENABLED"}},"appGroups":{"data":[{"type":"appGroups","id":"retain-group"}]}}}]}
         """)
         let catalog = try PortalCapabilityGraph.inventory(metadata: metadata, graph: graph, appID: "SYNTHETIC")
         precondition(catalog.count == 5)
         precondition(catalog.first { $0.id == "CARPLAY_AUDIO" }?.editable == true)
         precondition(catalog.first { $0.id == "UNKNOWN_ENABLED" }?.enabled == true)
         precondition(catalog.first { $0.id == "UNKNOWN_ENABLED" }?.editable == false)
-        let patch = try PortalCapabilityGraph.patch(metadata: metadata, graph: graph, appID: "SYNTHETIC", capabilityID: "CARPLAY_AUDIO", enabled: true)
+        precondition(PortalCapabilityGraph.activationIDs(in: catalog,
+            requested: ["com.apple.developer.carplay-audio"]) == ["CARPLAY_AUDIO"])
+        precondition(PortalCapabilityGraph.activationIDs(in: catalog, requested: []).isEmpty)
+        let futureMetadata = try json("""
+        [{"type":"capabilities","id":"NEW_SERVER_ID","attributes":{"name":"New right","entitlement":"com.apple.developer.new-right","editable":true}},
+         {"type":"capabilities","id":"DENIED","attributes":{"name":"Denied","entitlement":"com.apple.developer.denied","editable":false}},
+         {"type":"capabilities","id":"NEEDS_SETUP","attributes":{"name":"Setup","entitlement":"com.apple.developer.setup","editable":true,"settings":[{"key":"choice"}]}}]
+        """).array!
+        let future = try PortalCapabilityGraph.inventory(metadata: futureMetadata, graph: graph, appID: "SYNTHETIC")
+        precondition(PortalCapabilityGraph.activationIDs(in: future, requested: ["com.apple.developer.new-right",
+            "com.apple.developer.denied", "com.apple.developer.setup"]) == ["NEW_SERVER_ID"])
+        let enabledGraph = try json("""
+        {"data":{"type":"bundleIds","id":"SYNTHETIC","relationships":{"bundleIdCapabilities":{"data":[{"id":"carplay","type":"bundleIdCapabilities"}]}}},
+         "included":[{"id":"carplay","type":"bundleIdCapabilities","attributes":{"enabled":true},"relationships":{"capability":{"data":{"type":"capabilities","id":"CARPLAY_AUDIO"}}}}]}
+        """)
+        let enabled = try PortalCapabilityGraph.inventory(metadata: metadata, graph: enabledGraph, appID: "SYNTHETIC")
+        precondition(PortalCapabilityGraph.activationIDs(in: enabled, requested: ["com.apple.developer.carplay-audio"]).isEmpty)
+        let patch = try PortalCapabilityGraph.patch(metadata: metadata, graph: graph, appID: "SYNTHETIC", capabilityID: "CARPLAY_AUDIO", enabled: true, teamID: "TEST_TEAM")
+        precondition(patch["data"]?["attributes"]?["teamId"]?.string == "TEST_TEAM")
         let children = patch["data"]?["relationships"]?["bundleIdCapabilities"]?["data"]?.array ?? []
         precondition(children.count == 2)
+        precondition(children[0]["attributes"]?["inputs"] == nil)
         precondition(children[0]["attributes"]?["settings"] == graph["included"]?.array?[0]["attributes"]?["settings"])
         precondition(children[0]["relationships"]?["appGroups"]?["data"] == graph["included"]?.array?[0]["relationships"]?["appGroups"]?["data"])
         precondition(children[1]["relationships"]?["capability"]?["data"]?["id"]?.string == "CARPLAY_AUDIO")

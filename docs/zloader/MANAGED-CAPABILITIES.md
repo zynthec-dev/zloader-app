@@ -6,11 +6,12 @@ activation for the actual re-signed App ID are prerequisites for managed rights.
 
 For Apple-account signing, known services use their legacy Developer Services
 identifiers. Other nonempty `com.apple.developer.*` requests, excluding team
-identity, are sent individually as typed managed entitlement requests. One
-capability rejection does not suppress other requests. Authentication, rate-limit
-and transport failures still stop the operation. APIs may not support enabling
-all managed rights: activate those in Apple's portal for the actual App ID.
-The newly issued Apple-signed profile is always authoritative.
+identity, are matched to Apple's current account capability catalog and activated
+with the modern bundle-ID API when Apple marks them editable and no additional
+configuration is required. Each mutation is read back before profile resolution.
+Authentication, rate-limit, incomplete-inventory and transport failures stop the
+operation. Rights requiring additional portal configuration still need that
+configuration. The newly issued Apple-signed profile is always authoritative.
 
 A downloaded existing profile is reusable only if it authorizes the entire
 request as well as the selected team, certificate and devices. Otherwise zLoader
@@ -63,3 +64,30 @@ same HTTPS endpoint. Local synthetic tests cover these constraints. This newer
 portal route has not been exercised with a live account; a 421 or other portal
 session rejection is surfaced rather than concealed. Profile authorization and
 physical CarPlay behavior still require device/account validation.
+
+## Automatic activation during signing
+
+For requested managed entitlements, Apple-account signing now loads the account's
+current capability catalog for the actual re-signed App ID (including the team
+suffix). Editable disabled entries needing no additional setup and matching an entitlement key
+are enabled through the modern bundle-ID API and read back before issuing the
+profile. The older legacy entitlement-request dictionary is no longer used to
+activate managed capabilities. Unknown future capability IDs work through the
+same server-advertised entitlement mapping; no additional local ID list is needed.
+
+This does not approve new capabilities or enable unrelated account rights.
+Capabilities requiring portal configuration, missing entitlement mappings or
+Apple approval remain subject to Apple's returned profile. CarPlay failures name
+the exact App ID and approval/distribution requirements instead of presenting
+optional Google rights as additional prerequisites for CarPlay.
+
+The shared manual/automatic mutation path scopes the capability catalog to the
+actual App ID and sends the selected team in the bundle-ID resource attributes,
+as required by the Developer Portal PATCH shape. Read-only capability `inputs`
+metadata is not replayed as writable attributes. The top-level team routing
+parameter and the resource's team attribution serve separate purposes. Changes
+remain unconfirmed until Apple returns the requested state on a fresh read.
+
+Request-shape reference: fastlane's Apple-session provisioning client,
+`spaceship/lib/spaceship/connect_api/provisioning/provisioning.rb`,
+`get_available_bundle_id_capabilities` and `patch_bundle_id_capability`.

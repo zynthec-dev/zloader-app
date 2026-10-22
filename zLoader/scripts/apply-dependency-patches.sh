@@ -19,10 +19,16 @@ for spec in 'minimuxer:minimuxer-warnings.patch' 'SideSign:sidesign-managed-sign
     git -C "Dependencies/$dependency" apply "$patch"
 done
 
-patch="$PWD/zLoader/Patches/sidesign-portal-capabilities.patch"
-if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; then
-    git -C Dependencies/SideSign apply --check "$patch"
-    git -C Dependencies/SideSign apply "$patch"
+# The upgrade check also handles checkouts with the previous portal patch.
+upgrade="$PWD/zLoader/Patches/sidesign-portal-signing-activation.patch"
+if ! git -C Dependencies/SideSign apply --reverse --check "$upgrade" 2>/dev/null; then
+    patch="$PWD/zLoader/Patches/sidesign-portal-capabilities.patch"
+    if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; then
+        git -C Dependencies/SideSign apply --check "$patch"
+        git -C Dependencies/SideSign apply "$patch"
+    fi
+    git -C Dependencies/SideSign apply --check "$upgrade"
+    git -C Dependencies/SideSign apply "$upgrade"
 fi
 
 # SwiftPM checkouts must be resolved before applying this runtime signing fix.

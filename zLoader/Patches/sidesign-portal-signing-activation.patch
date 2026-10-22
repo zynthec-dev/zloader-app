@@ -1,0 +1,50 @@
+--- a/Sources/DeveloperPortal/PortalCapabilities.swift
++++ b/Sources/DeveloperPortal/PortalCapabilities.swift
+@@ -97,7 +97,16 @@
+         }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+     }
+ 
+-    public static func patch(metadata: [PortalJSON], graph: PortalJSON, appID: String, capabilityID: String, enabled: Bool) throws -> PortalJSON {
++    /// Match only entitlement keys explicitly requested by the input app.
++    /// The account catalog, not a static list of service IDs, decides availability.
++    public static func activationIDs(in capabilities: [PortalCapability], requested: Set<String>) -> [String] {
++        capabilities.filter { capability in
++            guard let key = capability.entitlement else { return false }
++            return requested.contains(key) && !capability.enabled && capability.editable && !capability.requiresConfiguration
++        }.map(\.id).sorted()
++    }
++
++    public static func patch(metadata: [PortalJSON], graph: PortalJSON, appID: String, capabilityID: String, enabled: Bool, teamID: String? = nil) throws -> PortalJSON {
+         let catalog = try inventory(metadata: metadata, graph: graph, appID: appID)
+         guard let capability = catalog.first(where: { $0.id == capabilityID }) else { throw Failure.unavailable }
+         guard capability.editable else { throw Failure.notEditable }
+@@ -118,9 +127,10 @@
+         }
+         var attributes: [String: PortalJSON] = [:]
+         for key in ["name", "identifier", "seedId"] { if let v = graph["data"]?["attributes"]?[key] { attributes[key] = v } }
++        if let teamID { attributes["teamId"] = .string(teamID) }
+         resources = try resources.map { resource in
+             guard var object = resource.object, let attributes = object["attributes"]?.object else { throw Failure.incomplete }
+-            object["attributes"] = .object(attributes.filter { ["enabled", "settings", "inputs"].contains($0.key) })
++            object["attributes"] = .object(attributes.filter { ["enabled", "settings"].contains($0.key) })
+             if let relationships = object["relationships"]?.object {
+                 for relationship in relationships.values {
+                     if relationship["links"]?["next"]?.string != nil { throw Failure.incomplete }
+@@ -148,7 +158,7 @@
+             guard seen.insert(url).inserted else { throw PortalCapabilityGraph.Failure.incomplete }
+             var request = URLRequest(url: url); request.httpMethod = "GET"
+             let result: PortalJSON = try await sendServicesRequest(request,
+-                additionalParameters: page == 0 ? ["filter[capabilityType]": "capability,service", "filter[includeRequestable]": "true", "limit": "1000"] : nil,
++                additionalParameters: page == 0 ? ["filter[bundleId]": appID, "filter[capabilityType]": "capability,service", "filter[includeRequestable]": "true", "limit": "1000"] : nil,
+                 session: session, team: team)
+             guard let entries = result["data"]?.array else { throw PortalCapabilityGraph.Failure.incomplete }
+             metadata += entries
+@@ -174,7 +184,7 @@
+         let (metadata, graph) = try await capabilityInputs(appID: appID, session: session, team: team)
+         let before = try PortalCapabilityGraph.inventory(metadata: metadata, graph: graph, appID: appID)
+         if before.first(where: { $0.id == capabilityID })?.enabled == enabled { return before }
+-        let patch = try PortalCapabilityGraph.patch(metadata: metadata, graph: graph, appID: appID, capabilityID: capabilityID, enabled: enabled)
++        let patch = try PortalCapabilityGraph.patch(metadata: metadata, graph: graph, appID: appID, capabilityID: capabilityID, enabled: enabled, teamID: team.identifier)
+         guard var payload = patch.object else { throw PortalCapabilityGraph.Failure.incomplete }
+         payload["teamId"] = .string(team.identifier)
+         var request = URLRequest(url: URL(string: "bundleIds/" + appID, relativeTo: Constants.URLs.developerPortalV1Base)!)

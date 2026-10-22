@@ -433,6 +433,11 @@ private extension FetchProvisioningProfilesOperation{
             failures.append(NSLocalizedString("The profile does not authorize all selected registered devices.", comment: ""))
         }
         guard failures.isEmpty else {
+            let missingCarPlay = failures.filter { $0.contains("entitlement com.apple.developer.carplay-") || $0.contains("entitlement com.apple.developer.playable-content") }
+            if !missingCarPlay.isEmpty {
+                throw OperationError.invalidParameters("Apple did not authorize CarPlay in the newly issued profile for " + appID.bundleIdentifier +
+                    ". Automatic activation could not obtain this right. Verify Apple's approval and CarPlay activation for this exact App ID and signing distribution type, then sign again. " + missingCarPlay.joined(separator: "; "))
+            }
             throw OperationError.invalidParameters("Apple's newly issued profile for " + appID.bundleIdentifier +
                 " was rejected: " + failures.joined(separator: "; ") + ". No signing permissions were bypassed.")
         }
@@ -535,21 +540,16 @@ private extension FetchProvisioningProfilesOperation{
         appID.features.merge(targetFeatures) { _, requested in requested }
         
         do {
-            var updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team, requireFeatureReadback: false)
-            // Managed entitlements are not limited to the static legacy service
-            // list. Ask Apple separately so one unavailable right cannot prevent
-            // another approved capability from being enabled.
-            if team.type.isPaid {
-                for (key, value) in managedRequests.sorted(by: { $0.key < $1.key }) {
-                    var request = updated
-                    request.managedEntitlements = [key: value]
-                    do {
-                        updated = try await DeveloperPortalProxy.shared.updateAppID(request, team: team, requireFeatureReadback: false)
-                        updated.managedEntitlements = [:]
-                    } catch ServerError.underlyingError(let code, let message) where code != 401 && code != 429 && !(500...599).contains(code) {
-                        // A newly issued Apple profile decides authorization.
-                        self.debugLog("[FetchProvisioningProfiles] Apple rejected managed capability \(key): \(message)")
-                    }
+            let updated = try await DeveloperPortalProxy.shared.updateAppID(appID, team: team, requireFeatureReadback: false)
+            // The legacy entitlements dictionary does not activate managed
+            // capabilities. Use Apple's current account catalog and verified
+            // bundle-ID mutation, preserving unrelated rights and associations.
+            if team.type.isPaid && !managedRequests.isEmpty {
+                let capabilities = try await DeveloperPortalProxy.shared.fetchPortalCapabilities(appID: appID.identifier, team: team)
+                let activationIDs = PortalCapabilityGraph.activationIDs(in: capabilities, requested: Set(managedRequests.keys))
+                for capabilityID in activationIDs {
+                    _ = try await DeveloperPortalProxy.shared.setPortalCapability(
+                        appID: appID.identifier, capabilityID: capabilityID, enabled: true, team: team)
                 }
             }
             self.verboseLog("[FetchProvisioningProfiles] Updated features for App ID \(updated.bundleIdentifier).")
