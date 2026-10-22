@@ -1196,7 +1196,14 @@ private extension MyAppsViewController
     }
 
     private func installFromLibrary(_ url: URL) {
-        navigationController?.popToViewController(self, animated: true)
+        // On iOS this controller is a child of the two-page My Apps host.
+        // Pop to that navigation root rather than an unattached stack entry.
+        #if !os(tvOS)
+        let destination = navigationController?.viewControllers.first(where: { $0 is MyAppsPagesViewController }) ?? self
+        #else
+        let destination: UIViewController = self
+        #endif
+        navigationController?.popToViewController(destination, animated: true)
         if let coordinator = navigationController?.transitionCoordinator {
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in self?.presentImportDialog(for: url) }
         } else {

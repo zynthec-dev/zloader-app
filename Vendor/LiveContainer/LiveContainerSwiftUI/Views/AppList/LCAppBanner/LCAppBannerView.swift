@@ -137,6 +137,8 @@ final class LCAppBannerRootView: UIView {
         let textColor = Self.readableTextColor(for: accentColor, traitCollection: traitCollection)
 
         iconImageView.image = icon
+        detailStack.accessibilityIdentifier = "container-app-info-" + model.bundleIdentifier
+        runControl.accessibilityIdentifier = "container-app-run-" + model.bundleIdentifier
         nameLabel.text = model.displayName
         nameLabel.textColor = .label
         versionLabel.text = "\(model.version) - \(model.bundleIdentifier)"
@@ -183,7 +185,7 @@ final class LCAppBannerRootView: UIView {
         }
 
         guard let cgImage = icon.cgImage else {
-            return .clear
+            return UIColor(named: "FontColor", in: LCSharedUtils.resourceBundle(), compatibleWith: nil) ?? .systemTeal
         }
 
         var pixelData = [UInt8](repeating: 0, count: 4)
@@ -389,6 +391,16 @@ final class LCAppBannerRunControl: UIControl {
     func update(color: UIColor, isSigning: Bool, progress: Double, isEnabled: Bool) {
         self.progress = min(max(progress, 0), 1)
         self.isEnabled = isEnabled
+
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        color.resolvedColor(with: traitCollection).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        func linear(_ component: CGFloat) -> CGFloat {
+            component <= 0.04045 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+        let foreground: UIColor = luminance > 0.179 ? .black : .white
+        titleLabel.textColor = foreground
+        activityIndicator.color = foreground
 
         baseLayer.backgroundColor = color.withAlphaComponent(isSigning ? 0.2 : 1).cgColor
         progressCircleLayer.backgroundColor = color.cgColor

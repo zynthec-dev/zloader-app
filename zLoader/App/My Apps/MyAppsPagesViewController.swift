@@ -1,5 +1,7 @@
 import UIKit
 
+#if !os(tvOS)
+
 /// The existing installed-app controller remains intact. Container apps live on
 /// the adjacent page and keep LiveContainer's own management/navigation flows.
 final class MyAppsPagesViewController: UIViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
@@ -77,3 +79,4 @@ final class MyAppsPagesViewController: UIViewController, UIPageViewControllerDat
         if completed { selection.selectedSegmentIndex = pageViewController.viewControllers?.first === installed ? 0 : 1 }
     }
 }
+#endif
