@@ -66,6 +66,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     @StateObject private var generatedIconStyleSelector = AlertHelper<GeneratedIconStyle>()
     
     @State var safariViewOpened = false
+    @State private var shortcutServer = LCShortcutServer()
     @State var safariViewURL = URL(string: "https://google.com")!
     
     @State private var navigateTo : AnyView?
@@ -393,7 +394,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 await installFromPlist(urlStr: urlStr)
             })
         }
-        .fullScreenCover(isPresented: $safariViewOpened) {
+        .fullScreenCover(isPresented: $safariViewOpened, onDismiss: {
+            Task { await shortcutServer.stop() }
+        }) {
             SafariView(url: $safariViewURL)
         }
         .sheet(isPresented: $helpPresent) {
@@ -1173,8 +1176,15 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
     
     func installMdm(data: Data) {
-        safariViewURL = URL(string:"data:application/x-apple-aspen-config;base64,\(data.base64EncodedString())")!
-        safariViewOpened = true
+        Task {
+            do {
+                safariViewURL = try await shortcutServer.start(profile: data)
+                safariViewOpened = true
+            } catch {
+                errorInfo = error.localizedDescription
+                errorShow = true
+            }
+        }
     }
     
     func openNavigationView(view: AnyView) {

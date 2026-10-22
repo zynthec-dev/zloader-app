@@ -6,6 +6,7 @@
 #import "LCAppInfo.h"
 #import "LCUtils.h"
 #import "../../LiveContainer/LCSharedUtils.h"
+#import "../../LiveContainer/Tweaks/ZLoaderGuestURLPolicy.h"
 #if TARGET_OS_SIMULATOR
 #import <dlfcn.h>
 #import "../../ZSign/zsigner.h"
@@ -248,42 +249,11 @@
     return newIcon;
 }
 
-- (NSDictionary *)generateWebClipConfigWithContainerId:(NSString*)containerId iconStyle:(GeneratedIconStyle)style{
-    NSString *appClipUrl = [LCSharedUtils launchURLForGuestBundle:self.bundlePath.lastPathComponent container:containerId].absoluteString;
-    if (!appClipUrl) return nil;
-
-    UIImage* icon = [self generateLiveContainerWrappedIconWithStyle:style];
-    
-    NSDictionary *payload = @{
-        @"FullScreen": @YES,
-        @"Icon": UIImagePNGRepresentation(icon),
-        @"IgnoreManifestScope": @YES,
-        @"IsRemovable": @YES,
-        @"Label": self.displayName,
-        @"PayloadDescription": [NSString stringWithFormat:@"Web Clip for launching %@ (%@) in LiveContainer", self.displayName, self.bundlePath.lastPathComponent],
-        @"PayloadDisplayName": self.displayName,
-        @"PayloadIdentifier": self.bundleIdentifier,
-        @"PayloadType": @"com.apple.webClip.managed",
-        @"PayloadUUID": NSUUID.UUID.UUIDString,
-        @"PayloadVersion": @(1),
-        @"Precomposed": @NO,
-        @"toPayloadOrganization": @"LiveContainer",
-        @"URL": appClipUrl
-    };
-    return @{
-        @"ConsentText": @{
-            @"default": [NSString stringWithFormat:@"This profile installs a web clip which opens %@ (%@) in LiveContainer", self.displayName, self.bundlePath.lastPathComponent]
-        },
-        @"PayloadContent": @[payload],
-        @"PayloadDescription": payload[@"PayloadDescription"],
-        @"PayloadDisplayName": self.displayName,
-        @"PayloadIdentifier": self.bundleIdentifier,
-        @"PayloadOrganization": @"LiveContainer",
-        @"PayloadRemovalDisallowed": @(NO),
-        @"PayloadType": @"Configuration",
-        @"PayloadUUID": @"345097fb-d4f7-4a34-ab90-2e3f1ad62eed",
-        @"PayloadVersion": @(1),
-    };
+- (NSDictionary *)generateWebClipConfigWithContainerId:(NSString*)containerId iconStyle:(GeneratedIconStyle)style {
+    NSURL *url = [LCSharedUtils launchURLForGuestBundle:self.bundlePath.lastPathComponent container:containerId];
+    UIImage *icon = [self generateLiveContainerWrappedIconWithStyle:style];
+    NSString *organization = [NSUserDefaults.lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue] ? @"zLoader" : @"LiveContainer";
+    return ZLoaderContainerShortcutProfile(url, self.displayName, UIImagePNGRepresentation(icon), organization);
 }
 
 - (void)save {

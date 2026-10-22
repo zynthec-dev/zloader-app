@@ -21,14 +21,22 @@ The fixed, non-removable default source is
 `com.zynthec.zLoader` entry; SideStore releases do not replace zLoader.
 
 Self-updates hand the staged package to iOS's installation service before
-terminating the old process. The first progress response, including 0%, is an
-acknowledgement; waiting for positive progress can keep replacement stalled.
+terminating the old process. The handoff occurs after the complete Install
+command has been written and flushed. Waiting for an installation-progress
+response can keep replacement stalled while iOS waits for the old process to exit.
 The installer uses the same IPA/directory choice as the AFC transfer. Release
 0.7.46 fixes these paths, but a successful build does not establish device
 replacement. Validate on an iPhone by refreshing/updating from an installed
 0.7.46 or newer, reopening zLoader and checking the installed build and preserved
 app records. An older build's broken updater needs an initial manual replacement
 using the same app identity and App Group, without deleting the app.
+
+The adjacent Container page embeds the pinned original LiveContainer runtime,
+management views, multitasking and tweak support. IPA imports offer device or
+container installation. General Container settings select the host's identity or
+one shared virtual identity for all guests. See [container setup, provenance and
+acceptance testing](docs/zloader/CONTAINERS.md). Device signing, JIT availability,
+Apple permissions and physical-device lifecycle remain separate acceptance checks.
 
 ## Build
 

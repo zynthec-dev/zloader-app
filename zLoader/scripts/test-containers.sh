@@ -12,6 +12,10 @@ swiftc -module-cache-path "$build/ModuleCache" \
     Vendor/LiveContainer/LiveContainerSwiftUI/Models/LCVirtualDeviceIdentity.swift \
     zLoader/Tests/ContainerDeviceIdentityTests.swift -o "$build/identity-tests"
 "$build/identity-tests"
+swiftc -module-cache-path "$build/ModuleCache" -parse-as-library \
+    Vendor/LiveContainer/LiveContainerSwiftUI/Utilities/LCShortcutServer.swift \
+    zLoader/Tests/ContainerShortcutServerTests.swift -o "$build/shortcut-server-tests"
+"$build/shortcut-server-tests"
 xcrun --sdk macosx clang -fobjc-arc -fblocks -Wall -Wextra -framework Foundation -larchive \
     Vendor/LiveContainer/LiveContainerSwiftUI/Utilities/unarchive.m \
     zLoader/Tests/ContainerArchiveTests.m -o "$build/archive-tests"

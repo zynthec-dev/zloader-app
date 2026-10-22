@@ -519,13 +519,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App-Clip erstellen"
+            "value" : "Verknüpfung erstellen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Create App Clip"
+            "value" : "Create Home Screen Shortcut"
           }
         },
         "es" : {
