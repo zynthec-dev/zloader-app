@@ -23,6 +23,7 @@ struct LCVirtualDeviceSettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Kennung für Apps (IDFV)").font(.subheadline)
                     Text(identity.vendorIdentifier.uuidString).font(.caption.monospaced()).textSelection(.enabled)
+                        .accessibilityIdentifier("container-shared-idfv")
                 }
                 Button("Virtuelle Identität neu erstellen") { confirmRegeneration = true }
                     .accessibilityIdentifier("container-regenerate-device-identity")

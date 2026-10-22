@@ -35,12 +35,20 @@ static NSArray<NSString *> *guestSchemes;
 static BOOL browserHooksActive;
 
 static BOOL ownsURL(NSURL *url) {
-    return browserHooksActive && ZLoaderURLBelongsToGuest(url, guestSchemes, authentications.allKeys);
+    NSMutableArray *activeSchemes = [NSMutableArray new];
+    for (ZLoaderGuestAuthentication *record in authentications.allValues) {
+        if (record.session && !record.finished && record.scheme.length) [activeSchemes addObject:record.scheme];
+    }
+    return browserHooksActive && ZLoaderURLBelongsToGuest(url, guestSchemes, activeSchemes);
 }
 static void finishAuthentication(ZLoaderGuestAuthentication *record, NSURL *url, NSError *error) {
+    if (!NSThread.isMainThread) {
+        dispatch_async(dispatch_get_main_queue(), ^{ finishAuthentication(record, url, error); });
+        return;
+    }
     if (record.finished) return;
     record.finished = YES;
-    if (authentications[record.scheme] == record) [authentications removeObjectForKey:record.scheme];
+    if (record.scheme.length && authentications[record.scheme] == record) [authentications removeObjectForKey:record.scheme];
     record.completion(url, error);
 }
 static void deliverURL(NSURL *url) {
@@ -109,6 +117,16 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
 @end
 
 @implementation WKWebView (ZLoaderGuestCallbacks)
+- (instancetype)zl_initWithFrame:(CGRect)frame configuration:(WKWebViewConfiguration *)configuration __attribute__((objc_method_family(init))) {
+    self = [self zl_initWithFrame:frame configuration:configuration];
+    if (browserHooksActive) [self setNavigationDelegate:self.navigationDelegate];
+    return self;
+}
+- (instancetype)zl_initWithCoder:(NSCoder *)coder __attribute__((objc_method_family(init))) {
+    self = [self zl_initWithCoder:coder];
+    if (browserHooksActive) [self setNavigationDelegate:self.navigationDelegate];
+    return self;
+}
 - (void)zl_setNavigationDelegate:(id<WKNavigationDelegate>)delegate {
     if (!browserHooksActive || [delegate isKindOfClass:ZLoaderGuestNavigationDelegate.class]) { [self zl_setNavigationDelegate:delegate]; return; }
     ZLoaderGuestNavigationDelegate *proxy = [ZLoaderGuestNavigationDelegate new];
@@ -160,6 +178,22 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
     base(self, _cmd);
     [self.guestWebView loadRequest:[NSURLRequest requestWithURL:self.initialURL]];
 }
+- (void)viewWillAppear:(BOOL)animated {
+    void (*base)(id, SEL, BOOL) = (void *)class_getMethodImplementation(UIViewController.class, _cmd);
+    base(self, _cmd, animated);
+}
+- (void)viewDidAppear:(BOOL)animated {
+    void (*base)(id, SEL, BOOL) = (void *)class_getMethodImplementation(UIViewController.class, _cmd);
+    base(self, _cmd, animated);
+}
+- (void)viewWillDisappear:(BOOL)animated {
+    void (*base)(id, SEL, BOOL) = (void *)class_getMethodImplementation(UIViewController.class, _cmd);
+    base(self, _cmd, animated);
+}
+- (void)viewDidDisappear:(BOOL)animated {
+    void (*base)(id, SEL, BOOL) = (void *)class_getMethodImplementation(UIViewController.class, _cmd);
+    base(self, _cmd, animated);
+}
 - (void)closeGuestBrowser {
     if ([self.delegate respondsToSelector:@selector(safariViewControllerDidFinish:)]) [self.delegate safariViewControllerDidFinish:self];
     [self dismissViewControllerAnimated:YES completion:nil];
@@ -174,15 +208,50 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
 }
 @end
 @implementation SFSafariViewController (ZLoaderGuestCallbacks)
+// Apple uses private SFSafari subclasses for ASWebAuthenticationSession. Their
+// private presentation API must retain the system implementation and identity.
+- (instancetype)zl_initWithURL:(NSURL *)url __attribute__((objc_method_family(init))) {
+    if (browserHooksActive && object_getClass(self) == SFSafariViewController.class) {
+        return [[ZLoaderGuestSafariBrowser alloc] initWithURL:url configuration:[SFSafariViewControllerConfiguration new]];
+    }
+    return [self zl_initWithURL:url];
+}
+- (instancetype)zl_initWithURL:(NSURL *)url entersReaderIfAvailable:(BOOL)reader __attribute__((objc_method_family(init))) {
+    if (browserHooksActive && object_getClass(self) == SFSafariViewController.class) {
+        SFSafariViewControllerConfiguration *configuration = [SFSafariViewControllerConfiguration new];
+        configuration.entersReaderIfAvailable = reader;
+        return [[ZLoaderGuestSafariBrowser alloc] initWithURL:url configuration:configuration];
+    }
+    return [self zl_initWithURL:url entersReaderIfAvailable:reader];
+}
 - (instancetype)zl_initWithURL:(NSURL *)url configuration:(SFSafariViewControllerConfiguration *)configuration __attribute__((objc_method_family(init))) {
-    if (browserHooksActive && ![self isKindOfClass:ZLoaderGuestSafariBrowser.class]) {
+    if (browserHooksActive && object_getClass(self) == SFSafariViewController.class) {
         return [[ZLoaderGuestSafariBrowser alloc] initWithURL:url configuration:configuration];
     }
     return [self zl_initWithURL:url configuration:configuration];
 }
 @end
 
+@implementation ASWebAuthenticationSessionCallback (ZLoaderGuestCallbacks)
++ (instancetype)zl_callbackWithCustomScheme:(NSString *)scheme {
+    id callback = [self zl_callbackWithCustomScheme:scheme];
+    objc_setAssociatedObject(callback, @selector(zl_callbackWithCustomScheme:), scheme.lowercaseString, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    return callback;
+}
+@end
+
 @implementation ASWebAuthenticationSession (ZLoaderGuestCallbacks)
+- (instancetype)zl_initWithURL:(NSURL *)url callback:(ASWebAuthenticationSessionCallback *)callback completionHandler:(ASWebAuthenticationSessionCompletionHandler)completion __attribute__((objc_method_family(init))) {
+    ZLoaderGuestAuthentication *record = [ZLoaderGuestAuthentication new];
+    record.scheme = objc_getAssociatedObject(callback, @selector(zl_callbackWithCustomScheme:));
+    record.completion = completion;
+    self = [self zl_initWithURL:url callback:callback completionHandler:^(NSURL *result, NSError *error) {
+        finishAuthentication(record, result, error);
+    }];
+    record.session = self;
+    objc_setAssociatedObject(self, @selector(zl_start), record, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return self;
+}
 - (instancetype)zl_initWithURL:(NSURL *)url callbackURLScheme:(NSString *)scheme completionHandler:(ASWebAuthenticationSessionCompletionHandler)completion __attribute__((objc_method_family(init))) {
     ZLoaderGuestAuthentication *record = [ZLoaderGuestAuthentication new];
     record.scheme = scheme.lowercaseString;
@@ -199,7 +268,7 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
     if (!record) return [self zl_start];
     if (record.scheme.length) authentications[record.scheme] = record;
     BOOL started = [self zl_start];
-    if (!started && authentications[record.scheme] == record) [authentications removeObjectForKey:record.scheme];
+    if (!started && record.scheme.length && authentications[record.scheme] == record) [authentications removeObjectForKey:record.scheme];
     return started;
 }
 @end
@@ -214,7 +283,13 @@ void ZLoaderGuestBrowserHooksInit(void) {
     }
     guestSchemes = schemes;
     swizzle(WKWebView.class, @selector(setNavigationDelegate:), @selector(zl_setNavigationDelegate:));
+    swizzle(WKWebView.class, @selector(initWithFrame:configuration:), @selector(zl_initWithFrame:configuration:));
+    swizzle(WKWebView.class, @selector(initWithCoder:), @selector(zl_initWithCoder:));
+    swizzle(SFSafariViewController.class, @selector(initWithURL:), @selector(zl_initWithURL:));
+    swizzle(SFSafariViewController.class, NSSelectorFromString(@"initWithURL:entersReaderIfAvailable:"), @selector(zl_initWithURL:entersReaderIfAvailable:));
     swizzle(SFSafariViewController.class, @selector(initWithURL:configuration:), @selector(zl_initWithURL:configuration:));
     swizzle(ASWebAuthenticationSession.class, @selector(initWithURL:callbackURLScheme:completionHandler:), @selector(zl_initWithURL:callbackURLScheme:completionHandler:));
+    swizzle(object_getClass(ASWebAuthenticationSessionCallback.class), @selector(callbackWithCustomScheme:), @selector(zl_callbackWithCustomScheme:));
+    swizzle(ASWebAuthenticationSession.class, @selector(initWithURL:callback:completionHandler:), @selector(zl_initWithURL:callback:completionHandler:));
     swizzle(ASWebAuthenticationSession.class, @selector(start), @selector(zl_start));
 }

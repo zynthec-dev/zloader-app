@@ -18,7 +18,7 @@ class URLHandler {
     func handle(_ url: URL) -> Bool {
         #if !os(tvOS)
         if ["zloader", "zloader-container"].contains(url.scheme?.lowercased() ?? ""),
-           ["livecontainer-launch", "open-url", "container-import", "container-certificate"].contains(url.host?.lowercased() ?? ""),
+           ["livecontainer-launch", "open-url", "container-import"].contains(url.host?.lowercased() ?? ""),
            ZLoaderHandleContainerURL(url) {
             UserDefaults.standard.set(true, forKey: "zLoader.pendingContainerPage")
             NotificationCenter.default.post(name: .init("ZLoaderShowContainers"), object: nil)

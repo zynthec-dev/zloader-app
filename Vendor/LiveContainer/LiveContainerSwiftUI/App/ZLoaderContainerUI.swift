@@ -23,7 +23,7 @@ import SwiftUI
 
     @objc public static func openURL(_ url: URL) -> Bool {
         guard ["zloader", "zloader-container"].contains(url.scheme?.lowercased() ?? ""),
-              ["livecontainer-launch", "open-url", "container-import", "container-certificate"].contains(url.host?.lowercased() ?? "") else { return false }
+              ["livecontainer-launch", "open-url", "container-import"].contains(url.host?.lowercased() ?? "") else { return false }
         prepare()
         DataManager.shared.model.selectedTab = .apps
         DataManager.shared.model.deepLink = url

@@ -220,7 +220,14 @@ struct MultitaskAppWindow: View {
                     } else {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             if !DataManager.shared.model.mainWindowOpened {
-                                openWindow(id: "Main")
+                                if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+                                    let main = UIApplication.shared.openSessions.first {
+                                        $0.configuration.delegateClass != ZLoaderContainerWindowSceneDelegate.self
+                                    }
+                                    UIApplication.shared.requestSceneSessionActivation(main, userActivity: nil, options: nil)
+                                } else {
+                                    openWindow(id: "Main")
+                                }
                             }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 requestSceneDestruction()
