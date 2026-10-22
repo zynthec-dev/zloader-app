@@ -384,6 +384,8 @@ final class PipelineRunner: Sendable
         context.groupOperationsCount = operationsCount
         
         switch operation {
+            case .refresh:
+                context.renewProvisioningProfiles = true
             case .install(_, let customID), .reinstall(_, let customID):
                 context.customBundleIdentifier = customID
             case .update(_, let customID):
@@ -391,6 +393,7 @@ final class PipelineRunner: Sendable
                 context.isStoreUpdate = true
             case .resign(_, let mode):
                 context.alternateIconMode = mode
+                context.renewProvisioningProfiles = true
             default:
                 break
         }

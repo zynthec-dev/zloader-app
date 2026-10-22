@@ -9,6 +9,7 @@ enum PortalProfileResolver {
     }
 
     static func resolve<Profile>(
+        renewExisting: Bool = false,
         list: () async throws -> [Candidate],
         download: (String) async throws -> Profile,
         compatible: (Profile) -> Bool,
@@ -27,7 +28,7 @@ enum PortalProfileResolver {
                 downloadError = error
                 continue
             }
-            if compatible(profile) { return profile }
+            if compatible(profile), !renewExisting { return profile }
             if renewalID == nil, candidate.mayRenew, renewable(profile) { renewalID = candidate.identifier }
         }
         // A failed read does not prove absence. Do not create duplicates or

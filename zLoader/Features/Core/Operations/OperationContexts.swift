@@ -292,6 +292,9 @@ class InstallAppOperationContext: PipelineOperationContext
     var signingTeamOverride: ALTTeam?
     var isSignOnly = false
     var isStoreUpdate: Bool = false
+    /// Explicit refresh/re-sign asks Apple to renew a managed profile even if
+    /// its old copy is still valid. Imported material has a fixed expiry.
+    var renewProvisioningProfiles = false
     var targetAppBundle: ALTApplication?
 
     var provisioningProfiles: [String: ALTProvisioningProfile]?

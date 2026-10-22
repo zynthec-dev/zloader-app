@@ -9,8 +9,8 @@ import Foundation
         var failList = false
         var failDownload = false
         var owned = true
-        func resolve() async throws -> Profile {
-            try await PortalProfileResolver.resolve(list: {
+        func resolve(renewExisting: Bool = false) async throws -> Profile {
+            try await PortalProfileResolver.resolve(renewExisting: renewExisting, list: {
                 self.events.append("list")
                 if self.failList { throw Failure.offline }
                 return self.profiles.keys.sorted().map { .init(identifier: $0, mayRenew: self.owned) }
@@ -68,6 +68,15 @@ import Foundation
         duplicate.profiles["other"] = Profile(id: "other", valid: true, sameTeam: true)
         _ = try await duplicate.resolve()
         precondition(duplicate.events == ["list", "download:old", "download:other"])
+        let refresh = Portal()
+        _ = try await refresh.resolve(renewExisting: true)
+        precondition(refresh.events == ["list", "download:old", "renew:old"])
+        let external = Portal(); external.owned = false
+        _ = try await external.resolve(renewExisting: true)
+        precondition(external.events == ["list", "download:old", "create"])
+        let unavailableRefresh = Portal(); unavailableRefresh.failDownload = true
+        do { _ = try await unavailableRefresh.resolve(renewExisting: true); preconditionFailure() } catch {}
+        precondition(unavailableRefresh.events == ["list", "download:old"])
         print("PASS fresh portal check every time; deleted profile recreated despite valid installed copy; subsequent reuse; read failures do not create; renewal ownership/team checks; compatible duplicates reused")
     }
 }

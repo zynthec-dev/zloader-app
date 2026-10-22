@@ -388,7 +388,7 @@ private extension FetchProvisioningProfilesOperation{
 
         let preferredUUID = app.bundleIdentifier == context.targetAppBundle?.bundleIdentifier
             ? context.overrideProvisioningProfile?.uuid : nil
-        let profile = try await PortalProfileResolver.resolve(list: {
+        let profile = try await PortalProfileResolver.resolve(renewExisting: context.renewProvisioningProfiles, list: {
             let existing = try await DeveloperPortalProxy.shared.listProvisioningProfiles(team: team)
             return existing.filter {
                 $0.identifier != nil && ($0.bundleIdentifier.map { EmbeddedProfileReuse.matchesBundleID($0, target: appID.bundleIdentifier) } == true ||
