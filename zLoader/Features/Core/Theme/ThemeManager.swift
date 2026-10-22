@@ -228,7 +228,8 @@ extension ThemeManager {
         UITableView.appearance().backgroundColor = .settingsBackground
         UICollectionView.appearance().backgroundColor = .settingsBackground
         UITextField.appearance().tintColor = .altPrimary
-        UITextField.appearance().backgroundColor = .settingsField
+        // Native alerts and rounded form rows already draw the field container.
+        UITextField.appearance().backgroundColor = .clear
         UISwitch.appearance().onTintColor = .altPrimary
     }
 
@@ -279,7 +280,7 @@ extension ThemeManager {
                 field.textColor = .label
                 field.viewWithTag(77500)?.removeFromSuperview()
             } else {
-                field.backgroundColor = .settingsField
+                field.backgroundColor = .clear
                 field.textColor = .label
                 field.viewWithTag(77500)?.removeFromSuperview()
             }
