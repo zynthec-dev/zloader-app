@@ -79,6 +79,7 @@ final class RefreshAppOperation: BasePipelineOperation<InstallAppOperationContex
             throw OperationError.invalidParameters("The refreshed profiles do not contain the main app profile.")
         }
         installedApp.update(provisioningProfile: hostProfile)
+        try ProvisioningProfileCache.write(profiles, for: installedApp)
         
         if let certStatus = self.context.targetCertStatus {
             installedApp.certificateStatus = certStatus

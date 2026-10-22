@@ -2,6 +2,9 @@ import Foundation
 
 /// Presentation changes must not alter refresh-all ordering (the host refreshes last).
 enum AppInstallationPresentation {
+    static func shouldRestoreInstaller(beganActive: Bool, enteredBackground: Bool, isActive: Bool, succeeded: Bool) -> Bool {
+        beganActive && enteredBackground && !isActive && succeeded
+    }
     static func pinnedFirst<Element>(_ items: [Element], isRunningStore: (Element) -> Bool) -> [Element] {
         guard let index = items.firstIndex(where: isRunningStore), index != items.startIndex else { return items }
         var result = items

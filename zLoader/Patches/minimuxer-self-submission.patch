@@ -1,0 +1,11 @@
+--- a/DeviceGateway/idevice/IdeviceGateway.swift
++++ b/DeviceGateway/idevice/IdeviceGateway.swift
+@@ -2440,6 +2440,8 @@
+             ) { client in
+                 let options = plist_new_dict()
+                 defer { plist_free(options) }
++                // Consumed locally by the patched transport, never sent to iOS.
++                plist_dict_set_item(options, "ZLoaderHandoffAfterSubmission", plist_new_bool(1))
+                 if appName != nil {
+                     plist_dict_set_item(options, "PackageType", plist_new_string("Developer"))
+                 }

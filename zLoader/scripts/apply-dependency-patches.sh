@@ -8,6 +8,14 @@ for spec in 'minimuxer:minimuxer-warnings.patch' 'SideSign:sidesign-managed-sign
         continue
     fi
     # Upgrade an existing checkout carrying the previous cumulative patch set.
+    if [ "$dependency" = minimuxer ]; then
+        upgrade="$PWD/zLoader/Patches/minimuxer-self-submission.patch"
+        if git -C "Dependencies/$dependency" apply --check "$upgrade" 2>/dev/null; then
+            git -C "Dependencies/$dependency" apply "$upgrade"
+            git -C "Dependencies/$dependency" apply --reverse --check "$patch"
+            continue
+        fi
+    fi
     if [ "$dependency" = SideSign ]; then
         upgrade="$PWD/zLoader/Patches/sidesign-managed-capabilities.patch"
         if git -C "Dependencies/$dependency" apply --check "$upgrade" 2>/dev/null; then

@@ -182,6 +182,7 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
         }
         
         self.setProgress(30)
+        let foregroundRecovery = isSelfReinstall ? nil : await MainActor.run { InstallationForegroundRecovery() }
         
         // Keep transport alive while submitting a self-update. The gateway's
         // first acknowledged progress response hands replacement to iOS; only
@@ -201,7 +202,7 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             if isSelfReinstall {
                 let appName = sentIPA ? nil : resignedAppBundle.fileURL.lastPathComponent
                 self.debugLog("[InstallAppOperation] Handing self-update to installation_proxy (IPA: \(sentIPA))")
-                try await installSelfUpdate(bundleID, appName: appName)
+                try await installSelfUpdate(bundleID, replacingBundleIdentifier: resignedAppBundle.bundleIdentifier, appName: appName)
             } else if sentIPA {
                 try await installIPA(bundleID)
             } else {
@@ -211,8 +212,11 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             // A failed request must not be mistaken for a pending successful update
             // on the next launch. Keep the old installation and propagate its error.
             if isSelfReinstall { self.removeStagedSelfReinstallation() }
+            await foregroundRecovery?.finish(succeeded: false)
             throw error
         }
+
+        await foregroundRecovery?.finish(succeeded: true)
 
         self.setProgress(90)
         

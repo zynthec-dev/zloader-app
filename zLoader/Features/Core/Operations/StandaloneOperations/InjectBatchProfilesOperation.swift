@@ -56,6 +56,7 @@ final class InjectBatchProfilesOperation: BaseStandaloneOperation<StandaloneOper
                         throw OperationError.invalidParameters("The refreshed profiles do not contain the main app profile.")
                     }
                     installedApp.update(provisioningProfile: hostProfile)
+                    try ProvisioningProfileCache.write(batch.keyedProfiles, for: installedApp)
                     for extensionApp in installedApp.appExtensions {
                         if let profile = batch.keyedProfiles[extensionApp.bundleIdentifier] ?? batch.keyedProfiles[extensionApp.resignedBundleIdentifier] {
                             extensionApp.update(provisioningProfile: profile)

@@ -1,6 +1,17 @@
 import Foundation
 @main struct AppInstallationPresentationTests {
     static func main() {
+        for beganActive in [false, true] {
+            for backgrounded in [false, true] {
+                for isActive in [false, true] {
+                    for succeeded in [false, true] {
+                        precondition(AppInstallationPresentation.shouldRestoreInstaller(beganActive: beganActive,
+                            enteredBackground: backgrounded, isActive: isActive, succeeded: succeeded) ==
+                            (beganActive && backgrounded && !isActive && succeeded))
+                    }
+                }
+            }
+        }
         let order = ["expires-today", "running-store", "expires-next-week", "other-store"]
         precondition(AppInstallationPresentation.pinnedFirst(order) { $0 == "running-store" } == ["running-store", "expires-today", "expires-next-week", "other-store"])
         precondition(AppInstallationPresentation.pinnedFirst(order) { $0 == "missing" } == order)

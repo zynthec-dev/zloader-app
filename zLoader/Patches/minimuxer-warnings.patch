@@ -51,7 +51,7 @@ index 0a581fb..8590fbb 100644
          try await start(pairingFileContent: pairingFileContent, preferred: preferred)
      }
 diff --git a/DeviceGateway/idevice/IdeviceGateway.swift b/DeviceGateway/idevice/IdeviceGateway.swift
-index e9310d0..a8c7bf7 100644
+index e9310d0..0dae4f4 100644
 --- a/DeviceGateway/idevice/IdeviceGateway.swift
 +++ b/DeviceGateway/idevice/IdeviceGateway.swift
 @@ -43,7 +43,7 @@ public final class IdeviceGateway: BaseDeviceGateway, DeviceGatewayAPI, @uncheck
@@ -221,7 +221,7 @@ index e9310d0..a8c7bf7 100644
          }
      }
  
-@@ -2353,6 +2417,88 @@ extension IdeviceGateway {
+@@ -2353,6 +2417,90 @@ extension IdeviceGateway {
          }
      }
  
@@ -248,6 +248,8 @@ index e9310d0..a8c7bf7 100644
 +            ) { client in
 +                let options = plist_new_dict()
 +                defer { plist_free(options) }
++                // Consumed locally by the patched transport, never sent to iOS.
++                plist_dict_set_item(options, "ZLoaderHandoffAfterSubmission", plist_new_bool(1))
 +                if appName != nil {
 +                    plist_dict_set_item(options, "PackageType", plist_new_string("Developer"))
 +                }

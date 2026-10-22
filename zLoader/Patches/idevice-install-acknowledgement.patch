@@ -1,8 +1,35 @@
 diff --git a/idevice/src/services/installation_proxy.rs b/idevice/src/services/installation_proxy.rs
-index a461c58..f3d764b 100644
+index a461c58..618ccf1 100644
 --- a/idevice/src/services/installation_proxy.rs
 +++ b/idevice/src/services/installation_proxy.rs
-@@ -423,15 +423,19 @@ impl InstallationProxyClient {
+@@ -168,7 +168,12 @@ impl InstallationProxyClient {
+         S: Clone,
+     {
+         let package_path = package_path.into();
+-        let options = options.unwrap_or(plist::Value::Dictionary(Dictionary::new()));
++        let mut options = options.unwrap_or(plist::Value::Dictionary(Dictionary::new()));
++        // Local transport control, never an Apple installation option. A host
++        // replacing itself cannot wait for a response that requires its exit.
++        let handoff_after_submission = options.as_dictionary_mut()
++            .and_then(|v| v.remove("ZLoaderHandoffAfterSubmission"))
++            .and_then(|v| v.as_boolean()).unwrap_or(false);
+ 
+         let command = crate::plist!({
+             "Command": "Install",
+@@ -178,6 +183,12 @@ impl InstallationProxyClient {
+ 
+         self.idevice.send_plist(command).await?;
+ 
++        if handoff_after_submission {
++            // send_plist has written and flushed the complete framed command.
++            // This establishes submission, not successful Apple verification.
++            callback((0, state.clone())).await;
++        }
++
+         self.watch_completion(callback, state).await
+     }
+ 
+@@ -423,15 +434,19 @@ impl InstallationProxyClient {
          loop {
              let mut res = self.idevice.read_plist().await?;
  
@@ -29,7 +56,7 @@ index a461c58..f3d764b 100644
              }
  
              if let Some(c) = res.remove("Status").and_then(|x| x.into_string())
-@@ -455,3 +459,37 @@ impl crate::RsdService for InstallationProxyClient {
+@@ -455,3 +470,92 @@ impl crate::RsdService for InstallationProxyClient {
          Ok(Self::new(idevice))
      }
  }
@@ -49,6 +76,61 @@ index a461c58..f3d764b 100644
 +#[cfg(test)]
 +mod zloader_installation_tests {
 +    use super::*;
++    use std::{future::Future, pin::Pin, sync::{Arc, Mutex}, task::{Context, Poll, Waker}};
++    use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
++
++    #[derive(Debug, Default)]
++    struct Writes { bytes: Vec<u8>, flushed: bool, failed: bool, callbacks: usize }
++    #[derive(Debug)]
++    struct Socket(Arc<Mutex<Writes>>);
++    impl AsyncRead for Socket {
++        fn poll_read(self: Pin<&mut Self>, _: &mut Context<'_>, _: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
++            // Simulate installd waiting for the old host, without responding.
++            Poll::Pending
++        }
++    }
++    impl AsyncWrite for Socket {
++        fn poll_write(self: Pin<&mut Self>, _: &mut Context<'_>, bytes: &[u8]) -> Poll<std::io::Result<usize>> {
++            let mut writes = self.0.lock().unwrap();
++            if writes.failed { return Poll::Ready(Err(std::io::ErrorKind::BrokenPipe.into())); }
++            writes.bytes.extend_from_slice(bytes);
++            Poll::Ready(Ok(bytes.len()))
++        }
++        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<std::io::Result<()>> {
++            self.0.lock().unwrap().flushed = true;
++            Poll::Ready(Ok(()))
++        }
++        fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<std::io::Result<()>> { Poll::Ready(Ok(())) }
++    }
++
++    #[test]
++    fn self_handoff_follows_complete_flushed_command_without_waiting_for_response() {
++        for (handoff, failed) in [(true, false), (false, false), (true, true)] {
++            let writes = Arc::new(Mutex::new(Writes { failed, ..Default::default() }));
++            let mut client = InstallationProxyClient::new(Idevice::new(Box::new(Socket(writes.clone())), "test"));
++            let options = crate::plist!({"ZLoaderHandoffAfterSubmission": handoff, "PackageType": "Developer"});
++            let seen = writes.clone();
++            let mut operation = Box::pin(client.install_with_callback("PublicStaging/store/App.app", Some(options), move |_| {
++                let mut writes = seen.lock().unwrap();
++                assert!(writes.flushed, "Cannot terminate with an incomplete command");
++                writes.callbacks += 1;
++                std::future::ready(())
++            }, ()));
++            let result = operation.as_mut().poll(&mut Context::from_waker(Waker::noop()));
++            let writes = writes.lock().unwrap();
++            assert_eq!(writes.callbacks, usize::from(handoff && !failed));
++            if failed { assert!(matches!(result, Poll::Ready(Err(_)))); }
++            else {
++                assert!(result.is_pending());
++                let size = u32::from_be_bytes(writes.bytes[..4].try_into().unwrap()) as usize;
++                assert_eq!(size, writes.bytes.len() - 4);
++                let request = plist::Value::from_reader_xml(&writes.bytes[4..]).unwrap();
++                let options = request.as_dictionary().unwrap()["ClientOptions"].as_dictionary().unwrap();
++                assert!(!options.contains_key("ZLoaderHandoffAfterSubmission"));
++                assert_eq!(options["PackageType"].as_string(), Some("Developer"));
++            }
++        }
++    }
 +    #[test]
 +    fn acknowledges_status_without_percentage_but_never_errors() {
 +        let mut response = Dictionary::new();
