@@ -29,7 +29,13 @@ for name in ('Frameworks', 'PlugIns'):
             info['CFBundleShortVersionString'] = os.environ['MARKETING_VERSION']
             info['CFBundleVersion'] = os.environ['CURRENT_PROJECT_VERSION']
             info['ZLoaderContainerHost'] = True
+            info['ZLoaderContainerAppGroup'] = 'group.' + os.environ['APP_GROUP_IDENTIFIER']
             (out / 'Info.plist').write_bytes(plistlib.dumps(info))
+            if platform == 'iphonesimulator':
+                # Keep Xcode's macOS-safe Simulator signature entitlements;
+                # simulated iOS capabilities live in the Mach-O test section.
+                subprocess.run(['codesign','--force','--sign','-','--timestamp=none',
+                                '--preserve-metadata=entitlements',str(out)],check=True,capture_output=True)
 
 resources = app / 'LiveContainerResources.bundle'
 if resources.exists(): shutil.rmtree(resources)

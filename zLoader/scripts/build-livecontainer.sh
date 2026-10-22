@@ -3,8 +3,8 @@ set -eu
 cd "$(dirname "$0")/../.."
 platform=${1:-iphoneos}
 case "$platform" in
-    iphoneos) destination='generic/platform=iOS'; folder=LiveContainerDevice ;;
-    iphonesimulator) destination='generic/platform=iOS Simulator'; folder=LiveContainerSimulator ;;
+    iphoneos) destination='generic/platform=iOS'; folder=LiveContainerDevice; signing=NO ;;
+    iphonesimulator) destination='generic/platform=iOS Simulator'; folder=LiveContainerSimulator; signing=YES ;;
     *) echo "Container runtime is supported on iOS only" >&2; exit 1 ;;
 esac
 sh zLoader/scripts/prepare-livecontainer.sh
@@ -16,6 +16,7 @@ fingerprint=$(python3 - "$platform" "$host" "$group" <<'PY'
 from pathlib import Path
 import hashlib,sys
 h=hashlib.sha256(('\0'.join(sys.argv[1:])).encode())
+h.update(Path('zLoader/scripts/build-livecontainer.sh').read_bytes())
 root=Path('Vendor/LiveContainer')
 for p in sorted(root.rglob('*')):
     if p.is_file() and 'OpenSSL' not in p.relative_to(root).parts and '.git' not in p.parts:
@@ -34,7 +35,8 @@ if ! env -i PATH="$PATH" HOME="$HOME" USER="${USER:-}" LOGNAME="${LOGNAME:-}" \
     TMPDIR="${TMPDIR:-/tmp}" DEVELOPER_DIR="$DEVELOPER_DIR" \
     /usr/bin/xcodebuild -project Vendor/LiveContainer/LiveContainer.xcodeproj -scheme LiveContainer \
     -configuration Release -destination "$destination" -derivedDataPath "$build" \
-    ARCHS=arm64 ONLY_ACTIVE_ARCH=YES IPHONEOS_DEPLOYMENT_TARGET=26.5 CODE_SIGNING_ALLOWED=NO \
+    ARCHS=arm64 ONLY_ACTIVE_ARCH=YES IPHONEOS_DEPLOYMENT_TARGET=26.5 \
+    CODE_SIGNING_ALLOWED="$signing" CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
     LIVECONTAINER_BUNDLE_IDENTIFIER="$host" APP_GROUP_SIDESTORE="$group" APP_GROUP_ALTSTORE="$group" \
     build > "$build/build.log" 2>&1; then
     tail -100 "$build/build.log"

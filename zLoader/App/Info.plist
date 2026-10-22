@@ -339,6 +339,8 @@
 	</array>
 	<key>ZLoaderContainerHost</key>
 	<true/>
+	<key>ZLoaderContainerAppGroup</key>
+	<string>group.$(APP_GROUP_IDENTIFIER)</string>
 	<key>GCSupportedGameControllers</key>
 	<array>
 		<dict>

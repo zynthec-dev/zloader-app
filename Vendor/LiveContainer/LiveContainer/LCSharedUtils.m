@@ -80,9 +80,10 @@ static NSDictionary *readCredential(void) {
         void* taskSelf = SecTaskCreateFromSelf(NULL);
         CFErrorRef error = NULL;
         CFTypeRef cfans = SecTaskCopyValueForEntitlement(taskSelf, CFSTR("com.apple.developer.team-identifier"), &error);
-        if(CFGetTypeID(cfans) == CFStringGetTypeID()) {
+        if(cfans && CFGetTypeID(cfans) == CFStringGetTypeID()) {
             ans = (__bridge NSString*)cfans;
         }
+        if (cfans) CFRelease(cfans);
         CFRelease(taskSelf);
 #endif
         if(!ans) {
@@ -116,10 +117,11 @@ static NSDictionary *readCredential(void) {
     static dispatch_once_t once;
     static NSString *appGroupID = @"Unknown";
     dispatch_once(&once, ^{
-        NSArray* possibleAppGroups = @[
-            [@"group.com.SideStore.SideStore." stringByAppendingString:[self teamIdentifier]],
-            [@"group.com.rileytestut.AltStore." stringByAppendingString:[self teamIdentifier]]
-        ];
+        NSString *team = [self teamIdentifier];
+        NSArray* possibleAppGroups = team.length ? @[
+            [@"group.com.SideStore.SideStore." stringByAppendingString:team],
+            [@"group.com.rileytestut.AltStore." stringByAppendingString:team]
+        ] : @[];
         
         // we prefer app groups with "Apps" in it, which indicate this app group is actually used by the store.
         for (NSString *group in possibleAppGroups) {
@@ -158,9 +160,16 @@ static NSDictionary *readCredential(void) {
         CFRelease(taskSelf);
         
         if(!value) {
+#if TARGET_OS_SIMULATOR
+            // Simulator has no Apple team/profile. Keep its local preference
+            // namespace stable; no device authorization is inferred from this.
+            NSString *simulatorGroup = NSBundle.mainBundle.infoDictionary[@"ZLoaderContainerAppGroup"];
+            if (simulatorGroup.length) appGroupID = simulatorGroup;
+#endif
             return;
         }
-        NSArray* appGroups = (__bridge NSArray *)value;
+        id decodedValue = CFBridgingRelease(value);
+        NSArray* appGroups = [decodedValue isKindOfClass:NSArray.class] ? decodedValue : @[];
         if(appGroups.count > 0) {
             appGroupID = [appGroups firstObject];
         }

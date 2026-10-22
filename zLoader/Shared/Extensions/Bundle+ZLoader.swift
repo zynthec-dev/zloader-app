@@ -8,6 +8,9 @@
 
 import Foundation
 import CodeSignKit
+#if targetEnvironment(simulator)
+import MachO
+#endif
 
 private let appGroupsLock = NSLock()
 private nonisolated(unsafe) var appGroupsCache: [URL: (modDate: Date?, groups: [String])] = [:]
@@ -83,6 +86,31 @@ public extension Bundle
             }
 
             let groups: [String] = {
+                #if targetEnvironment(simulator)
+                // Xcode stores simulated iOS entitlements in a Mach-O section,
+                // separate from the macOS signature used to execute the process.
+                for index in 0..<_dyld_image_count() {
+                    guard let name = _dyld_get_image_name(index),
+                          URL(fileURLWithPath: String(cString: name)).resolvingSymlinksInPath() == execURL.resolvingSymlinksInPath(),
+                          let header = _dyld_get_image_header(index) else { continue }
+                    var size: UInt = 0
+                    let header64 = UnsafeRawPointer(header).assumingMemoryBound(to: mach_header_64.self)
+                    if let bytes = getsectiondata(header64, "__TEXT", "__entitlements", &size),
+                       let plist = try? PropertyListSerialization.propertyList(
+                           from: Data(bytes: bytes, count: Int(size)), options: [], format: nil
+                       ) as? [String: Any],
+                       let groups = plist["com.apple.security.application-groups"] as? [String] {
+                        return groups
+                    }
+                }
+                // Some Simulator launchers expose only their trampoline in the
+                // image inventory. The configured namespace still requires the
+                // Simulator container service's authorization below.
+                if let group = self.infoDictionary?["ZLoaderContainerAppGroup"] as? String,
+                   FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil {
+                    return [group]
+                }
+                #endif
                 guard let rawEntitlements = try? MachOParser.entitlements(at: execURL),
                       let data = rawEntitlements.data(using: .utf8),
                       let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],

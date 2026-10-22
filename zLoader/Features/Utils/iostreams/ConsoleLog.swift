@@ -52,8 +52,14 @@ class ConsoleLog {
                 return FileManager.default.fileExists(atPath: self.logFileURL.path)
             }
         )
-        let syslogOutputStream = SyslogOutputStream()
-        let compositeStream = CompositeOutputStream([fileOutputStream, syslogOutputStream])
+        #if targetEnvironment(simulator)
+        // Xcode mirrors OSLog back to stderr in Simulator. Sending captured
+        // stderr to OSLog again creates an unbounded feedback loop. The logger
+        // already echoes to the original console and keeps the same log file.
+        let compositeStream = CompositeOutputStream([fileOutputStream])
+        #else
+        let compositeStream = CompositeOutputStream([fileOutputStream, SyslogOutputStream()])
+        #endif
         self.compositeStream = compositeStream
         
         return UnBufferedConsoleLogger(stream: compositeStream)
