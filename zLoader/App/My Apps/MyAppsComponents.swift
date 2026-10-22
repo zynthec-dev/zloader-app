@@ -20,7 +20,11 @@ final class InstalledAppCollectionViewCell: UICollectionViewCell
         super.awakeFromNib()
         
         self.contentView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        self.contentView.preservesSuperviewLayoutMargins = true
+        // Launcher tiles use the grid's spacing; the old list-row margins
+        // otherwise shrink only device-app icons by sixteen points.
+        self.layoutMargins = .zero
+        self.contentView.layoutMargins = .zero
+        self.contentView.preservesSuperviewLayoutMargins = false
         
         let deactivateBadge = UIView()
         deactivateBadge.translatesAutoresizingMaskIntoConstraints = false

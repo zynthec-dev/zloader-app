@@ -27,6 +27,7 @@ final class ContainerUITests: XCTestCase {
         app.tabBars.buttons["Meine Apps"].tap()
         let pages = app.segmentedControls["my-apps-pages"]
         XCTAssertTrue(pages.waitForExistence(timeout: 10))
+        attach("installed-app-grid")
         pages.buttons["Apps in Containern"].tap()
         XCTAssertTrue(app.buttons["Container sortieren"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label IN %@", ["Install App", "App installieren"])).count, 1)
