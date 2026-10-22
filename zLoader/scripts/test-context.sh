@@ -3,4 +3,4 @@ set -eu
 cd "$(dirname "$0")/../.."
 mkdir -p .build/SwiftModuleCache
 swiftc -module-cache-path .build/SwiftModuleCache zLoader/Shared/Extensions/ManagedObjectContext+Confinement.swift zLoader/Tests/ContextConfinementTests.swift -o .build/test-context
-.build/test-context
+.build/test-context -com.apple.CoreData.ConcurrencyDebug 1

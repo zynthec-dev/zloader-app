@@ -33,3 +33,27 @@ extension NSManagedObjectContext {
         }
     }
 }
+
+/// Transfer only persistent identity across queues. The receiving UI must obtain
+/// its own instance instead of reading the private-context object on MainActor.
+extension NSManagedObjectContext {
+    func persistedObjectID<Object: NSManagedObject>(for object: Object) async throws -> NSManagedObjectID {
+        try await performWithObject(object) { object in
+            guard !object.isDeleted, !object.objectID.isTemporaryID else {
+                throw NSError(domain: "zLoader.ManagedObjectHandoff", code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "The installation result has not been saved."])
+            }
+            return object.objectID
+        }
+    }
+
+    @MainActor
+    func existingMainActorObject<Object: NSManagedObject>(with id: NSManagedObjectID, as type: Object.Type) throws -> Object {
+        precondition(concurrencyType == .mainQueueConcurrencyType)
+        guard let object = try existingObject(with: id) as? Object else {
+            throw NSError(domain: "zLoader.ManagedObjectHandoff", code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "The saved installation result has an unexpected type."])
+        }
+        return object
+    }
+}

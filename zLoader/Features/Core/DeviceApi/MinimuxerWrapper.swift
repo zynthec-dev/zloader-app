@@ -409,6 +409,11 @@ func debugApp(_ appId: String) async throws {
 }
 
 func installSelfUpdate(_ bundleId: String, appName: String?) async throws {
+    // Keep the process-exit capability confined to the actual running host.
+    guard AppInstallationPresentation.isSelfReplacement(
+        runningBundleID: Bundle.main.bundleIdentifier ?? "", resignedBundleID: bundleId) else {
+        throw OperationError.invalidParameters("Only an update of the running zLoader app may terminate this process.")
+    }
     #if !targetEnvironment(simulator)
     try await withDeviceTransport {
         try await minimuxer.core.installSelfApp(bundleId: bundleId, appName: appName) {
@@ -416,10 +421,12 @@ func installSelfUpdate(_ bundleId: String, appName: String?) async throws {
             // submitted package. iOS owns the replacement from this point on.
             // Terminate from this callback thread: dispatching to main can
             // leave the old executable running while installation waits for it.
+            debugLog("[zLoader] Exiting after iOS accepted replacement of the running zLoader app.")
             exit(EXIT_SUCCESS)
         }
         // Some installer versions finish without a PercentComplete response.
         // A successful return is also safe proof that the request was handled.
+        debugLog("[zLoader] Exiting after successful self-update installation.")
         exit(EXIT_SUCCESS)
     }
     #endif

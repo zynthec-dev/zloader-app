@@ -50,17 +50,13 @@ final class PipelineRunner: Sendable
                                 completionHandler: @escaping (Result<InstalledApp, Error>) -> Void) -> RefreshGroup
     {
         let group = RefreshGroup(dbContext: dbContext)
-        group.completionHandler = { (results) in
-            do
-            {
+        group.completionHandler = { [weak group] results in
+            do {
                 guard let result = results.values.first else {
-                    throw group.error ?? OperationError.unknownResult
+                    throw group?.error ?? OperationError.unknownResult
                 }
-                let installedApp = try result.get()
-                completionHandler(.success(installedApp))
-            }
-            catch
-            {
+                completionHandler(.success(try result.get()))
+            } catch {
                 completionHandler(.failure(error))
             }
         }
@@ -72,11 +68,11 @@ final class PipelineRunner: Sendable
             } catch {
                 if Task.isCancelled || error is CancellationError {
                     debugLog("[AppManager] performSingleOperation task CANCELLED for: \(operation.bundleIdentifier)")
-                    completionHandler(.failure(OperationError.cancelled))
+                    await MainActor.run { completionHandler(.failure(OperationError.cancelled)) }
                     return
                 }
                 debugLog("[AppManager] performSingleOperation task failed for: \(operation.bundleIdentifier) with error: \(error)")
-                completionHandler(.failure(error))
+                await MainActor.run { completionHandler(.failure(error)) }
             }
         }
         
@@ -250,10 +246,35 @@ final class PipelineRunner: Sendable
             try await injectOp.execute()
         }
 
-        await MainActor.run {
-            group.completionHandler?(group.results)
+        // Installation results belong to the private writer context. Resolve
+        // permanent identities before invoking UIKit callbacks on MainActor;
+        // retain the original background results for non-UI pipeline consumers.
+        var installationIDs: [String: Result<NSManagedObjectID, Error>] = [:]
+        for operation in operations {
+            let steps = PipelineStepDefinition.steps(for: operation)
+            let installsApp = steps.contains { $0.step == .installApp }
+            let refreshResignsApp = group.sharedContext.importedSigningMaterial != nil && steps.contains { $0.step == .refreshApp }
+            guard installsApp || refreshResignsApp else { continue }
+            let bundleID = operation.bundleIdentifier
+            guard case .success(let app) = group.results[bundleID] else { continue }
+            do {
+                installationIDs[bundleID] = .success(try await group.dbContext.persistedObjectID(for: app))
+            } catch {
+                installationIDs[bundleID] = .failure(error)
+            }
         }
-        
+        let completedInstallationIDs = installationIDs
+        await MainActor.run {
+            let viewContext = DatabaseManager.shared.viewContext
+            var visibleResults = group.results
+            for (bundleID, identity) in completedInstallationIDs {
+                visibleResults[bundleID] = identity.flatMap { id in
+                    Result { try viewContext.existingMainActorObject(with: id, as: InstalledApp.self) }
+                }
+            }
+            group.completionHandler?(visibleResults)
+        }
+
         return group
     }
     
@@ -269,10 +290,11 @@ final class PipelineRunner: Sendable
             let result = try await self.performPipeline(for: operation, handler: handler, group: group, operationsCount: operationsCount)
             // Persist before removing the transient launcher tile or reporting success.
             // A save failure is an operation failure, not a successful invisible app.
-            let bundleID = result.bundleIdentifier
             let dbContext = group.dbContext
-            try await dbContext.perform {
+            let bundleID = try await dbContext.perform {
+                let bundleID = result.bundleIdentifier
                 if dbContext.hasChanges { try dbContext.save() }
+                return bundleID
             }
             await MainActor.run {
                 DatabaseManager.shared.viewContext.processPendingChanges()
@@ -291,7 +313,7 @@ final class PipelineRunner: Sendable
             await WidgetDataManager.publishCurrentInstalledApps(in: dbContext)
             debugLog("[AppManager] performOperation: Reloading COMPLETE for widget timelines.")
             
-            if result.bundleIdentifier == StoreApp.zloaderAppID {
+            if bundleID == StoreApp.zloaderAppID {
                 let context = StandaloneOperationContext(steps: .scheduleExpirationWarningNotification, dbBackgroundContext: group.dbContext)
                 let scheduleNotifOp = try ScheduleExpirationWarningNotificationOperation(
                     installedApp: result,
