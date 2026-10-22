@@ -1393,8 +1393,13 @@ private extension MyAppsViewController
             self.enableJIT(for: installedApp, launchBeforeAttaching: true)
             return
         }
-        UIApplication.shared.open(installedApp.openAppURL) { success in
-            if !success { ToastView(error: OperationError.openAppFailed(name: installedApp.name), opensLog: true).show(in: self) }
+        let bundleIdentifier = installedApp.resignedBundleIdentifier
+        let appName = installedApp.name
+        ZLoaderAppLauncher.openApplication(withBundleIdentifier: bundleIdentifier) { [weak self] success, error in
+            DispatchQueue.main.async {
+                guard let self, !success else { return }
+                ToastView(error: error ?? OperationError.openAppFailed(name: appName), opensLog: true).show(in: self)
+            }
         }
     }
     
@@ -2019,7 +2024,8 @@ private extension MyAppsViewController
                 }
                 switch result {
                 case .success:
-                    if launchBeforeAttaching { UIApplication.shared.open(installedApp.openAppURL) }
+                    // The JIT gateway already launched and resumed the target.
+                    // Do not launch it a second time by delivering a deep link.
                     break
                 case .failure(let error):
                     ToastView(error: error, opensLog: true).show(in: self)

@@ -939,6 +939,7 @@
 			baseConfigurationReferenceAnchor = A8EEC71D2F4B10D900F2436D /* xcconfigs */;
 			baseConfigurationReferenceRelativePath = zLoader.xcconfig;
 			buildSettings = {
+				SWIFT_OBJC_BRIDGING_HEADER = "zLoader/App/zLoader-Bridging-Header.h";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
