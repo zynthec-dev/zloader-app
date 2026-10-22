@@ -6,6 +6,10 @@
 #import "LCAppInfo.h"
 #import "LCUtils.h"
 #import "../../LiveContainer/LCSharedUtils.h"
+#if TARGET_OS_SIMULATOR
+#import <dlfcn.h>
+#import "../../ZSign/zsigner.h"
+#endif
 
 
 @implementation LCAppInfo
@@ -245,13 +249,8 @@
 }
 
 - (NSDictionary *)generateWebClipConfigWithContainerId:(NSString*)containerId iconStyle:(GeneratedIconStyle)style{
-    NSURLComponents *components = [NSURLComponents new];
-    components.scheme = NSUserDefaults.lcAppUrlScheme ?: @"livecontainer";
-    components.host = @"livecontainer-launch";
-    NSMutableArray *query = [NSMutableArray arrayWithObject:[NSURLQueryItem queryItemWithName:@"bundle-name" value:self.bundlePath.lastPathComponent]];
-    if (containerId) [query addObject:[NSURLQueryItem queryItemWithName:@"container-folder-name" value:containerId]];
-    components.queryItems = query;
-    NSString *appClipUrl = components.URL.absoluteString;
+    NSString *appClipUrl = [LCSharedUtils launchURLForGuestBundle:self.bundlePath.lastPathComponent container:containerId].absoluteString;
+    if (!appClipUrl) return nil;
 
     UIImage* icon = [self generateLiveContainerWrappedIconWithStyle:style];
     
@@ -295,6 +294,11 @@
 }
 
 - (void)patchExecAndSignIfNeedWithCompletionHandler:(void(^)(bool success, NSString* errorInfo))completetionHandler progressHandler:(void(^)(NSProgress* progress))progressHandler forceSign:(BOOL)forceSign {
+#if TARGET_OS_SIMULATOR
+    // A changed Simulator Mach-O needs a fresh local macOS code seal too.
+    // This path neither uses an Apple identity nor exists in device builds.
+    forceSign = YES;
+#endif
     [NSUserDefaults.standardUserDefaults setObject:@(YES) forKey:@"SigningInProgress"];
     NSString *appPath = self.bundlePath;
 
@@ -361,6 +365,15 @@
         [self save];
     }
 
+#if TARGET_OS_SIMULATOR
+    void *signer = dlopen("@executable_path/Frameworks/ZSign.dylib", RTLD_LAZY | RTLD_GLOBAL);
+    NSData *emptyEntitlements = [NSPropertyListSerialization dataWithPropertyList:@{} format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+    BOOL sealed = signer && [NSClassFromString(@"ZSigner") adhocSignMachOAtPath:execPath
+        bundleId:infoPlist[@"CFBundleIdentifier"] entitlementData:emptyEntitlements];
+    [NSUserDefaults.standardUserDefaults removeObjectForKey:@"SigningInProgress"];
+    completetionHandler(sealed, sealed ? nil : @"Die lokale Simulator-Signatur konnte nicht erneuert werden.");
+    return;
+#endif
     if (!LCSharedUtils.certificatePassword || self.is32bit || self.dontSign) {
         [NSUserDefaults.standardUserDefaults removeObjectForKey:@"SigningInProgress"];
         completetionHandler(YES, nil);

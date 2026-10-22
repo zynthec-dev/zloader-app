@@ -32,6 +32,8 @@ for internal in [False]:
         declared = plistlib.loads(subprocess.check_output(['codesign', '-d', '--entitlements', '-', '--xml', str(host)], stderr=subprocess.DEVNULL))
         assert ('com.apple.developer.networking.networkextension' in declared) == internal
         assert declared['com.apple.security.application-groups'] == ['group.com.zynthec.zLoader']
-        assert len(declared['keychain-access-groups']) == 128
+        groups = declared['keychain-access-groups']
+        assert len(groups) == 129
+        assert '0000000000.com.zynthec.zLoader.container-signing' in groups
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(host)], check=True, capture_output=True)
 print('PASS external-only IPA: no tunnel provider, recovery payload or host Network Extension entitlement; widget and App Group signatures intact')

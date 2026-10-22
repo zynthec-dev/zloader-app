@@ -296,11 +296,8 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
             return
         }
 
-        if let folderName = configuration.model.uiSelectedContainer?.folderName {
-            UIPasteboard.general.string = "\(LCUtils.appUrlScheme() ?? "livecontainer")://livecontainer-launch?bundle-name=\(relativeBundlePath)&container-folder-name=\(folderName)"
-        } else {
-            UIPasteboard.general.string = "\(LCUtils.appUrlScheme() ?? "livecontainer")://livecontainer-launch?bundle-name=\(relativeBundlePath)"
-        }
+        UIPasteboard.general.string = LCSharedUtils.launchURL(bundle: relativeBundlePath,
+            container: configuration.model.uiSelectedContainer?.folderName)?.absoluteString
     }
 
     private func createAppClip() async {

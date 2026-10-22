@@ -2,6 +2,7 @@
 
 @interface LCSharedUtils : NSObject
 + (NSBundle *)resourceBundle;
++ (NSURL *)launchURLForGuestBundle:(NSString *)bundleFolder container:(NSString *)containerFolder NS_SWIFT_NAME(launchURL(bundle:container:));
 + (NSData *)containerCertificateData;
 + (BOOL)storeContainerCertificate:(NSData *)data password:(NSString *)password error:(NSError **)error;
 + (void)removeContainerCertificate;

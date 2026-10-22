@@ -290,8 +290,8 @@ int checkCert(NSData *key,
     ZSignAsset zSignAsset;
     zSignAsset.InitAdhoc([entitlementData bytes], (int)[entitlementData length]);
     
-    ZMachO* macho = new ZMachO();
-    if (!macho->Init(path.UTF8String)) {
+    ZMachO macho;
+    if (!macho.Init(path.UTF8String)) {
         ZLog::ErrorV(">>> Invalid mach-o file! %s\n", path.UTF8String);
         return false;
     }
@@ -300,7 +300,20 @@ int checkCert(NSData *key,
     string strInfoSHA256;
     string strCodeResourcesData;
     string strBundleId(bundleId.UTF8String);
-    bool bRet = macho->Sign(&zSignAsset, true, strBundleId, strInfoSHA1, strInfoSHA256, strCodeResourcesData);
+    bool bRet = macho.Sign(&zSignAsset, true, strBundleId, strInfoSHA1, strInfoSHA256, strCodeResourcesData);
+#if TARGET_OS_SIMULATOR
+    if (bRet) {
+        // Mapping the old code during patching can leave its seal in the host
+        // kernel's vnode cache. Publish the completed seal through a fresh inode.
+        NSFileManager *fm = NSFileManager.defaultManager;
+        NSURL *original = [NSURL fileURLWithPath:path];
+        NSURL *fresh = [NSURL fileURLWithPath:[path stringByAppendingFormat:@".%@.sealed", NSUUID.UUID.UUIDString]];
+        NSError *error = nil;
+        bRet = [fm copyItemAtURL:original toURL:fresh error:&error];
+        if (bRet) bRet = [fm replaceItemAtURL:original withItemAtURL:fresh backupItemName:nil options:0 resultingItemURL:NULL error:&error];
+        if (!bRet) [fm removeItemAtURL:fresh error:nil];
+    }
+#endif
     return bRet;
 }
 

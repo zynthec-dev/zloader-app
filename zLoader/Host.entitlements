@@ -136,6 +136,7 @@
 		<string>0000000000.com.zynthec.zLoader.container.125</string>
 		<string>0000000000.com.zynthec.zLoader.container.126</string>
 		<string>0000000000.com.zynthec.zLoader.container.127</string>
+		<string>0000000000.com.zynthec.zLoader.container-signing</string>
 	</array>
 </dict>
 </plist>

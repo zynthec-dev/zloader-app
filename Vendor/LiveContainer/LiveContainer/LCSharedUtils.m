@@ -2,6 +2,7 @@
 #import "FoundationPrivate.h"
 #import "UIKitPrivate.h"
 #import "utils.h"
+#import "Tweaks/ZLoaderGuestURLPolicy.h"
 @import MachO;
 @import Security;
 
@@ -19,7 +20,8 @@ static NSMutableDictionary *credentialQuery(void) {
         (__bridge id)kSecAttrService: @"de.zloader.container-signing",
         (__bridge id)kSecAttrAccount: @"signing-identity"} mutableCopy];
     NSString *team = [LCSharedUtils teamIdentifier];
-    if (team.length) query[(__bridge id)kSecAttrAccessGroup] = [team stringByAppendingString:@".com.zynthec.zLoader.container"];
+    // Keep the signing vault outside the 128 access groups allocated to guests.
+    if (team.length) query[(__bridge id)kSecAttrAccessGroup] = [team stringByAppendingString:@".com.zynthec.zLoader.container-signing"];
     return query;
 }
 static NSDictionary *readCredential(void) {
@@ -37,6 +39,9 @@ static NSDictionary *readCredential(void) {
 }
 
 @implementation LCSharedUtils
++ (NSURL *)launchURLForGuestBundle:(NSString *)bundleFolder container:(NSString *)containerFolder {
+    return ZLoaderContainerLaunchURL(lcAppUrlScheme ?: @"livecontainer", bundleFolder, containerFolder);
+}
 + (NSData *)containerCertificateData { return readCredential()[@"certificate"]; }
 + (BOOL)storeContainerCertificate:(NSData *)data password:(NSString *)password error:(NSError **)error {
     NSDictionary *value = @{@"certificate": data, @"password": password};
@@ -216,7 +221,10 @@ static NSDictionary *readCredential(void) {
         }
     }
 
-    int tries = 1;
+    // Preserve LiveContainer's queued second native activation: the first
+    // completion terminates the current host, the pending activation launches
+    // a fresh process whose pre-UIApplicationMain bootstrap can load the guest.
+    int tries = 2;
     _LSOpenConfiguration *configuration = [[PrivClass(_LSOpenConfiguration) alloc] init];
     if(classicMode) {
         NSMutableDictionary* dict = [NSMutableDictionary new];
