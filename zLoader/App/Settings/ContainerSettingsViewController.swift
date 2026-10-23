@@ -5,6 +5,7 @@ final class ContainerSettingsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Container-Einstellungen"
+        navigationItem.largeTitleDisplayMode = .never
         let controller = ZLoaderContainerSettingsController()
         addChild(controller)
         controller.view.translatesAutoresizingMaskIntoConstraints = false
