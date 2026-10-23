@@ -1,0 +1,106 @@
+--- a/Sources/Models/BundleSigningLayout.swift
++++ b/Sources/Models/BundleSigningLayout.swift
+@@ -2,6 +2,28 @@
+ 
+ /// Bundle relationships used by profile preparation and signing, independently of removal UI.
+ public enum BundleSigningLayout {
++    /// Classic app extensions and ExtensionKit extensions use different folders.
++    /// Keep discovery shared by signing, profile preparation and inspection.
++    public static func extensionURLs(in bundle: URL) throws -> [URL] {
++        let bundle = bundle.resolvingSymlinksInPath()
++        var extensions = Set<URL>()
++        for folder in ["PlugIns", "Extensions"] {
++            let directory = bundle.appendingPathComponent(folder)
++            guard FileManager.default.fileExists(atPath: directory.path) else { continue }
++            let children = try FileManager.default.contentsOfDirectory(
++                at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
++            )
++            for child in children where child.pathExtension.lowercased() == "appex" {
++                let resolved = child.resolvingSymlinksInPath()
++                guard resolved.path.hasPrefix(bundle.path + "/") else {
++                    throw CocoaError(.fileReadNoPermission)
++                }
++                extensions.insert(resolved)
++            }
++        }
++        return extensions.sorted { $0.path < $1.path }
++    }
++
+     /// Cached/custom metadata must not replace the source graph with a prior
+     /// team's resolved identities. Resign owns these writes for the whole graph.
+     public static func preparationMetadata(_ metadata: [String: any Sendable]) -> [String: any Sendable] {
+@@ -28,7 +50,8 @@
+             }
+             guard visited.insert(bundle).inserted else { return }
+             components.append(bundle)
+-            for (folder, suffix) in [("PlugIns", "appex"), ("Watch", "app")] {
++            for child in try extensionURLs(in: bundle) { try visit(child) }
++            for (folder, suffix) in [("Watch", "app")] {
+                 let directory = bundle.appendingPathComponent(folder)
+                 guard FileManager.default.fileExists(atPath: directory.path) else { continue }
+                 let children = try FileManager.default.contentsOfDirectory(
+@@ -40,6 +63,34 @@
+         }
+         try visit(root)
+         return components
++    }
++
++    /// Fail before signing/installing if a discovered child retained the old
++    /// host ID. Each component must still have its own authorized profile.
++    public static func validateIdentifiers(in root: URL) throws {
++        let components = try componentURLs(in: root)
++        var seen = Set<String>()
++        var hostID: String?
++        for component in components {
++            let rootPlist = component.appendingPathComponent("Info.plist")
++            let plistURL = FileManager.default.fileExists(atPath: rootPlist.path)
++                ? rootPlist : component.appendingPathComponent("Contents/Info.plist")
++            let data = try Data(contentsOf: plistURL)
++            guard let info = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
++                  let identifier = info["CFBundleIdentifier"] as? String, !identifier.isEmpty,
++                  seen.insert(identifier).inserted else {
++                throw CocoaError(.propertyListReadCorrupt, userInfo: [NSLocalizedDescriptionKey:
++                    "Unreadable or duplicate bundle identifier in '\(component.lastPathComponent)'."])
++            }
++            if let hostID {
++                guard identifier.hasPrefix(hostID + ".") else {
++                    throw CocoaError(.propertyListReadCorrupt, userInfo: [NSLocalizedDescriptionKey:
++                        "Embedded bundle ID '\(identifier)' must start with '\(hostID).'."])
++                }
++            } else {
++                hostID = identifier
++            }
++        }
+     }
+ 
+     public static func rebasedIdentifier(_ identifier: String, from original: String, to resolved: String) throws -> String {
+--- a/Sources/Models/AppBundle.swift
++++ b/Sources/Models/AppBundle.swift
+@@ -135,16 +135,10 @@
+     }
+ 
+     private func loadExtensions() -> Set<AppBundle> {
+-        let pluginsURL = fileURL.appendingPathComponent("PlugIns")
+-        guard let contents = try? FileManager.default.contentsOfDirectory(
+-            at: pluginsURL,
+-            includingPropertiesForKeys: nil,
+-            options: [.skipsHiddenFiles]
+-        ) else {
++        guard let contents = try? BundleSigningLayout.extensionURLs(in: fileURL) else {
+             return []
+         }
+         let extensions = contents
+-            .filter { $0.pathExtension.lowercased() == "appex" }
+             .compactMap { AppBundle(fileURL: $0) }
+         return Set(extensions)
+     }
+--- a/Sources/CodeSigning/CodeSignerAPI.swift
++++ b/Sources/CodeSigning/CodeSignerAPI.swift
+@@ -57,6 +57,7 @@
+             }
+         }
+ 
++        try BundleSigningLayout.validateIdentifiers(in: appURL)
+         let components = try appBundle.signingBundles()
+         var entitlementsByURL: [URL: String] = [:]
+ 

@@ -423,12 +423,7 @@ struct FullAppBundleView: View {
     }
 
     private var appExtensions: [URL] {
-        let dir = bundleURL.appendingPathComponent("PlugIns")
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-        ) else { return [] }
-        return contents.filter { $0.pathExtension == "appex" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        (try? BundleSigningLayout.extensionURLs(in: bundleURL)) ?? []
     }
 
     private var displayName: String {

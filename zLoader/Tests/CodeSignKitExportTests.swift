@@ -29,6 +29,45 @@ import CodeSignKit
             teamIdentifier: nil, entitlementsXML: xml, infoPlistData: nil,
             codeResourcesData: nil, cmsSigner: nil, options: [.adHoc]).sign()
         try signed.write(to: executable)
+        let host = folder.appendingPathComponent("ExtensionKit.app")
+        let helper = host.appendingPathComponent("Extensions/iOSHelper.appex")
+        let original = "com.utmapp.UTM"
+        let resolved = original + ".QA12345678"
+        for (url, id) in [(host, original), (helper, original + ".iOSHelper")] {
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            let plist: [String: Any] = ["CFBundleIdentifier": id, "CFBundleExecutable": "TestExecutable",
+                "CFBundlePackageType": url == host ? "APPL" : "XPC!", "CFBundleVersion": "1"]
+            let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)
+            try data.write(to: url.appendingPathComponent("Info.plist"))
+            try signed.write(to: url.appendingPathComponent("TestExecutable"))
+        }
+        let components = try BundleSigningLayout.componentURLs(in: host)
+        precondition(components.count == 2)
+        let identities = [original: resolved, original + ".iOSHelper": resolved + ".iOSHelper"]
+        var entitlementsByPath: [String: String] = [:]
+        for url in components {
+            let plistURL = url.appendingPathComponent("Info.plist")
+            let data = try Data(contentsOf: plistURL)
+            let plist = try PropertyListSerialization.propertyList(from: data, format: nil) as! [String: Any]
+            let updated = try BundleSigningLayout.rewriting(plist, identities: identities)
+            try PropertyListSerialization.data(fromPropertyList: updated, format: .binary, options: 0).write(to: plistURL)
+            let id = updated["CFBundleIdentifier"] as! String
+            let entitlements: [String: Any] = ["application-identifier": "QA12345678." + id,
+                "com.apple.developer.team-identifier": "QA12345678", "test-owner": url == host ? "host" : "helper"]
+            let encoded = try PropertyListSerialization.data(fromPropertyList: entitlements, format: .xml, options: 0)
+            let path = url == host ? "" : String(url.path.dropFirst(host.path.count + 1))
+            entitlementsByPath[path] = String(data: encoded, encoding: .utf8)!
+        }
+        try BundleSigningLayout.validateIdentifiers(in: host)
+        try CodeSigner.signAdHoc(appPath: host.path, entitlementProvider: { entitlementsByPath[$0] ?? "" })
+        for url in components {
+            let xml = try MachOParser.entitlements(at: url)
+            let signedEntitlements = try PropertyListSerialization.propertyList(from: Data(xml.utf8), format: nil) as! [String: Any]
+            let id = url == host ? resolved : resolved + ".iOSHelper"
+            precondition(signedEntitlements["application-identifier"] as? String == "QA12345678." + id)
+            precondition(signedEntitlements["test-owner"] as? String == (url == host ? "host" : "helper"))
+        }
+        print("PASS actual CodeSignKit signs host and ExtensionKit helper with distinct final IDs and entitlement ownership")
         print("PASS canonical DER matches Apple reference and MachOSigner produces regression fixture")
         print("PASS pinned CodeSignKit imports ASCII/Unicode encrypted exports, preserves private key and rejects wrong password")
     }

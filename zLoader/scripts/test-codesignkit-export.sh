@@ -9,6 +9,7 @@ mkdir -p "$package/Sources/CodeSignKit" "$package/Sources/Compatibility"
 chmod -R u+w "$package/Sources"
 cp .build/SourcePackages/checkouts/CodeSignKit/Sources/*.swift "$package/Sources/CodeSignKit/"
 cp zLoader/Features/Core/Certificates/PortablePKCS12.swift zLoader/Tests/CodeSignKitExportTests.swift "$package/Sources/Compatibility/"
+cp Dependencies/SideSign/Sources/Models/BundleSigningLayout.swift "$package/Sources/Compatibility/"
 python3 - "$package" "$root" <<'PY'
 import sys, json
 from pathlib import Path
@@ -33,6 +34,15 @@ SWIFTCI_USE_LOCAL_DEPS=1 swift run --package-path "$package" Compatibility "$wor
 codesign -d --entitlements - --xml "$work/fixture" > "$work/decoded.plist" 2> "$work/diagnostics"
 if rg -q 'invalid entitlements' "$work/diagnostics"; then cat "$work/diagnostics"; exit 1; fi
 codesign --verify --strict "$work/fixture"
+codesign --verify --deep --strict "$work/ExtensionKit.app"
+codesign -d --entitlements - --xml "$work/ExtensionKit.app/Extensions/iOSHelper.appex" > "$work/helper-entitlements.plist" 2> "$work/helper-diagnostics"
+python3 - "$work/helper-entitlements.plist" <<'PYHELPER'
+import plistlib, sys
+values = plistlib.load(open(sys.argv[1], 'rb'))
+assert values['application-identifier'] == 'QA12345678.com.utmapp.UTM.QA12345678.iOSHelper'
+assert values['test-owner'] == 'helper'
+print('PASS Apple codesign verifies ExtensionKit signatures and the helper-specific identity/entitlements')
+PYHELPER
 python3 - "$work/decoded.plist" <<'PYTEST'
 import plistlib, sys
 values = plistlib.load(open(sys.argv[1], 'rb'))

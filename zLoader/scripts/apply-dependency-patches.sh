@@ -54,6 +54,12 @@ if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; 
     git -C Dependencies/SideSign apply "$patch"
 fi
 
+patch="$PWD/zLoader/Patches/sidesign-extensionkit.patch"
+if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; then
+    git -C Dependencies/SideSign apply --check "$patch"
+    git -C Dependencies/SideSign apply "$patch"
+fi
+
 # SwiftPM checkouts must be resolved before applying this runtime signing fix.
 code_sign_kit="$PWD/.build/SourcePackages/checkouts/CodeSignKit"
 if [ -d "$code_sign_kit" ]; then
