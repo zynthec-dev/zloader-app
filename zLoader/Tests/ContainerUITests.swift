@@ -54,6 +54,7 @@ final class ContainerUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Identität übernehmen"].exists)
         XCTAssertFalse(app.buttons["Container-Quellen"].exists)
         XCTAssertTrue(app.buttons["container-jitless-diagnostics"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts.matching(identifier: "Container-Einstellungen").count, 1)
         attach("container-settings-simplified")
         let identity = app.buttons["container-device-identity-settings"]
         XCTAssertTrue(identity.waitForExistence(timeout: 10))

@@ -396,7 +396,7 @@ struct LCSettingsView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle(isHost ? "Container-Einstellungen" : "lc.tabView.settings".loc)
+            .navigationTitle(isHost ? "" : "lc.tabView.settings".loc)
             .alert("lc.common.error".loc, isPresented: $errorShow){
             } message: {
                 Text(errorInfo)
