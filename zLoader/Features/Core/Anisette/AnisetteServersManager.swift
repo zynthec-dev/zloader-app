@@ -53,9 +53,27 @@ public actor AnisetteServersManager {
 
     private init() {}
 
+    public func prepareMacAnisetteIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: "zLoader.macAnisetteMigration.v1") else { return }
+        defaults.useOnDeviceAnisette = false
+        defaults.menuAnisetteURL = AppConstants.Anisette.Servers.defaultServerURL
+        defaults.disableAnisetteRotation = true
+        defaults.set(true, forKey: "zLoader.macAnisetteMigration.v1")
+    }
+
+    private func includingMacServer(_ items: [AnisetteServerItem]) -> [AnisetteServerItem] {
+        let address = AppConstants.Anisette.Servers.defaultServerURL
+        guard !items.contains(where: { $0.address.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == address }) else {
+            return items
+        }
+        return [AnisetteServerItem(name: "Mac Anisette (jkcoxson)", address: address)] + items
+    }
+
     // MARK: - Local Persistence & In-Memory Caching
 
     public func loadLocalServers() -> [AnisetteServerItem] {
+        prepareMacAnisetteIfNeeded()
         if let cached = inMemoryServersCache {
             return cached
         }
@@ -72,7 +90,7 @@ public actor AnisetteServersManager {
 
         guard fileManager.fileExists(atPath: targetURL.path),
               let data = try? Data(contentsOf: targetURL) else {
-            return []
+            return includingMacServer([])
         }
 
         let decoder = Foundation.JSONDecoder()
@@ -89,11 +107,13 @@ public actor AnisetteServersManager {
             }
         }
 
-        inMemoryServersCache = items
-        return items
+        let available = includingMacServer(items)
+        inMemoryServersCache = available
+        return available
     }
 
     public func saveLocalServers(_ items: [AnisetteServerItem]) {
+        let items = includingMacServer(items)
         inMemoryServersCache = items
 
         let encoder = Foundation.JSONEncoder()
@@ -310,6 +330,10 @@ public actor AnisetteServersManager {
             throw NSError(domain: "AnisetteServersManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON format returned from '\(serverSource)'."])
         }
 
+        let address = AppConstants.Anisette.Servers.defaultServerURL
+        if !aniServers.contains(where: { $0.address.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == address }) {
+            aniServers.insert(Server(name: "Mac Anisette (jkcoxson)", address: address), at: 0)
+        }
         return aniServers
     }
 
@@ -376,6 +400,7 @@ public actor AnisetteServersManager {
 
     /// Kicks off background sync on app boot if > 24 hours ago OR if previous sync failed/interrupted
     public func performDailySyncIfNeeded() async {
+        prepareMacAnisetteIfNeeded()
         if isOfflineMode {
             return
         }

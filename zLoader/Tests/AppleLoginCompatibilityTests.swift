@@ -6,8 +6,7 @@ struct AppleLoginCompatibilityTests {
         let original = "<Mac> <macOS> <AuthKit>"
         for path in ["/grandslam/GsService2", "/grandslam/GsService2/validate"] {
             let value = AppleLoginCompatibility.clientInfo(for: URL(string: "https://gsa.apple.com" + path)!, anisetteClientInfo: original)
-            precondition(value.contains("<Android;"))
-            precondition(value != original)
+            precondition(value == original)
         }
         for address in [
             "https://gsa.apple.com/auth/verify/trusteddevice",
@@ -43,25 +42,25 @@ struct AppleLoginCompatibilityTests {
         let failure = AppleLoginCompatibility.HTTPFailure(statusCode: 503, phase: .initialization, retryAfter: nil)
         let result: String = try await AppleLoginCompatibility.retryHandshake503(after: failure, pause: { delay in
             precondition(delay == 5)
-            precondition(!AppleLoginCompatibility.useWindowsIdentity)
+            precondition(!AppleLoginCompatibility.hasRetriedHandshake)
         }, attempt: {
-            precondition(AppleLoginCompatibility.useWindowsIdentity)
+            precondition(AppleLoginCompatibility.hasRetriedHandshake)
             let identity = AppleLoginCompatibility.clientInfo(for: gsa, anisetteClientInfo: original)
-            precondition(identity.contains("<Windows;"))
+            precondition(identity == original)
             precondition(AppleLoginCompatibility.clientInfo(for: verify, anisetteClientInfo: original) == original)
             precondition(AppleLoginCompatibility.clientInfo(for: URL(string: "https://gsa.apple.com/grandslam/GsService2/validate")!, anisetteClientInfo: original) == identity)
-            let inherited = await Task { AppleLoginCompatibility.useWindowsIdentity }.value
+            let inherited = await Task { AppleLoginCompatibility.hasRetriedHandshake }.value
             precondition(inherited)
             return "retried once"
         })
-        precondition(result == "retried once" && !AppleLoginCompatibility.useWindowsIdentity)
+        precondition(result == "retried once" && !AppleLoginCompatibility.hasRetriedHandshake)
         let proofFailure = AppleLoginCompatibility.HTTPFailure(statusCode: 503, phase: .proof, retryAfter: nil)
         let proofResult: String = try await AppleLoginCompatibility.retryHandshake503(after: proofFailure,
             pause: { precondition($0 == 5) }, attempt: {
-                precondition(AppleLoginCompatibility.useWindowsIdentity)
+                precondition(AppleLoginCompatibility.hasRetriedHandshake)
                 return "fresh handshake"
             })
-        precondition(proofResult == "fresh handshake" && !AppleLoginCompatibility.useWindowsIdentity)
+        precondition(proofResult == "fresh handshake" && !AppleLoginCompatibility.hasRetriedHandshake)
         for denied in [
             AppleLoginCompatibility.HTTPFailure(statusCode: 503, phase: .appTokens, retryAfter: nil),
             .init(statusCode: 503, phase: .other, retryAfter: nil),
@@ -96,12 +95,32 @@ struct AppleLoginCompatibilityTests {
             })
             preconditionFailure("Expected fallback failure")
         } catch let error as AppleLoginCompatibility.HTTPFailure { precondition(error.statusCode == 503) }
-        precondition(!AppleLoginCompatibility.useWindowsIdentity)
+        try await AppleLoginCompatibility.$pushedCodeHandled.withValue(true) {
+            do {
+                let _: Int = try await AppleLoginCompatibility.retryHandshake503(after: failure,
+                    pause: { _ in preconditionFailure("Do not repeat after 2FA") },
+                    attempt: { preconditionFailure("Do not repeat after 2FA") })
+                preconditionFailure("Expected terminal error")
+            } catch is AppleLoginCompatibility.HTTPFailure {}
+        }
+        let bytes = Array(UInt8(0)...UInt8(15))
+        precondition(AppleLoginCompatibility.encodedIdentifier(bytes) == "AAECAwQFBgcICQoLDA0ODw==")
+        let identity = try AppleLoginCompatibility.RemoteIdentity.decode(Data(
+            #"{"client_info":"<MacBookPro13,3> <Mac OS X;10.12.6;16G29> <AuthKit>","user_agent":"akd/1.0"}"#.utf8))
+        precondition(identity.clientInfo.contains("MacBookPro13,3") && identity.userAgent == "akd/1.0")
+        for payload in [#"{}"#, #"{"client_info":"", "user_agent":"akd"}"#,
+                        #"{"client_info":"Mac", "user_agent":"akd\r\nInjected: x"}"#] {
+            do {
+                _ = try AppleLoginCompatibility.RemoteIdentity.decode(Data(payload.utf8))
+                preconditionFailure("Invalid remote identity accepted")
+            } catch {}
+        }
+        precondition(!AppleLoginCompatibility.hasRetriedHandshake)
         let _: Bool = try await AppleLoginCompatibility.retryHandshake503(after:
             AppleLoginCompatibility.HTTPFailure(statusCode: 503, phase: .initialization, retryAfter: 12),
             pause: { precondition($0 == 12) }, attempt: { true })
         precondition(failure.errorDescription?.contains("503") == true)
         precondition(failure.errorDescription?.contains("starting sign-in") == true)
-        print("PASS GrandSlam-only Android identity; original 2FA/SMS identity; pushed-code inference and explicit auth precedence; per-login retry state inheritance/reset; one cancellable init/proof 503 fresh-handshake fallback; no token/code/rate-limit retry; Retry-After bounds")
+        print("PASS provider identity retained across provisioning/SRP/2FA; pushed-code inference and explicit auth precedence; per-login retry state inheritance/reset; one cancellable init/proof 503 fresh-handshake retry; no token/code/rate-limit retry; Retry-After bounds")
     }
 }

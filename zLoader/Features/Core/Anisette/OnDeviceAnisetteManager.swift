@@ -49,7 +49,8 @@ public actor OnDeviceAnisetteManager {
         let identifierUUID = await AnisetteConfigManager.shared.resolveDeviceIdentifier()
 
         var existingAdiPbData: Data? = nil
-        if let base64Blob = AnisetteConfigManager.shared.anisetteAdiBlob,
+        if Keychain.shared.adiPbProvider == nil || Keychain.shared.adiPbProvider == "on-device",
+           let base64Blob = AnisetteConfigManager.shared.anisetteAdiBlob,
            let decoded = Data(base64Encoded: base64Blob, options: .ignoreUnknownCharacters),
            !decoded.isEmpty {
             existingAdiPbData = decoded
@@ -75,6 +76,7 @@ public actor OnDeviceAnisetteManager {
 
         if let freshBlob = newAdiPb {
             AnisetteConfigManager.shared.anisetteAdiBlob = freshBlob.base64EncodedString()
+            Keychain.shared.adiPbProvider = "on-device"
             debugLog("[OnDeviceAnisetteManager] [Fetch] Fresh local provisioning completed -> saved new adi.pb (\(freshBlob.count) bytes) to Keychain")
         }
 

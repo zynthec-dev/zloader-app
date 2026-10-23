@@ -82,6 +82,9 @@ public class Keychain
     @KeychainItem(key: "adiPb")
     public var adiPb: String?
 
+    @KeychainItem(key: "adiPbProvider")
+    public var adiPbProvider: String?
+
     @KeychainItem(key: "deviceUDID")
     public var deviceUDID: String?
 
@@ -160,6 +163,7 @@ public class Keychain
 
         if !keepAnisetteData {
             self.adiPb = nil
+            self.adiPbProvider = nil
             debugLog("[Keychain] Cleared Anisette ADI data (adiPb).")
         } else {
             debugLog("[Keychain] Preserved Anisette ADI data (adiPb).")

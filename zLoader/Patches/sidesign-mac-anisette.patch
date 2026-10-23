@@ -1,0 +1,248 @@
+--- a/Sources/DeveloperPortal/AppleLoginCompatibility.swift
++++ b/Sources/DeveloperPortal/AppleLoginCompatibility.swift
+@@ -1,11 +1,36 @@
+ import Foundation
+ 
+-// Adapted from SideStore/SideSign PR #5 (NiceAesth) and SideStore commit
+-// 34f61f2. Keep the Android ADI identity scoped to GrandSlam endpoints;
+-// Apple's /auth/verify endpoints still require the original anisette identity.
++// Pushed-code handling adapted from SideStore/SideSign PR #5 (NiceAesth)
++// and SideStore commit 34f61f2. Remote identity follows Omnisette V3 and
++// xtool-org/xtool PR #380: provisioning, SRP and 2FA must agree on the provider.
+ enum AppleLoginCompatibility {
+     @TaskLocal static var pushedCodeHandled = false
+-    @TaskLocal static var useWindowsIdentity = false
++    @TaskLocal static var hasRetriedHandshake = false
++
++    struct RemoteIdentity: Decodable, Sendable {
++        let clientInfo: String
++        let userAgent: String
++
++        enum CodingKeys: String, CodingKey {
++            case clientInfo = "client_info"
++            case userAgent = "user_agent"
++        }
++
++        static func decode(_ data: Data) throws -> Self {
++            let identity = try JSONDecoder().decode(Self.self, from: data)
++            guard [identity.clientInfo, identity.userAgent].allSatisfy({
++                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
++                $0.rangeOfCharacter(from: .newlines) == nil
++            }) else {
++                throw CocoaError(.fileReadCorruptFile)
++            }
++            return identity
++        }
++    }
++
++    static func encodedIdentifier(_ bytes: [UInt8]) -> String {
++        Data(bytes).base64EncodedString()
++    }
+ 
+     enum Phase: String, Sendable {
+         case initialization = "init"
+@@ -32,32 +57,25 @@
+     }
+ 
+     // One fresh SRP attempt, scoped to this login, only after an HTTP 503
+-    // at initialization or proof. Never replay a proof or a verification code.
++    // at initialization or proof. Keep the provider identity unchanged and do
++    // not restart after a verification code has already been accepted.
+     static func retryHandshake503<Result: Sendable>(after error: any Error,
+                                        pause: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) },
+                                        attempt: @Sendable () async throws -> Result) async throws -> Result {
+         guard let failure = error as? HTTPFailure, failure.statusCode == 503,
+-              (failure.phase == .initialization || failure.phase == .proof), !useWindowsIdentity else { throw error }
++              (failure.phase == .initialization || failure.phase == .proof),
++              !hasRetriedHandshake, !pushedCodeHandled else { throw error }
+         if let retryAfter = failure.retryAfter,
+            !retryAfter.isFinite || retryAfter < 0 || retryAfter > 30 { throw error }
+         let seconds = max(5, failure.retryAfter ?? 5)
+         try await pause(seconds)
+         try Task.checkCancellation()
+-        return try await $useWindowsIdentity.withValue(true) {
++        return try await $hasRetriedHandshake.withValue(true) {
+             try await attempt()
+         }
+     }
+ 
+-    private static let androidClientInfo = "<Pixel 7> <Android;14;UQ1A.240205.002> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
+-
+-    // Windows descriptor reported working where the Android descriptor yields
+-    // non-plist 503 responses: Dadoum/anisette-v3-server issue #61 (2026-10-16).
+-    private static let windowsClientInfo = "<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
+-
+     static func clientInfo(for url: URL, anisetteClientInfo: String) -> String {
+-        if url.scheme == "https", url.host == "gsa.apple.com", url.path.hasPrefix("/grandslam/") {
+-            return useWindowsIdentity ? windowsClientInfo : androidClientInfo
+-        }
+         return anisetteClientInfo
+     }
+ 
+--- a/Sources/DeveloperPortal/Authentication.swift
++++ b/Sources/DeveloperPortal/Authentication.swift
+@@ -138,7 +138,7 @@
+             completeResponseDictionary = try await sendAuthenticationRequest(parameters: completeParameters, anisetteData: anisetteData)
+         } catch {
+             // Start a fresh SRP exchange: the old public key, challenge and proof
+-            // must not be replayed when changing the client identity.
++            // must not be replayed after a transient transport failure.
+             return try await AppleLoginCompatibility.retryHandshake503(after: error) {
+                 try await authenticate(appleID: unsanitizedAppleID, password: password,
+                     anisetteData: anisetteData, xcodeVersion: xcodeVersion,
+@@ -337,7 +337,7 @@
+             "Content-Type": "text/x-xml-plist",
+             "X-MMe-Client-Info": AppleLoginCompatibility.clientInfo(for: requestURL, anisetteClientInfo: anisetteData.clientInfo),
+             "Accept": "*/*",
+-            "User-Agent": h.grandSlam.userAgent,
++            "User-Agent": anisetteData.userAgent,
+             "Connection": "close"
+         ]
+         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+@@ -925,7 +925,7 @@
+             "Accept": "application/x-buddyml",
+             "Accept-Language": "en-us",
+             "Content-Type": "application/x-plist",
+-            "User-Agent": h.developerServices.userAgent,
++            "User-Agent": a.userAgent,
+             "X-Apple-App-Info": h.grandSlam.authApp,
+             "X-Xcode-Version": context.xcodeVersion,
+             "X-Apple-Identity-Token": encodedIdentityToken,
+--- a/Sources/Anisette/AnisetteDataManager.swift
++++ b/Sources/Anisette/AnisetteDataManager.swift
+@@ -437,11 +437,25 @@
+         let client = try await getClient(for: resolvedMode, clientInfo: clientInfo)
+ 
+         do {
+-            let (rawHeaders, newBlob) = try await client.getAnisetteData(
++            var resolvedHeaders = headers ?? AnisetteRequestHeaders()
++            if let remote = client.provider as? RemoteAnisetteDataProvider {
++                let identity = try await remote.fetchClientIdentity()
++                resolvedHeaders.clientInfo = identity.clientInfo
++                resolvedHeaders.userAgent = identity.userAgent
++                resolvedHeaders.deviceID = identifier.uuidString.uppercased()
++                let identifierData = withUnsafeBytes(of: identifier.uuid) { Data($0) }
++                resolvedHeaders.localUserID = SHA256.hash(data: identifierData)
++                    .map { String(format: "%02X", $0) }.joined()
++            }
++            var (rawHeaders, newBlob) = try await client.getAnisetteData(
+                 identifier: identifier,
+                 storage: .memory(existingBlob: existingAdiBlob),
+-                headers: headers
++                headers: resolvedHeaders
+             )
++            if let remote = client.provider as? RemoteAnisetteDataProvider,
++               let routing = remote.routingInfo {
++                rawHeaders[Constants.Anisette.Headers.routingInfo] = routing
++            }
+ 
+             let anisetteData = try Self.validateAndCreateAnisetteData(from: rawHeaders)
+ 
+@@ -510,6 +524,7 @@
+         startIndex: Int = 0,
+         identifier: UUID,
+         existingAdiBlob: Data? = nil,
++        existingAdiBlobServer: URL? = nil,
+         headers: AnisetteRequestHeaders? = nil,
+         onError: (@Sendable (Error) async throws -> Bool)? = nil,
+         onSuccess: (@Sendable (URL) -> Void)? = nil
+@@ -532,7 +547,7 @@
+                 let result = try await fetchAnisetteData(
+                     mode: .remote(server: serverURL),
+                     identifier: identifier,
+-                    existingAdiBlob: existingAdiBlob,
++                    existingAdiBlob: existingAdiBlobServer == serverURL ? existingAdiBlob : nil,
+                     headers: headers,
+                     onError: onError
+                 )
+--- a/Sources/Anisette/RemoteAnisetteDataProvider.swift
++++ b/Sources/Anisette/RemoteAnisetteDataProvider.swift
+@@ -14,6 +14,28 @@
+ 
+     public let serverURL: URL
+ 
++    private final class ResponseStorage: @unchecked Sendable {
++        let lock = NSLock()
++        var routingInfo: String?
++    }
++    private let responseStorage = ResponseStorage()
++
++    var routingInfo: String? {
++        responseStorage.lock.withLock { responseStorage.routingInfo }
++    }
++
++    func fetchClientIdentity() async throws -> AppleLoginCompatibility.RemoteIdentity {
++        var request = URLRequest(url: serverURL.appendingPathComponent("v3/client_info"))
++        request.timeoutInterval = Constants.Anisette.remoteRequestTimeout
++        request.cachePolicy = .reloadIgnoringLocalCacheData
++        let (data, response) = try await URLSession.shared.data(for: request)
++        guard let response = response as? HTTPURLResponse, response.isSuccess else {
++            throw AnisetteError.badServerResponse(statusCode: (response as? HTTPURLResponse)?.statusCode ?? -1,
++                payload: "Unable to fetch the Anisette V3 client identity.")
++        }
++        return try AppleLoginCompatibility.RemoteIdentity.decode(data)
++    }
++
+     private final class ProvisioningSessionManager: @unchecked Sendable {
+         private let lock = NSLock()
+         private var counter: UInt32 = 0
+@@ -56,7 +78,7 @@
+         identifier: [UInt8],
+         adiPb: [UInt8]
+     ) async throws -> AnisetteDataResponse {
+-        let cleanIdentifier = identifier.map { String(format: "%02x", $0) }.joined()
++        let cleanIdentifier = AppleLoginCompatibility.encodedIdentifier(identifier)
+         let baseURL = serverURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+ 
+         // 1. If adiPb is present, attempt v3 /v3/get_headers
+@@ -81,28 +103,19 @@
+                         let msg = json["message"] ?? "GetHeadersError"
+                         throw AnisetteError.badServerResponse(statusCode: -1, payload: msg)
+                     }
+-                    return try AnisetteDataResponse(from: json)
+-                }
+-            }
+-        }
+-
+-        // 2. Fallback to legacy v1 root GET
+-        var request = URLRequest(url: serverURL)
+-        request.cachePolicy = .reloadIgnoringLocalCacheData
+-        request.timeoutInterval = Constants.Anisette.remoteRequestTimeout
+-
+-        let (data, response) = try await URLSession.shared.data(for: request)
+-        guard let httpResp = response as? HTTPURLResponse, httpResp.isSuccess else {
+-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+-            let payload = String(data: data, encoding: .utf8) ?? ""
+-            throw AnisetteError.badServerResponse(statusCode: status, payload: payload)
+-        }
+-
+-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: String] else {
+-            throw AnisetteError.invalidAnisetteData
+-        }
+-
+-        return try AnisetteDataResponse(from: json)
++                    let result = try AnisetteDataResponse(from: json)
++                    guard let routing = json["X-Apple-I-MD-RINFO"], UInt64(routing) != nil else {
++                        throw AnisetteError.invalidAnisetteData
++                    }
++                    responseStorage.lock.withLock { responseStorage.routingInfo = routing }
++                    return result
++                }
++            }
++        }
++
++        // A failed per-device request must not silently become a shared V1
++        // identity. In particular, do not hide a rejected legacy ADI blob.
++        throw AnisetteError.providerNotReady("The Anisette V3 server could not generate headers. Reset its provisioning data and try again.")
+     }
+ 
+     public func startProvision(
+@@ -124,7 +137,7 @@
+         let webSocketTask = URLSession.shared.webSocketTask(with: webSocketURL)
+         webSocketTask.resume()
+ 
+-        let cleanIdentifier = identifier.map { String(format: "%02x", $0) }.joined()
++        let cleanIdentifier = AppleLoginCompatibility.encodedIdentifier(identifier)
+ 
+         do {
+             while true {

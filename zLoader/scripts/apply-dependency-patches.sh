@@ -4,6 +4,11 @@ cd "$(dirname "$0")/../.."
 for spec in 'minimuxer:minimuxer-warnings.patch' 'SideSign:sidesign-managed-signing.patch'; do
     dependency=${spec%%:*}
     patch="$PWD/zLoader/Patches/${spec#*:}"
+    # The Mac Anisette upgrade overlaps the cumulative authentication hunks.
+    # Its reverse check confirms the newer state; do not reapply the baseline.
+    if [ "$dependency" = SideSign ] && git -C Dependencies/SideSign apply --reverse --check "$PWD/zLoader/Patches/sidesign-mac-anisette.patch" 2>/dev/null; then
+        continue
+    fi
     if git -C "Dependencies/$dependency" apply --reverse --check "$patch" 2>/dev/null; then
         continue
     fi
@@ -41,6 +46,12 @@ if ! git -C Dependencies/SideSign apply --reverse --check "$upgrade" 2>/dev/null
     fi
     git -C Dependencies/SideSign apply --check "$upgrade"
     git -C Dependencies/SideSign apply "$upgrade"
+fi
+
+patch="$PWD/zLoader/Patches/sidesign-mac-anisette.patch"
+if ! git -C Dependencies/SideSign apply --reverse --check "$patch" 2>/dev/null; then
+    git -C Dependencies/SideSign apply --check "$patch"
+    git -C Dependencies/SideSign apply "$patch"
 fi
 
 # SwiftPM checkouts must be resolved before applying this runtime signing fix.

@@ -69,6 +69,8 @@ sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
 sh zLoader/scripts/test-watch-signing.sh
 sh zLoader/scripts/test-apple-login.sh
+sh zLoader/scripts/test-anisette-migration.sh
+sh zLoader/scripts/test-anisette-protocol.sh
 sh zLoader/scripts/test-certificate-revocation.sh
 sh zLoader/scripts/test-portal-profile-resolver.sh
 sh zLoader/scripts/test-account-certificate-policy.sh
@@ -132,6 +134,8 @@ or signing bypass is provided.
 Current validation and known gaps: [0.7.15 audit](docs/zloader/AUDIT-0.7.15.md).
 
 Current setup: [LocalDevVPN bootstrap and optional managed tunnel, 0.7.17](docs/zloader/ON-DEVICE-SETUP-0.7.17.md).
+
+Apple login error -80046: [Mac Anisette migration and validation, 0.8.2](docs/zloader/APPLE-LOGIN-0.8.2.md).
 
 Latest changes: [installation certificate recovery and Signed IPAs, 0.7.18](docs/zloader/CERTIFICATES-SIGNED-IPAS-0.7.18.md).
 
