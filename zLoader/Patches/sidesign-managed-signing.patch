@@ -44,18 +44,41 @@
              var permissions = (externalAttributes >> 16) & 0x01FF
 --- a/Sources/CodeSigning/CodeSignerAPI.swift
 +++ b/Sources/CodeSigning/CodeSignerAPI.swift
-@@ -25,6 +25,7 @@
+@@ -25,39 +25,12 @@
  public struct AppBundleSigner: CodeSignerAPI, Sendable {
      public let team: Team
      public let keyStore: KeyStore
 +    public let entitlementOverrides: [String: [String: any Sendable]]
  
-     private enum SigningTargetType: CustomStringConvertible {
-         case mainAppBundleDirectory
-@@ -55,9 +56,10 @@
-         }
-     }
- 
+-    private enum SigningTargetType: CustomStringConvertible {
+-        case mainAppBundleDirectory
+-        case mainAppExecutable
+-        case appExtensionBundle(identifier: String)
+-        case appExtensionExecutable(identifier: String)
+-        case framework
+-        case dylib
+-        case unmatched
+-
+-        var description: String {
+-            switch self {
+-            case .mainAppBundleDirectory:
+-                return ".mainAppBundleDirectory"
+-            case .mainAppExecutable:
+-                return ".mainAppExecutable"
+-            case .appExtensionBundle(let id):
+-                return ".appExtensionBundle('\(id)')"
+-            case .appExtensionExecutable(let id):
+-                return ".appExtensionExecutable('\(id)')"
+-            case .framework:
+-                return ".framework"
+-            case .dylib:
+-                return ".dylib"
+-            case .unmatched:
+-                return ".unmatched"
+-            }
+-        }
+-    }
+-
 -    public init(team: Team, keyStore: KeyStore) {
 +    public init(team: Team, keyStore: KeyStore, entitlementOverrides: [String: [String: any Sendable]] = [:]) {
          self.team = team
@@ -64,25 +87,27 @@
      }
  
      public func signApp(at appURL: URL, provisioningProfiles profiles: [ProvisioningProfile], progress: Progress? = nil) async throws
-@@ -75,10 +77,13 @@
+@@ -75,12 +48,16 @@
          verboseLog("[SideSign] BundleID: \(appBundle.bundleIdentifier)")
  
          func profile(for app: AppBundle) -> ProvisioningProfile? {
 -            for p in profiles where p.bundleIdentifier == app.bundleIdentifier {
 -                return p
--            }
--            return profiles.first
 +            let candidates = profiles.filter {
 +                SigningEntitlements.matchesBundleIdentifier($0.bundleIdentifier, bundleIdentifier: app.bundleIdentifier)
 +            }.sorted { $0.bundleIdentifier.count > $1.bundleIdentifier.count }
 +            return candidates.first {
 +                (try? SigningEntitlements.prepare(application: entitlementOverrides[app.bundleIdentifier] ?? app.entitlements,
 +                    profile: $0.entitlements, teamID: $0.teamIdentifier, bundleIdentifier: app.bundleIdentifier)) != nil
-+            }
+             }
+-            return profiles.first
          }
  
++        let components = try appBundle.signingBundles()
          var entitlementsByURL: [URL: String] = [:]
-@@ -92,35 +97,12 @@
+ 
+         func prepare(_ app: AppBundle) throws {
+@@ -92,35 +69,12 @@
                  throw SignerError.missingProvisioningProfile(bundleIdentifier: app.bundleIdentifier)
              }
  
@@ -124,6 +149,94 @@
  
              verboseLog("[SideSign] Filtered entitlements for signing: \(filteredEntitlements)")
  
+@@ -137,6 +91,10 @@
+ 
+             verboseLog("[SideSign] Prepared Entitlements XML for \(app.bundleIdentifier):\n\(string)")
+             entitlementsByURL[app.fileURL.resolvingSymlinksInPath()] = string
++            guard let executable = app.executableURL else {
++                throw SignerError.invalidApp(cause: "Missing executable for \(app.bundleIdentifier)")
++            }
++            entitlementsByURL[executable.resolvingSymlinksInPath()] = string
+ 
+             let profileURL = app.fileURL.appendingPathComponent("embedded.mobileprovision")
+             verboseLog("[SideSign] Writing mobileprovision to: \(profileURL.path)")
+@@ -144,11 +102,8 @@
+         }
+ 
+         do {
+-            try prepare(appBundle)
+-
+-            for ext in appBundle.appExtensions {
+-                verboseLog("[SideSign] Found app extension: \(ext.bundleIdentifier) at \(ext.fileURL.path)")
+-                try prepare(ext)
++            for component in components {
++                try prepare(component)
+             }
+ 
+             let keyData = try keyStore.exportP12()
+@@ -158,55 +113,13 @@
+                 appPath: appBundle.fileURL.path,
+                 keyData: keyData,
+                 entitlementProvider: { path in
+-                    let normPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+-                    let appResolved = appBundle.fileURL.resolvingSymlinksInPath()
+-
+-                    let targetType: SigningTargetType
+-                    let xml: String
+-
+-                    if normPath.isEmpty {
+-                        targetType = .mainAppBundleDirectory
+-                        xml = entitlementsByURL[appResolved] ?? ""
+-                    } else {
+-                        let url: URL = normPath.hasPrefix("/") ? URL(fileURLWithPath: normPath) : appBundle.fileURL.appendingPathComponent(normPath)
+-                        let resolved = url.resolvingSymlinksInPath()
+-
+-                        if resolved == appResolved {
+-                            targetType = .mainAppBundleDirectory
+-                            xml = entitlementsByURL[appResolved] ?? ""
+-                        } else if let matchedExt = appBundle.appExtensions.first(where: { ext in
+-                            let extResolved = ext.fileURL.resolvingSymlinksInPath()
+-                            return resolved == extResolved ||
+-                                   resolved.path.hasPrefix(extResolved.path + "/") ||
+-                                   resolved.lastPathComponent == extResolved.lastPathComponent ||
+-                                   resolved.deletingPathExtension().lastPathComponent == extResolved.deletingPathExtension().lastPathComponent
+-                        }) {
+-                            let extResolved = matchedExt.fileURL.resolvingSymlinksInPath()
+-                            if resolved == extResolved {
+-                                targetType = .appExtensionBundle(identifier: matchedExt.bundleIdentifier)
+-                            } else {
+-                                targetType = .appExtensionExecutable(identifier: matchedExt.bundleIdentifier)
+-                            }
+-                            xml = entitlementsByURL[extResolved] ?? ""
+-                        } else if resolved.pathExtension.lowercased() == "framework" || resolved.path.contains(".framework") {
+-                            targetType = .framework
+-                            xml = ""
+-                        } else if resolved.pathExtension.lowercased() == "dylib" || resolved.lastPathComponent.hasSuffix(".dylib") {
+-                            targetType = .dylib
+-                            xml = ""
+-                        } else if resolved.deletingLastPathComponent() == appResolved ||
+-                                  resolved.path.hasPrefix(appResolved.path + "/") {
+-                            targetType = .mainAppExecutable
+-                            xml = entitlementsByURL[appResolved] ?? ""
+-                        } else {
+-                            targetType = .unmatched
+-                            xml = ""
+-                        }
+-                    }
+-
+-                    let xmlStatus = xml.isEmpty ? "none" : "present (\(xml.count) bytes)"
+-                    verboseLog("[SideSign] AppBundleSigner entitlementProvider queried path: '\(path)' [Type: \(targetType)], xml: \(xmlStatus)")
+-                    return xml
++                    // Exact ownership handles Watch apps and nested extensions without
++                    // leaking their grants to embedded frameworks or same-named binaries.
++                    let relative = path.trimmingCharacters(in: .whitespacesAndNewlines)
++                    let target = relative.isEmpty ? appBundle.fileURL :
++                        (relative.hasPrefix("/") ? URL(fileURLWithPath: relative) :
++                            appBundle.fileURL.appendingPathComponent(relative))
++                    return entitlementsByURL[target.resolvingSymlinksInPath()] ?? ""
+                 },
+                 progress: {
+                     progress?.completedUnitCount += 1
 --- /dev/null
 +++ b/Sources/CodeSigning/SigningEntitlements.swift
 @@ -0,0 +1,88 @@
@@ -772,7 +885,32 @@
  
 --- a/Sources/Models/AppBundle.swift
 +++ b/Sources/Models/AppBundle.swift
-@@ -142,7 +142,13 @@
+@@ -38,6 +38,24 @@
+         fileURL.pathExtension.lowercased() == "appex"
+     }
+ 
++    public var isWatchOS: Bool {
++        infoPlist["DTPlatformName"] as? String == "watchos" ||
++            infoPlist["WKApplication"] as? Bool == true ||
++            infoPlist["WKWatchKitApp"] as? Bool == true ||
++            supportedDeviceTypes.contains(.appleWatch)
++    }
++
++    public func signingBundles() throws -> [AppBundle] {
++        var identifiers = Set<String>()
++        return try BundleSigningLayout.componentURLs(in: fileURL).map { url in
++            guard let component = AppBundle(fileURL: url),
++                  identifiers.insert(component.bundleIdentifier).inserted else {
++                throw SignerError.invalidApp(cause: "Unreadable or duplicate signing component: \(url.lastPathComponent)")
++            }
++            return component
++        }
++    }
++
+     public var entitlements: [String: any Sendable] {
+         loadEntitlements()
+     }
+@@ -142,7 +160,13 @@
      }
  
      private func loadEntitlementsString() -> String {
@@ -973,3 +1111,107 @@
      static let increasedMemoryLimit: Feature            = "increasedMemoryLimit"
      static let extendedVirtualAddressing: Feature       = "extendedVirtualAddressing"
      static let increasedDebuggingMemoryLimit: Feature   = "increasedDebuggingMemoryLimit"
+--- a/Sources/Models/ProfileType.swift
++++ b/Sources/Models/ProfileType.swift
+@@ -126,7 +126,7 @@
+     public var acceptedDeviceTypes: DeviceType {
+         switch self {
+         case .iOS, .adHoc:
+-            return [.iPhone, .iPad]
++            return [.iPhone, .iPad, .appleWatch]
+         case .tvOS, .tvOSAdHoc:
+             return [.appleTV]
+         case .macOS, .driverKit:
+--- /dev/null
++++ b/Sources/Models/BundleSigningLayout.swift
+@@ -0,0 +1,90 @@
++import Foundation
++
++/// Bundle relationships used by profile preparation and signing, independently of removal UI.
++public enum BundleSigningLayout {
++    /// Cached/custom metadata must not replace the source graph with a prior
++    /// team's resolved identities. Resign owns these writes for the whole graph.
++    public static func preparationMetadata(_ metadata: [String: any Sendable]) -> [String: any Sendable] {
++        var metadata = metadata
++        metadata.removeValue(forKey: "CFBundleIdentifier")
++        metadata.removeValue(forKey: "WKCompanionAppBundleIdentifier")
++        if var extensionInfo = metadata["NSExtension"] as? [String: any Sendable],
++           var attributes = extensionInfo["NSExtensionAttributes"] as? [String: any Sendable] {
++            attributes.removeValue(forKey: "WKAppBundleIdentifier")
++            extensionInfo["NSExtensionAttributes"] = attributes
++            metadata["NSExtension"] = extensionInfo
++        }
++        return metadata
++    }
++
++    public static func componentURLs(in root: URL) throws -> [URL] {
++        let root = root.resolvingSymlinksInPath()
++        var components: [URL] = []
++        var visited = Set<URL>()
++        func visit(_ bundle: URL) throws {
++            let bundle = bundle.resolvingSymlinksInPath()
++            guard bundle == root || bundle.path.hasPrefix(root.path + "/") else {
++                throw CocoaError(.fileReadNoPermission)
++            }
++            guard visited.insert(bundle).inserted else { return }
++            components.append(bundle)
++            for (folder, suffix) in [("PlugIns", "appex"), ("Watch", "app")] {
++                let directory = bundle.appendingPathComponent(folder)
++                guard FileManager.default.fileExists(atPath: directory.path) else { continue }
++                let children = try FileManager.default.contentsOfDirectory(
++                    at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
++                ).filter { $0.pathExtension.lowercased() == suffix }
++                    .sorted { $0.lastPathComponent < $1.lastPathComponent }
++                for child in children { try visit(child) }
++            }
++        }
++        try visit(root)
++        return components
++    }
++
++    public static func rebasedIdentifier(_ identifier: String, from original: String, to resolved: String) throws -> String {
++        guard identifier == original || identifier.hasPrefix(original + ".") else {
++            throw CocoaError(.propertyListReadCorrupt, userInfo: [NSLocalizedDescriptionKey:
++                "Component bundle ID '\(identifier)' is outside its parent '\(original)'."])
++        }
++        return resolved + identifier.dropFirst(original.count)
++    }
++
++    /// Exact profile-resolved identities also handle custom IDs and legacy Watch extensions.
++    public static func rewriting(_ info: [String: Any], identities: [String: String]) throws -> [String: Any] {
++        var info = info
++        guard let original = info["CFBundleIdentifier"] as? String,
++              let resolved = identities[original] else {
++            throw CocoaError(.propertyListReadCorrupt, userInfo: [NSLocalizedDescriptionKey:
++                "The component has no profile-resolved bundle identifier."])
++        }
++        func reference(_ value: String) throws -> String {
++            if let mapped = identities[value] { return mapped }
++            if identities.values.contains(value) { return value }
++            throw CocoaError(.propertyListReadCorrupt, userInfo: [NSLocalizedDescriptionKey:
++                "Watch bundle reference '\(value)' does not identify a packaged component."])
++        }
++        info["CFBundleIdentifier"] = resolved
++        if let companion = info["WKCompanionAppBundleIdentifier"] as? String {
++            info["WKCompanionAppBundleIdentifier"] = try reference(companion)
++        }
++        if var extensionInfo = info["NSExtension"] as? [String: Any],
++           var attributes = extensionInfo["NSExtensionAttributes"] as? [String: Any],
++           let watch = attributes["WKAppBundleIdentifier"] as? String {
++            attributes["WKAppBundleIdentifier"] = try reference(watch)
++            extensionInfo["NSExtensionAttributes"] = attributes
++            info["NSExtension"] = extensionInfo
++        }
++        if let tasks = info["BGTaskSchedulerPermittedIdentifiers"] as? [String], original != resolved {
++            var seen = Set<String>()
++            info["BGTaskSchedulerPermittedIdentifiers"] = tasks.map { task -> String in
++                if task == resolved || task.hasPrefix(resolved + ".") { return task }
++                if task == original || task.hasPrefix(original + ".") {
++                    return resolved + task.dropFirst(original.count)
++                }
++                return task
++            }.filter { seen.insert($0).inserted }
++        }
++        return info
++    }
++}

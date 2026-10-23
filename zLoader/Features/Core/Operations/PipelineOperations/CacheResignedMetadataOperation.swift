@@ -62,14 +62,18 @@ final class CacheResignedMetadataOperation: BasePipelineOperation<InstallAppOper
         let infoPlistDirectory = app.directoryURL.appendingPathComponent("Info.plist")
         try FileManager.default.createDirectory(at: infoPlistDirectory, withIntermediateDirectories: true, attributes: nil)
         
-        let validBundleIDs = Set(targetAppBundle.allAppBundles.map { $0.bundleIdentifier })
+        let components = try targetAppBundle.signingBundles()
+        let validBundleIDs = Set(components.map { $0.bundleIdentifier })
         cleanupStaleFiles(in: infoPlistDirectory, matchingExtension: "plist", validIDs: validBundleIDs, description: "Info.plist")
         
-        for bundle in targetAppBundle.allAppBundles {
+        for bundle in components {
             let targetID = bundle.bundleIdentifier
             let destURL = infoPlistDirectory.appendingPathComponent("\(targetID).plist")
             do {
-                let parser = try InfoPlistParser(bundleURL: bundle.fileURL)
+                var parser = try InfoPlistParser(bundleURL: bundle.fileURL)
+                if bundle.fileURL == targetAppBundle.fileURL {
+                    parser.merge(["CFBundleIdentifier": context.customBundleIdentifier ?? context.bundleIdentifier], deep: false)
+                }
                 try parser.write(to: destURL)
                 debugLog("[CacheResignedMetadataOperation] Cached resigned Info.plist for \(targetID) to \(destURL.path)")
             } catch {

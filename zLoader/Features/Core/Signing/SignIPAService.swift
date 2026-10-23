@@ -96,11 +96,15 @@ enum SignIPAService {
     static func sign(_ preparation: SignIPAPreparation) async throws -> URL {
         let context = preparation.context
         guard let app = context.targetAppBundle else { throw OperationError.invalidApp(reason: "Missing app") }
+        let signingBundles = try app.signingBundles()
         if let profiles = preparation.importedProfiles {
             var chosen: [String: ALTProvisioningProfile] = [:]
-            for component in [app] + app.appExtensions {
-                let targetID = component.bundleIdentifier == app.bundleIdentifier ? context.targetBundleIdentifier :
-                    component.bundleIdentifier.replacingOccurrences(of: app.bundleIdentifier, with: context.targetBundleIdentifier)
+            for component in signingBundles {
+                let targetID: String
+                if component.fileURL == app.fileURL { targetID = context.targetBundleIdentifier }
+                else if let resolved = PacketTunnelProvisioning.extensionBundleIdentifier(component.bundleIdentifier,
+                    parent: app.bundleIdentifier, resolvedParent: context.targetBundleIdentifier) { targetID = resolved }
+                else { throw OperationError.invalidApp(reason: "An embedded component's bundle ID must start with the companion app's bundle ID.") }
                 let requested = context.customEntitlementsByBundleID[targetID] ?? context.customEntitlementsByBundleID[component.bundleIdentifier] ?? component.entitlements
                 let candidates = ([context.overrideProvisioningProfile].compactMap { $0 } + profiles).filter {
                     $0.expirationDate > Date() && $0.teamIdentifier == preparation.team.identifier &&
@@ -123,7 +127,7 @@ enum SignIPAService {
                 try await FetchProvisioningProfilesOperation(context: context).execute(parentProgress: nil)
             }
         }
-        for component in [app] + app.appExtensions {
+        for component in signingBundles {
             let archive = component.fileURL.appendingPathComponent("ALTCertificate.p12")
             if FileManager.default.fileExists(atPath: archive.path) { try FileManager.default.removeItem(at: archive) }
         }

@@ -193,7 +193,7 @@ final class VerifyAppOperation: BasePipelineOperation<InstallAppOperationContext
             }
             
             var previousEntitlements = Set(previousApp.entitlements.keys.map { ALTEntitlement(rawValue: $0) })
-            for appExtension in previousApp.appExtensions {
+            for appExtension in try previousApp.signingBundles().dropFirst() {
                 previousEntitlements.formUnion(appExtension.entitlements.keys.map { ALTEntitlement(rawValue: $0) })
             }
             
@@ -207,8 +207,8 @@ final class VerifyAppOperation: BasePipelineOperation<InstallAppOperationContext
     
     @discardableResult
     private func verifyPermissions(of appBundle: ALTApplication, @AsyncManaged match storeApp: StoreApp) async throws -> [any ALTAppPermission] {
-        let entitlements = self.entitlements(for: appBundle)
-        let privacyPermissions = self.privacyPermissions(for: appBundle)
+        let entitlements = try self.entitlements(for: appBundle)
+        let privacyPermissions = try self.privacyPermissions(for: appBundle)
         let localPermissions: [any ALTAppPermission] = Array(entitlements) + privacyPermissions
         
         try await self.verifyPermissions(localPermissions: localPermissions, match: storeApp, appBundle: appBundle)
@@ -216,9 +216,9 @@ final class VerifyAppOperation: BasePipelineOperation<InstallAppOperationContext
         return localPermissions
     }
 
-    private func entitlements(for appBundle: ALTApplication) -> Set<ALTEntitlement> {
+    private func entitlements(for appBundle: ALTApplication) throws -> Set<ALTEntitlement> {
         var allEntitlements = Set(appBundle.entitlements.keys.map { ALTEntitlement(rawValue: $0) })
-        for appExtension in appBundle.appExtensions {
+        for appExtension in try appBundle.signingBundles().dropFirst() {
             allEntitlements.formUnion(appExtension.entitlements.keys.map { ALTEntitlement(rawValue: $0) })
         }
         
@@ -231,8 +231,8 @@ final class VerifyAppOperation: BasePipelineOperation<InstallAppOperationContext
         return allEntitlements
     }
 
-    private func privacyPermissions(for appBundle: ALTApplication) -> [ALTAppPrivacyPermission] {
-        return ([appBundle] + appBundle.appExtensions).flatMap { (app) in
+    private func privacyPermissions(for appBundle: ALTApplication) throws -> [ALTAppPrivacyPermission] {
+        return try appBundle.signingBundles().flatMap { (app) in
             let permissions = app.infoPlist.keys.compactMap { key -> ALTAppPrivacyPermission? in
                 if #available(iOS 16, tvOS 16, *) {
                     guard key.wholeMatch(of: Regex.privacyPermission) != nil else { return nil }

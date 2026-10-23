@@ -64,6 +64,7 @@ python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
+sh zLoader/scripts/test-watch-signing.sh
 sh zLoader/scripts/test-apple-login.sh
 sh zLoader/scripts/test-certificate-revocation.sh
 sh zLoader/scripts/test-portal-profile-resolver.sh
@@ -97,6 +98,11 @@ direct Xcode build. This also patches CodeSignKit's DER entitlement encoder;
 consolidated in `sidesign-managed-signing.patch` so overlapping patches can be
 applied repeatedly. It is tracked separately, idempotent and
 leaves the original dependency gitlinks intact.
+
+Watch companion IPAs are prepared as complete signing component graphs: the phone,
+Watch app and nested extensions each receive their own profile and final identity.
+See [Watch signing and refresh](docs/zloader/WATCH-SIGNING.md) for registered-device
+requirements, the optional full Clawy fixture test and remaining hardware checks.
 
 The single sideloading release is `outputs/zLoader-resignable.ipa` (also aliased as
 `zLoader-iLoader.ipa`). It contains the host, widget and App Group entitlement

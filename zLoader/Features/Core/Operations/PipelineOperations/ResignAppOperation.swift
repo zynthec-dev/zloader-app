@@ -87,13 +87,12 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         let openURL = InstalledApp.openAppURL(targetBundleIdentifier: finalBundleIdentifier)
         let fileURL = targetAppBundle.fileURL
 
-        let appBundleURL = self.context.temporaryDirectory.appendingPathComponent("App.app")
-        if fileURL.path != appBundleURL.path {
-            if FileManager.default.fileExists(atPath: appBundleURL.path) {
-                try FileManager.default.removeItem(at: appBundleURL)
-            }
-            try FileManager.default.copyItem(at: fileURL, to: appBundleURL)
-        }
+        // Download/Stage already use temporaryDirectory/App.app. Keep that
+        // source pristine for original-to-resigned component bookkeeping.
+        let signingDirectory = context.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: signingDirectory, withIntermediateDirectories: true)
+        let appBundleURL = signingDirectory.appendingPathComponent("App.app")
+        try FileManager.default.copyItem(at: fileURL, to: appBundleURL)
         
         guard let appBundle = ALTApplication(fileURL: appBundleURL) else {
             throw OperationError.missingAppBundle(reason: "Could not load bundle at '\(appBundleURL.lastPathComponent)'")
@@ -124,19 +123,33 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
             }
         }
         
-        // Prepare app
-        try self.prepare(appBundle, bundleID: bundleIdentifier, additionalInfoDictionaryValues: additionalValues, profiles: profiles, appexBundleIds: appexBundleIds)
-        try self.removeMissingAppExtensionReferences(from: appBundle)
-        
-        for appExtension in appBundle.appExtensions {
-            let updatedAppExBundleId = appExtension.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: bundleIdentifier)
-            try self.prepare(appExtension, bundleID: updatedAppExBundleId, profiles: profiles, appexBundleIds: appexBundleIds)
+        let components = try appBundle.signingBundles()
+        var identities: [String: String] = [:]
+        for component in components {
+            let targetID = try BundleSigningLayout.rebasedIdentifier(component.bundleIdentifier,
+                from: appBundle.bundleIdentifier, to: bundleIdentifier)
+            guard let profile = context.useMainProfile ? profiles.values.first : profiles[targetID] else {
+                throw OperationError.missingProvisioningProfile(reason: "No provisioning profile found for '\(targetID)'.")
+            }
+            identities[component.bundleIdentifier] = appexBundleIds[targetID] ??
+                (profile.bundleIdentifier.contains("*") ? targetID : profile.bundleIdentifier)
         }
+        // Resolve the whole graph before changing any Info.plist. Watch references
+        // must use the same final identities as their own provisioning profiles.
+        for component in components {
+            let targetID = try BundleSigningLayout.rebasedIdentifier(component.bundleIdentifier,
+                from: appBundle.bundleIdentifier, to: bundleIdentifier)
+            let isHost = component.fileURL == appBundle.fileURL
+            try self.prepare(component, bundleID: targetID,
+                additionalInfoDictionaryValues: isHost ? additionalValues : [:],
+                profiles: profiles, identities: identities, isHost: isHost)
+        }
+        try self.removeMissingAppExtensionReferences(from: appBundle)
         
         return appBundleURL
     }
     
-    private func prepare(_ appBundle: ALTApplication, bundleID identifier: String?, additionalInfoDictionaryValues: [String: Any] = [:], profiles: [String: ALTProvisioningProfile], appexBundleIds: [String: String]) throws {
+    private func prepare(_ appBundle: ALTApplication, bundleID identifier: String?, additionalInfoDictionaryValues: [String: Any] = [:], profiles: [String: ALTProvisioningProfile], identities: [String: String], isHost: Bool) throws {
         guard let identifier else {
             throw OperationError.invalidParameters("Bundle is missing bundle identifier.")
         }
@@ -148,9 +161,11 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         }
         var infoDictionary = parser.rawDictionary as [String: Any]
         
-        let newBundleID = appexBundleIds[identifier] ?? (profile.bundleIdentifier.contains("*") ? identifier : profile.bundleIdentifier)
+        guard let newBundleID = identities[appBundle.bundleIdentifier] else {
+            throw OperationError.invalidParameters("Missing resolved identity for '\(appBundle.bundleIdentifier)'.")
+        }
         var requested = context.customEntitlementsByBundleID[identifier] ?? context.customEntitlementsByBundleID[appBundle.bundleIdentifier] ?? appBundle.entitlements
-        if appBundle.fileURL.pathExtension.lowercased() != "appex" {
+        if isHost {
             for (key, value) in context.additionalEntitlements { requested[key] = value }
         }
         if context.targetAppBundle?.isZLoaderApp == true,
@@ -167,15 +182,6 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
             infoDictionary["ZLoaderOmittedOptionalEntitlements"] = omitted.sorted()
         }
         signingEntitlements[newBundleID] = requested
-        infoDictionary[kCFBundleIdentifierKey as String] = newBundleID
-
-        // Fix-up BGTaskScheduler identifiers so they stay under the new bundle ID.
-        // Otherwise bg register() and submit() both succeed and the handler is never
-        // called, with no error surfaced to the app.
-        if identifier != newBundleID, let taskIDs = infoDictionary["BGTaskSchedulerPermittedIdentifiers"] as? [String] {
-            let taskIDs = self.rewrittenTaskSchedulerIdentifiers(taskIDs, from: identifier, to: newBundleID)
-            infoDictionary["BGTaskSchedulerPermittedIdentifiers"] = taskIDs
-        }
 
         infoDictionary.removeValue(forKey: "DTXcode")
         infoDictionary.removeValue(forKey: "DTXcodeBuild")
@@ -185,12 +191,9 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         }
 
         if let customPlist = context.customInfoPlistByBundleID[identifier] ?? context.customInfoPlistByBundleID[appBundle.bundleIdentifier] {
-            for (key, value) in customPlist {
-                if key == (kCFBundleIdentifierKey as String) || key == "CFBundleIdentifier" {
-                    continue
-                }
-                infoDictionary[key] = value
-            }
+            var merged = InfoPlistParser(dictionary: infoDictionary)
+            merged.merge(BundleSigningLayout.preparationMetadata(customPlist))
+            infoDictionary = merged.rawDictionary
         }
 
         if let appGroups = profile.entitlements[.appGroups] as? [String] {
@@ -214,6 +217,7 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         exportedUTIs.append(installedAppUTI)
         infoDictionary[Bundle.Info.exportedUTIs] = exportedUTIs
         
+        infoDictionary = try BundleSigningLayout.rewriting(infoDictionary, identities: identities)
         try InfoPlistParser(dictionary: infoDictionary).write(to: appBundle.infoPlistURL)
         
         // Remove _CodeSignature folder (if it exists) because it will be added when resigning and it may have files that aren't overwritten when resigning
@@ -256,22 +260,4 @@ final class ResignAppOperation: BasePipelineOperation<InstallAppOperationContext
         try InfoPlistParser(dictionary: updatedManifest).write(to: manifestPlistURL)
     }
 
-    private func rewrittenTaskSchedulerIdentifiers(_ taskIDs: [String], from originalBundleID: String, to newBundleID: String) -> [String] {
-        var seen = Set<String>()
-        var rewrittenTaskIDs = [String]()
-        for taskID in taskIDs {
-            let rewritten: String
-            if taskID == newBundleID || taskID.hasPrefix(newBundleID + ".") {
-                rewritten = taskID
-            } else if taskID == originalBundleID || taskID.hasPrefix(originalBundleID + ".") {
-                rewritten = newBundleID + taskID.dropFirst(originalBundleID.count)
-            } else {
-                rewritten = taskID
-            }
-            if seen.insert(rewritten).inserted {
-                rewrittenTaskIDs.append(rewritten)
-            }
-        }
-        return rewrittenTaskIDs
-    }
 }

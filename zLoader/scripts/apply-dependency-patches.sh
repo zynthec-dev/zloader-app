@@ -17,9 +17,13 @@ for spec in 'minimuxer:minimuxer-warnings.patch' 'SideSign:sidesign-managed-sign
         fi
     fi
     if [ "$dependency" = SideSign ]; then
-        upgrade="$PWD/zLoader/Patches/sidesign-managed-capabilities.patch"
-        if git -C "Dependencies/$dependency" apply --check "$upgrade" 2>/dev/null; then
-            git -C "Dependencies/$dependency" apply "$upgrade"
+        for name in sidesign-managed-capabilities.patch sidesign-watch-signing-upgrade.patch; do
+            upgrade="$PWD/zLoader/Patches/$name"
+            if git -C "Dependencies/$dependency" apply --check "$upgrade" 2>/dev/null; then
+                git -C "Dependencies/$dependency" apply "$upgrade"
+            fi
+        done
+        if git -C "Dependencies/$dependency" apply --reverse --check "$patch" 2>/dev/null; then
             continue
         fi
     fi

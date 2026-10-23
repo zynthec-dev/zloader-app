@@ -30,12 +30,17 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             throw OperationError.invalidParameters("FetchProvisioningProfilesOperation: context.targetAppBundle is nil")
         }
 
+        let signingBundles = try targetAppBundle.signingBundles()
+
         if let material = context.sharedContext.importedSigningMaterial {
             let deviceID = try await safeFetchUDID()
             var selected: [String: ALTProvisioningProfile] = [:]
-            for component in [targetAppBundle] + targetAppBundle.appExtensions {
-                let targetID = component.bundleIdentifier == targetAppBundle.bundleIdentifier ? context.targetBundleIdentifier :
-                    component.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: context.targetBundleIdentifier)
+            for component in signingBundles {
+                let targetID: String
+                if component.fileURL == targetAppBundle.fileURL { targetID = context.targetBundleIdentifier }
+                else if let resolved = PacketTunnelProvisioning.extensionBundleIdentifier(component.bundleIdentifier,
+                    parent: targetAppBundle.bundleIdentifier, resolvedParent: context.targetBundleIdentifier) { targetID = resolved }
+                else { throw OperationError.invalidApp(reason: "An embedded component's bundle ID must start with the companion app's bundle ID.") }
                 let requested = requestedEntitlements(for: component, team: material.team)
                 var candidates = material.profiles.sorted { $0.bundleIdentifier.count > $1.bundleIdentifier.count }
                 if component.bundleIdentifier == targetAppBundle.bundleIdentifier, let override = context.overrideProvisioningProfile {
@@ -46,12 +51,22 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
                         expiresAt: profile.expirationDate, certificates: profile.certificates.map(\.rawDER),
                         devices: profile.deviceIDs, entitlements: profile.entitlements)
                     let requirements = ProfileReuseRequirements(bundleID: targetID, teamID: material.team.identifier,
-                        certificate: material.certificate.certificate.rawDER, deviceID: deviceID, entitlements: requested)
+                        certificate: material.certificate.certificate.rawDER,
+                        deviceID: component.isWatchOS ? nil : deviceID, entitlements: requested)
                     return EmbeddedProfileReuse.accepts(snapshot, for: requirements) &&
                         (try? SigningEntitlements.prepare(application: requested, profile: profile.entitlements,
                             teamID: material.team.identifier, bundleIdentifier: targetID)) != nil
                 }) else {
-                    throw OperationError.invalidParameters(String(format: NSLocalizedString("No imported profile authorizes %@, this device, the certificate and all required entitlements. Import a compatible valid profile.", comment: ""), targetID))
+                    let message = component.isWatchOS
+                        ? NSLocalizedString("No imported Watch profile authorizes %@, the certificate and all required entitlements. Import a valid device-scoped Watch profile; watchOS must verify the paired Watch when installing.", comment: "")
+                        : NSLocalizedString("No imported profile authorizes %@, this device, the certificate and all required entitlements. Import a compatible valid profile.", comment: "")
+                    throw OperationError.invalidParameters(String(format: message, targetID))
+                }
+                if component.isWatchOS {
+                    // Imported identities have no portal session or paired-Watch
+                    // UDID. The profile is device-scoped; watchOS checks the actual
+                    // Watch rather than claiming the phone UDID authorizes it.
+                    self.debugLog("[FetchProvisioningProfiles] Imported Watch profile validated; the paired Watch's device authorization remains an installation-time check.")
                 }
                 selected[targetID] = profile
             }
@@ -60,7 +75,7 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             return selected
         }
 
-        let requiresTunnel = targetAppBundle.appExtensions.contains {
+        let requiresTunnel = signingBundles.contains {
             ($0.infoPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String == "com.apple.networkextension.packet-tunnel"
         }
         if requiresTunnel {
@@ -77,18 +92,21 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
 
         let effectiveBundleId = self.context.targetBundleIdentifier
 
-        let appExtensions = targetAppBundle.appExtensions
+        let appExtensions = Array(signingBundles.dropFirst())
         guard !context.useMainProfile || appExtensions.isEmpty else {
-            throw OperationError.invalidParameters("Each extension requires a separate app ID and provisioning profile.")
+            throw OperationError.invalidParameters("Each embedded app or extension requires a separate app ID and provisioning profile.")
         }
 
         let team = try await AuthManager.shared.getAuthenticatedTeam()
+        // Resolve once before any profile/App ID writes. The paired Watch itself
+        // cannot be discovered through the phone's local installation transport.
+        let watchDevices = signingBundles.contains(where: \.isWatchOS) ? try await registeredWatchDevices(for: team) : []
         self.debugLog("[FetchProvisioningProfiles] Executing for app \(targetAppBundle.bundleIdentifier), targetBundleID: \(effectiveBundleId), team: \(team.identifier), useMainProfile: \(self.context.useMainProfile)")
         
         self.setProgress(10)
 
         self.debugLog("[FetchProvisioningProfiles] Preparing main provisioning profile for \(targetAppBundle.bundleIdentifier)...")
-        let profile = try await self.provisionAndFetchProfile(for: targetAppBundle, parentAppBundle: nil, team: team)
+        let profile = try await self.provisionAndFetchProfile(for: targetAppBundle, parentAppBundle: nil, team: team, watchDevices: watchDevices)
         if context.overrideProvisioningProfile != nil {
             // Persist the replacement, not the stale/deleted assigned UUID.
             context.overrideProvisioningProfile = profile
@@ -109,9 +127,11 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
             for appExtension in appExtensions {
                 group.addTask {
                     self.verboseLog("[FetchProvisioningProfiles] Preparing extension profile for \(appExtension.bundleIdentifier)...")
-                    let extProfile = try await self.provisionAndFetchProfile(for: appExtension, parentAppBundle: targetAppBundle, team: team, resolvedParentID: profile.bundleIdentifier)
+                    let extProfile = try await self.provisionAndFetchProfile(for: appExtension, parentAppBundle: targetAppBundle, team: team, watchDevices: watchDevices, resolvedParentID: profile.bundleIdentifier)
                     // Use customized bundle ID if applicable
-                    let updatedExtensionBundleId = appExtension.bundleIdentifier.replacingOccurrences(of: targetAppBundle.bundleIdentifier, with: effectiveBundleId)
+                    guard let updatedExtensionBundleId = PacketTunnelProvisioning.extensionBundleIdentifier(
+                        appExtension.bundleIdentifier, parent: targetAppBundle.bundleIdentifier, resolvedParent: effectiveBundleId
+                    ) else { throw OperationError.invalidApp(reason: "An embedded component's bundle ID must start with the companion app's bundle ID.") }
                     self.verboseLog("[FetchProvisioningProfiles] Extension profile prepared for \(updatedExtensionBundleId)")
                     return (updatedExtensionBundleId, extProfile)
                 }
@@ -180,7 +200,7 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
     
     private func provisionAndFetchProfile(for targetAppBundle: ALTApplication,
                                           parentAppBundle: ALTApplication?,
-                                          team: ALTTeam, resolvedParentID: String? = nil) async throws -> ALTProvisioningProfile {
+                                          team: ALTTeam, watchDevices: [ALTDevice], resolvedParentID: String? = nil) async throws -> ALTProvisioningProfile {
         let parentID: String
         if let resolvedParentID {
             parentID = resolvedParentID
@@ -253,12 +273,21 @@ class FetchProvisioningProfilesOperation: BasePipelineOperation<InstallAppOperat
         self.debugLog("[FetchProvisioningProfiles] Fetching provisioning profile from Apple for App ID \(groupAppID.bundleIdentifier)...")
         let profile: ALTProvisioningProfile
         if team.type.isPaid {
-            profile = try await createCertificateBoundProfile(for: groupAppID, app: targetAppBundle, requiredGroups: requiredGroups, team: team)
+            profile = try await createCertificateBoundProfile(for: groupAppID, app: targetAppBundle, requiredGroups: requiredGroups, team: team, watchDevices: watchDevices)
         } else {
-            profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID, deviceType: DeveloperPortalProxy.currentDeviceType, team: team)
+            profile = try await DeveloperPortalProxy.shared.downloadProvisioningProfile(for: groupAppID,
+                deviceType: targetAppBundle.isWatchOS ? .appleWatch : DeveloperPortalProxy.currentDeviceType, team: team)
+        }
+        let authorizedWatch = watchDevices.first { watch in
+            profile.deviceIDs.contains { $0.caseInsensitiveCompare(watch.identifier) == .orderedSame }
+        }
+        if targetAppBundle.isWatchOS && !team.type.isPaid && authorizedWatch == nil {
+            throw OperationError.invalidParameters("Apple's Watch profile does not authorize a registered Apple Watch. Register your Watch in Developer Services > Devices and regenerate its profile, or import compatible Watch signing profiles.")
         }
         if !team.type.isPaid, let certificate = context.targetSigningCertificate {
-            let udid = try await safeFetchUDID()
+            let udid: String
+            if let authorizedWatch, targetAppBundle.isWatchOS { udid = authorizedWatch.identifier }
+            else { udid = try await safeFetchUDID() }
             let snapshot = EmbeddedProfileSnapshot(bundleID: profile.bundleIdentifier, teamID: profile.teamIdentifier,
                 expiresAt: profile.expirationDate, certificates: profile.certificates.map { $0.rawDER },
                 devices: profile.deviceIDs, entitlements: profile.entitlements)
@@ -300,7 +329,7 @@ private extension FetchProvisioningProfilesOperation{
             self.debugLog("[FetchProvisioningProfiles] Found existing App ID on portal: \(appID.bundleIdentifier)")
             return appID
         } else {
-            let requiredAppIDs = 1 + targetAppBundle.appExtensions.count
+            let requiredAppIDs = try targetAppBundle.signingBundles().count
             let availableAppIDs = max(0, Team.maximumFreeAppIDs - appIDs.count)
             self.verboseLog("[FetchProvisioningProfiles] App ID not found on portal for '\(bundleIdentifier)'. Required: \(requiredAppIDs), Available: \(availableAppIDs) (teamType: \(team.type))")
             
@@ -315,10 +344,24 @@ private extension FetchProvisioningProfilesOperation{
         }
     }
     
+    func registeredWatchDevices(for team: ALTTeam) async throws -> [ALTDevice] {
+        let devices = try await TaskChainCoalescer.shared.coalesce(key: "zloader_profile_watch_devices_" + team.identifier) {
+            try await DeveloperPortalProxy.shared.fetchDevices(for: team, types: .appleWatch)
+        }
+        let eligible = devices.filter {
+            $0.type.contains(.appleWatch) && WatchProfileDevices.isEligible(
+                identifier: $0.identifier, portalID: $0.deviceID, status: $0.status, requiresPortalID: team.type.isPaid)
+        }.sorted { $0.identifier.lowercased() < $1.identifier.lowercased() }
+        guard !eligible.isEmpty else {
+            throw OperationError.invalidParameters("No eligible Apple Watch is registered in the selected Apple team. Register your Watch's own UDID in Developer Services > Devices before signing this companion app, or import compatible Watch signing profiles. The iPhone UDID cannot authorize a Watch.")
+        }
+        return eligible
+    }
+
     /// Ask Apple to issue a separate profile for the actual active key, rather
     /// than downloading an automatically managed Xcode profile for another key.
     func createCertificateBoundProfile(for appID: ALTAppID, app: ALTApplication, requiredGroups: [String],
-                                       team: ALTTeam) async throws -> ALTProvisioningProfile {
+                                       team: ALTTeam, watchDevices: [ALTDevice]) async throws -> ALTProvisioningProfile {
         guard team.type != .free, let signing = context.targetSigningCertificate else {
             throw OperationError.invalidParameters("Managed provisioning requires a paid team and an active signing certificate with its private key.")
         }
@@ -327,39 +370,50 @@ private extension FetchProvisioningProfilesOperation{
               let certificateID = certificate.identifier, !certificateID.isEmpty else {
             throw OperationError.invalidParameters("The active signing certificate is not registered in the selected Apple team. Select its team or an eligible certificate from that team.")
         }
-        let device = try await TaskChainCoalescer.shared.coalesce(key: "zloader_profile_device_" + team.identifier) {
-            let udid: String
-            do {
-                udid = try await safeFetchUDID()
-            } catch {
-                throw OperationError.invalidParameters("Cannot authorize this device because its UDID could not be read through the active pairing transport. A valid Remote Pairing file is sufficient for Remote Pairing mode; a separate Lockdown file is not required. Underlying device-service error: " + error.localizedDescription)
+        let authorizedDevices: [ALTDevice]
+        let device: ALTDevice
+        if app.isWatchOS {
+            authorizedDevices = watchDevices
+            // No public paired-Watch UDID is available here. Include all eligible
+            // registered Watches, never the local iPhone as a substitute.
+            device = authorizedDevices[0]
+        } else {
+            let localDevice = try await TaskChainCoalescer.shared.coalesce(key: "zloader_profile_device_" + team.identifier) {
+                let udid: String
+                do {
+                    udid = try await safeFetchUDID()
+                } catch {
+                    throw OperationError.invalidParameters("Cannot authorize this device because its UDID could not be read through the active pairing transport. A valid Remote Pairing file is sufficient for Remote Pairing mode; a separate Lockdown file is not required. Underlying device-service error: " + error.localizedDescription)
+                }
+                let devices = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
+                if let existing = devices.first(where: { $0.identifier.caseInsensitiveCompare(udid) == .orderedSame }) {
+                    return existing
+                }
+                return try await DeveloperPortalProxy.shared.registerDevice(name: "zLoader device", identifier: udid, team: team)
             }
-            let devices = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
-            if let existing = devices.first(where: { $0.identifier.caseInsensitiveCompare(udid) == .orderedSame }) {
-                return existing
+            guard localDevice.deviceID?.isEmpty == false else {
+                throw OperationError.invalidParameters("Apple did not return a registered device ID for this iPhone. Device registration must complete before provisioning.")
             }
-            return try await DeveloperPortalProxy.shared.registerDevice(name: "zLoader device", identifier: udid, team: team)
-        }
-        guard device.deviceID?.isEmpty == false else {
-            throw OperationError.invalidParameters("Apple did not return a registered device ID for this iPhone. Device registration must complete before provisioning.")
-        }
-        if let status = device.status, status.lowercased().contains("disabled") || status.lowercased().contains("ineligible") {
-            throw OperationError.invalidParameters("This device is not eligible for provisioning in the selected Apple team (\(status)). Check its registration in Certificates, Identifiers & Profiles.")
-        }
-        var authorizedDevices = [device]
-        let includesSharingDevices = context.includeAllRegisteredDevices
-        if includesSharingDevices {
-            let registered = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
-            authorizedDevices += registered.filter { other in
-                let status = other.status?.lowercased() ?? "enabled"
-                #if os(tvOS)
-                let matchesPlatform = other.type.contains(.appleTV)
-                #else
-                let matchesPlatform = other.type.contains(.iPhone) || other.type.contains(.iPad)
-                #endif
-                return matchesPlatform && !status.contains("disabled") && !status.contains("ineligible") &&
-                    other.deviceID != nil && other.identifier != device.identifier
+            if let status = localDevice.status, status.lowercased().contains("disabled") || status.lowercased().contains("ineligible") {
+                throw OperationError.invalidParameters("This device is not eligible for provisioning in the selected Apple team (\(status)). Check its registration in Certificates, Identifiers & Profiles.")
             }
+            var selectedDevices = [localDevice]
+            let includesSharingDevices = context.includeAllRegisteredDevices
+            if includesSharingDevices {
+                let registered = try await DeveloperPortalProxy.shared.fetchDevices(for: team)
+                selectedDevices += registered.filter { other in
+                    let status = other.status?.lowercased() ?? "enabled"
+                    #if os(tvOS)
+                    let matchesPlatform = other.type.contains(.appleTV)
+                    #else
+                    let matchesPlatform = other.type.contains(.iPhone) || other.type.contains(.iPad)
+                    #endif
+                    return matchesPlatform && !status.contains("disabled") && !status.contains("ineligible") &&
+                        other.deviceID != nil && other.identifier != localDevice.identifier
+                }
+            }
+            device = localDevice
+            authorizedDevices = selectedDevices
         }
         let registeredIDs = Array(Set(authorizedDevices.compactMap(\.deviceID))).sorted()
         let registeredUDIDs = Set(authorizedDevices.map { $0.identifier.lowercased() })

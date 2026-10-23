@@ -44,6 +44,24 @@ struct EmbeddedProfileReuseTests {
                         profile(entitlements: [PacketTunnelProvisioning.entitlement: [PacketTunnelProvisioning.provider]])] {
             precondition(!EmbeddedProfileReuse.accepts(invalid, for: target, now: now))
         }
+        let importedWatch = ProfileReuseRequirements(bundleID: target.bundleID, teamID: target.teamID,
+            certificate: original, deviceID: nil, entitlements: values)
+        precondition(EmbeddedProfileReuse.accepts(profile(devices: ["synthetic-watch"]), for: importedWatch, now: now))
+        precondition(!EmbeddedProfileReuse.accepts(profile(devices: ["synthetic-watch"]), for: target, now: now))
+        for invalid in [profile(devices: []), profile(devices: [" "]), profile(team: "other-team"),
+                        profile(certificates: []), profile(expiry: 999), profile(entitlements: [:])] {
+            precondition(!EmbeddedProfileReuse.accepts(invalid, for: importedWatch, now: now))
+        }
+        precondition(WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: "portal-id", status: "enabled"))
+        precondition(WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: "portal-id", status: nil))
+        for status in ["d", "DISABLED", "ineligible"] {
+            precondition(!WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: "portal-id", status: status))
+        }
+        precondition(!WatchProfileDevices.isEligible(identifier: "", portalID: "portal-id", status: "enabled"))
+        precondition(!WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: nil, status: "enabled"))
+        precondition(WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: nil, status: "enabled", requiresPortalID: false))
+        precondition(!WatchProfileDevices.isEligible(identifier: "synthetic-watch", portalID: nil, status: "d", requiresPortalID: false))
+        print("PASS imported Watch target remains explicitly unknown; device-scoped profiles and identity/capability checks required; managed Watch eligibility")
         let deviceFailures = EmbeddedProfileReuse.incompatibilities(profile(devices: ["other-device"]), for: target, now: now)
         precondition(deviceFailures == ["current device is not authorized"])
         let groupFailures = EmbeddedProfileReuse.incompatibilities(profile(entitlements: [PacketTunnelProvisioning.entitlement: [PacketTunnelProvisioning.provider]]), for: target, now: now)

@@ -30,7 +30,7 @@ final class EmbedSigningCertOperation: BasePipelineOperation<InstallAppOperation
         }
         // IPA distribution must never include an exportable signing private key.
         // Existing installations retain their active key in the local Keychain.
-        for component in [appBundle] + appBundle.appExtensions {
+        for component in try appBundle.signingBundles() {
             let keyArchive = component.fileURL.appendingPathComponent("ALTCertificate.p12")
             if FileManager.default.fileExists(atPath: keyArchive.path) {
                 try FileManager.default.removeItem(at: keyArchive)

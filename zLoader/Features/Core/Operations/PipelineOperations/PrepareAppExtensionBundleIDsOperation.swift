@@ -21,7 +21,7 @@ final class PrepareAppExtensionBundleIDsOperation: BasePipelineOperation<Install
         if self.context.useMainProfile {
             if let appBundle = self.context.targetAppBundle, let profile = self.context.provisioningProfiles?[self.context.bundleIdentifier] {
                 var appexBundleIds: [String: String] = [:]
-                for appex in appBundle.appExtensions {
+                for appex in try appBundle.signingBundles().dropFirst() {
                     appexBundleIds[appex.bundleIdentifier] = appex.bundleIdentifier
                         .replacingOccurrences(of: appBundle.bundleIdentifier, with: profile.bundleIdentifier)
                 }

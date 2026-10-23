@@ -13,7 +13,9 @@ struct ProfileReuseRequirements {
     let bundleID: String
     let teamID: String
     let certificate: Data
-    let deviceID: String
+    // nil is reserved for imported Watch profiles: the paired Watch UDID is
+    // unavailable locally, so iOS/watchOS must enforce the actual device match.
+    let deviceID: String?
     let entitlements: [String: Any]
 }
 
@@ -24,7 +26,13 @@ enum EmbeddedProfileReuse {
         if profile.teamID != target.teamID { failures.append("developer team mismatch") }
         if profile.expiresAt <= now { failures.append("profile expired") }
         if target.certificate.isEmpty || !profile.certificates.contains(target.certificate) { failures.append("selected signing certificate is not authorized") }
-        if target.deviceID.isEmpty || !profile.devices.contains(where: { $0.caseInsensitiveCompare(target.deviceID) == .orderedSame }) { failures.append("current device is not authorized") }
+        if let deviceID = target.deviceID {
+            if deviceID.isEmpty || !profile.devices.contains(where: { $0.caseInsensitiveCompare(deviceID) == .orderedSame }) {
+                failures.append("current device is not authorized")
+            }
+        } else if !profile.devices.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            failures.append("the Watch profile does not authorize any registered device")
+        }
         // These values are generated for the selected identity by the signer.
         // Application identity, team and device are checked separately above.
         let generated: Set<String> = ["application-identifier", "com.apple.developer.team-identifier", "get-task-allow"]
@@ -129,5 +137,19 @@ enum ManagedCapabilityRequests {
             if let values = value as? [Any], values.isEmpty { return false }
             return true
         }
+    }
+}
+
+/// This signing flow cannot determine which registered Apple Watch is paired. Managed
+/// signing includes eligible registered Watches; Apple's profile and watchOS
+/// enforce the final device authorization when the companion is installed.
+enum WatchProfileDevices {
+    static func isEligible(identifier: String, portalID: String?, status: String?, requiresPortalID: Bool = true) -> Bool {
+        guard !identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        // Paid managed profiles require Apple's device record ID. Free-team
+        // profiles are issued by the existing automatic team-profile endpoint.
+        if requiresPortalID && (portalID?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) { return false }
+        let status = status?.lowercased() ?? "enabled"
+        return status != "d" && !status.contains("disabled") && !status.contains("ineligible")
     }
 }

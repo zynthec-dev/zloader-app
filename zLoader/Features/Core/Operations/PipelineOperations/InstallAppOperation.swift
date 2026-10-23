@@ -332,19 +332,23 @@ final class InstallAppOperation: BasePipelineOperation<InstallAppOperationContex
             throw OperationError.invalidParameters("InstallAppOperation: targetAppBundle is missing in context.")
         }
 
-        let originalExtensionsByFilename = Dictionary(
-            targetAppBundle.appExtensions.map { ($0.fileURL.lastPathComponent, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
+        // Paths are stable through identity changes; filenames alone collide when
+        // phone and Watch extensions both use e.g. Extension.appex.
+        func relativePath(_ component: ALTApplication, in parent: ALTApplication) -> String {
+            String(component.fileURL.resolvingSymlinksInPath().path.dropFirst(
+                parent.fileURL.resolvingSymlinksInPath().path.count + 1))
+        }
+        let originalComponents = try targetAppBundle.signingBundles().dropFirst()
+        let originalsByPath = Dictionary(uniqueKeysWithValues: originalComponents.map {
+            (relativePath($0, in: targetAppBundle), $0)
+        })
         var installedExtensions = Set<InstalledExtension>()
-        
-        for resignedAppExtensionBundle in resignedAppBundle.appExtensions {
-            let filename = resignedAppExtensionBundle.fileURL.lastPathComponent
-            guard let originalExtension = originalExtensionsByFilename[filename] else {
-                throw OperationError.invalidParameters("InstallAppOperation: extension '\(filename)' not found in targetAppBundle.")
+        for resignedAppExtensionBundle in try resignedAppBundle.signingBundles().dropFirst() {
+            let path = relativePath(resignedAppExtensionBundle, in: resignedAppBundle)
+            guard let originalExtension = originalsByPath[path] else {
+                throw OperationError.invalidParameters("InstallAppOperation: component '\(path)' not found in targetAppBundle.")
             }
-            
+
             let targetParentBundleID = context.targetBundleIdentifier
             let resignedParentBundleID = resignedAppBundle.bundleIdentifier
             

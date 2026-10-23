@@ -362,12 +362,26 @@ final class PipelineRunner: Sendable
         default: break
         }
         let material = group.sharedContext.importedSigningMaterial
+        let defaultSteps = PipelineStepDefinition.steps(for: operation)
+        let refreshesProfiles = defaultSteps.contains { $0.step == .refreshApp }
+        var requiresResign = material != nil
+        if refreshesProfiles, !requiresResign, let installed = operation.app as? InstalledApp {
+            let sourceURL = installed.managedObjectContext?.performAndWait { installed.fileURL } ?? installed.fileURL
+            guard let app = ALTApplication(fileURL: sourceURL) else {
+                throw OperationError.invalidApp(reason: "The cached app is missing or unreadable. Reinstall it before refreshing.")
+            }
+            // The current profile-injection transport targets only the iPhone.
+            // Reinstall the complete companion package with the renewed Watch
+            // profile embedded, using the existing installation path.
+            requiresResign = try app.signingBundles().contains(where: \.isWatchOS)
+        }
         let pipelineSteps: [PipelineExecutionStep]
-        if material != nil, PipelineStepDefinition.steps(for: operation).contains(where: { $0.step == .refreshApp }) {
-            // Re-sign the binary too: a profile alone cannot switch its signing identity.
+        if refreshesProfiles && requiresResign {
+            // Imported keys also require re-signing the executable, rather than
+            // injecting a profile that cannot change its signing identity.
             pipelineSteps = PipelineStepDefinition.resign
         } else {
-            pipelineSteps = PipelineStepDefinition.steps(for: operation)
+            pipelineSteps = defaultSteps
         }
         let context = InstallAppOperationContext(
             pipelineSteps: pipelineSteps,
