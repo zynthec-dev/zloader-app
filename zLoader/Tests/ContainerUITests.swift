@@ -233,6 +233,64 @@ final class ContainerUITests: XCTestCase {
         app.buttons["Container schließen"].firstMatch.tap()
     }
 
+    func test008SettingsOrderAndSingleBackNavigation() throws {
+        // Exercise settings on an onboarded app independently of device pairing.
+        app.terminate()
+        app.launchArguments += ["-hasCompletedOnboarding", "YES"]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        // The unfolded simulator exposes the vertical tab strip as buttons,
+        // while an ordinary phone exposes the same actions inside a TabBar.
+        let settings = app.buttons["Einstellungen"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 20))
+        settings.tap()
+        let developer = app.cells["settings-developer-options"]
+        let container = app.cells["settings-container"]
+        let customizations = app.cells["settings-user-customizations"]
+        for _ in 0..<10 where !customizations.isHittable { app.swipeUp() }
+        attach("settings084-menu-before-check")
+        print("Settings rows: developer=\(developer.exists)/\(developer.isHittable), container=\(container.exists)/\(container.isHittable), custom=\(customizations.exists)/\(customizations.isHittable)")
+        if !container.exists || !customizations.exists { print(app.debugDescription) }
+        XCTAssertTrue(developer.exists && container.isHittable && customizations.exists)
+        XCTAssertEqual(app.cells.matching(identifier: "settings-container").count, 1)
+        XCTAssertEqual(app.cells.matching(identifier: "settings-user-customizations").count, 1)
+        XCTAssertLessThan(developer.frame.midY, container.frame.midY)
+        XCTAssertLessThan(container.frame.midY, customizations.frame.midY)
+        attach("settings084-menu-order")
+
+        container.tap()
+        XCTAssertTrue(app.buttons["container-settings-back"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.navigationBars.count, 1)
+        XCTAssertEqual(app.navigationBars.buttons.count, 1)
+        XCTAssertFalse(app.staticTexts["Mehrere LiveContainer"].exists)
+        XCTAssertFalse(app.staticTexts["Multiple LiveContainers"].exists)
+        attach("settings084-container-root")
+
+        app.buttons["container-device-identity-settings"].tap()
+        XCTAssertTrue(app.buttons["container-regenerate-device-identity"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.navigationBars.count, 1)
+        XCTAssertEqual(app.navigationBars.buttons.count, 1)
+        XCTAssertFalse(app.buttons["container-settings-back"].exists)
+        attach("settings084-identity-single-back")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["container-settings-back"].waitForExistence(timeout: 5))
+
+        app.buttons["container-jitless-diagnostics"].tap()
+        XCTAssertEqual(app.navigationBars.count, 1)
+        XCTAssertEqual(app.navigationBars.buttons.count, 1)
+        attach("settings084-diagnostics-single-back")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["container-settings-back"].tap()
+        XCTAssertTrue(container.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.navigationBars.count, 1)
+        customizations.tap()
+        XCTAssertEqual(app.navigationBars.count, 1)
+        XCTAssertEqual(app.navigationBars.buttons.count, 1)
+        attach("settings084-user-customizations")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(container.waitForExistence(timeout: 5))
+    }
+
     @discardableResult private func selectIdentity(virtual: Bool) -> String {
         app.tabBars.buttons["Einstellungen"].tap()
         let container = app.staticTexts["Container-Einstellungen"].firstMatch

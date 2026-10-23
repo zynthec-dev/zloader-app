@@ -42,9 +42,10 @@ import SwiftUI
         NotificationCenter.default.post(name: .init("ZLoaderContainerAction"), object: name)
     }
 
-    @objc public static func settingsController() -> UIViewController {
+    @objc(settingsControllerWithOnClose:)
+    public static func settingsController(onClose: @escaping () -> Void) -> UIViewController {
         prepare()
-        return UIHostingController(rootView: ZLoaderContainerRoot(settings: true))
+        return UIHostingController(rootView: ZLoaderContainerRoot(settings: true, closeSettings: onClose))
     }
 
     @objc public static func openURL(_ url: URL) -> Bool {
@@ -82,6 +83,7 @@ import SwiftUI
 private struct ZLoaderContainerRoot: View {
     let settings: Bool
     var hostBackground: UIColor? = nil
+    var closeSettings: (() -> Void)? = nil
     @StateObject private var downloadHelper = DownloadHelper()
     @StateObject private var sceneDelegate = SceneDelegate()
     @State private var launchError: String?
@@ -89,7 +91,7 @@ private struct ZLoaderContainerRoot: View {
     var body: some View {
         Group {
             if settings {
-                LCSettingsView()
+                LCSettingsView(closeHostSettings: closeSettings)
             } else {
                 LCAppListView(embeddedInZLoader: true, hostBackground: hostBackground)
             }

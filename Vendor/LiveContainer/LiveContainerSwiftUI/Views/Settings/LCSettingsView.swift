@@ -33,6 +33,7 @@ enum JITEnablerType : Int, CaseIterable, Identifiable {
 }
 
 struct LCSettingsView: View {
+    private let closeHostSettings: (() -> Void)?
     @State var errorShow = false
     @State var errorInfo = ""
     @State var successShow = false
@@ -75,7 +76,8 @@ struct LCSettingsView: View {
     private let isHost = Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true
     let storeName = LCUtils.getStoreName()
     
-    init() {
+    init(closeHostSettings: (() -> Void)? = nil) {
+        self.closeHostSettings = closeHostSettings
         _certificateDataFound = State(initialValue: LCSharedUtils.certificatePassword() != nil)
         _store = State(initialValue: LCUtils.store())
     }
@@ -131,7 +133,7 @@ struct LCSettingsView: View {
                         Text(isHost ? "Container verwenden automatisch die aktive Signieridentität von zLoader. Diese muss auch die installierte zLoader-App signiert haben." : "lc.settings.jitLessDesc".loc)
                     }
                 }
-                if (store != .Unknown && store != .ADP) || LCUtils.isAppGroupAltStoreLike() {
+                if !isHost && ((store != .Unknown && store != .ADP) || LCUtils.isAppGroupAltStoreLike()) {
                     Section{
                         NavigationLink {
                             LCMultiLCManagementView()
@@ -396,7 +398,18 @@ struct LCSettingsView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle(isHost ? "" : "lc.tabView.settings".loc)
+            .navigationTitle(isHost ? "Container-Einstellungen" : "lc.tabView.settings".loc)
+            .toolbar {
+                if isHost, let closeHostSettings {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: closeHostSettings) {
+                            Label("Einstellungen", systemImage: "chevron.left")
+                        }
+                        .labelStyle(.iconOnly)
+                        .accessibilityIdentifier("container-settings-back")
+                    }
+                }
+            }
             .alert("lc.common.error".loc, isPresented: $errorShow){
             } message: {
                 Text(errorInfo)
@@ -465,7 +478,6 @@ struct LCSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .init("ZLoaderContainerIdentityChanged"))) { _ in
             certificateDataFound = LCUtils.certificateData() != nil
         }
-        .navigationViewStyle(StackNavigationViewStyle())
         .onAppear() {
             if !isViewAppeared {
                 guard sharedModel.selectedTab == .settings, let link = sharedModel.deepLink else { return }

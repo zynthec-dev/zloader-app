@@ -3,7 +3,7 @@
 NS_ASSUME_NONNULL_BEGIN
 int ZLoaderRunContainerHost(int argc, char * _Nullable * _Nonnull argv);
 UIViewController *ZLoaderContainerAppsController(UIColor *background);
-UIViewController *ZLoaderContainerSettingsController(void);
+UIViewController *ZLoaderContainerSettingsController(void (^onClose)(void));
 NSArray<UIBarButtonItem *> *ZLoaderContainerToolbarItems(void);
 BOOL ZLoaderHandleContainerURL(NSURL *url);
 void ZLoaderImportContainerIPA(NSURL *url);

@@ -40,7 +40,13 @@ UIViewController *ZLoaderContainerAppsController(UIColor *background) {
         ? ((UIViewController *(*)(id, SEL, UIColor *))objc_msgSend)(ui, selector, background)
         : controller(NSSelectorFromString(@"appsController"));
 }
-UIViewController *ZLoaderContainerSettingsController(void) { return controller(NSSelectorFromString(@"settingsController")); }
+UIViewController *ZLoaderContainerSettingsController(void (^onClose)(void)) {
+    Class ui = containerUI();
+    SEL selector = NSSelectorFromString(@"settingsControllerWithOnClose:");
+    return ui && [ui respondsToSelector:selector]
+        ? ((UIViewController *(*)(id, SEL, void (^)(void)))objc_msgSend)(ui, selector, onClose)
+        : controller(NSSelectorFromString(@"settingsController"));
+}
 NSArray<UIBarButtonItem *> *ZLoaderContainerToolbarItems(void) {
     Class ui = containerUI();
     SEL selector = NSSelectorFromString(@"toolbarItems");

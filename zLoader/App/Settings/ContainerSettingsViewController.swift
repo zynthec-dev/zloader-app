@@ -2,11 +2,27 @@ import UIKit
 import SideSign
 
 final class ContainerSettingsViewController: UIViewController {
+    private var previousNavigationBarHidden = false
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        previousNavigationBarHidden = navigationController?.isNavigationBarHidden ?? false
+        // The embedded SwiftUI stack owns the root and detail navigation bars.
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(previousNavigationBarHidden, animated: animated)
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Container-Einstellungen"
         navigationItem.largeTitleDisplayMode = .never
-        let controller = ZLoaderContainerSettingsController()
+        let controller = ZLoaderContainerSettingsController { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
         addChild(controller)
         controller.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(controller.view)

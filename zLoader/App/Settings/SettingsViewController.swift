@@ -34,7 +34,7 @@ extension SettingsViewController
         case credits
         case betaTesting
         case advancedSettings
-        case diagnostics    // diagnostics section, will be enabled on release builds only on swipe down with 3 fingers 3 times
+        case diagnostics
         // case macDirtyCow
     }
     
@@ -85,8 +85,6 @@ extension SettingsViewController
         case profileManagement      // row 8 - Profile Management
         case certificateManagement  // row 9 - Certificate Management
         case backupAndRestore       // row 10 - Backup & Restore
-        case userCustomizations     // row 11 - User Customizations
-        case containerSettings
 
         static var allCases: [AdvancedSettingsRow] {
             var rows: [AdvancedSettingsRow] = [.sendFeedback, .refreshAttempts, .refreshSideJITServer, .pairingFileManagement]
@@ -96,10 +94,8 @@ extension SettingsViewController
             rows.append(contentsOf: [
                 .connectionConfig,
                 .networkDiscovery,
-                .backupAndRestore,
-                .userCustomizations
+                .backupAndRestore
             ])
-            if UIDevice.current.userInterfaceIdiom != .tv { rows.append(.containerSettings) }
             return rows
         }
     }
@@ -113,6 +109,17 @@ extension SettingsViewController
     {
         case developerOptions            // row 0 - Developer Options
         case experimentalFeatures        // row 1 - Experimental Features
+        case containerSettings
+        case userCustomizations
+
+        static var allCases: [DiagnosticsRow] {
+            var rows: [DiagnosticsRow] = []
+            if UserDefaults.standard.isDebugModeEnabled { rows.append(.developerOptions) }
+            if UIDevice.current.userInterfaceIdiom != .tv { rows.append(.containerSettings) }
+            rows.append(.userCustomizations)
+            if UserDefaults.standard.isDebugModeEnabled { rows.append(.experimentalFeatures) }
+            return rows
+        }
     }
 }
 
@@ -925,14 +932,8 @@ extension SettingsViewController
 {
     override func numberOfSections(in tableView: UITableView) -> Int
     {
-        var numberOfSections = super.numberOfSections(in: tableView)
-        
-        if !UserDefaults.standard.isDebugModeEnabled
-        {
-            numberOfSections -= 1
-        }
-        
-        return numberOfSections
+        // Container and user settings remain available when diagnostics are hidden.
+        return super.numberOfSections(in: tableView)
     }
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat
@@ -972,7 +973,10 @@ extension SettingsViewController
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row >= TechyThingsRow.allCases.count { return 0 }
-        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .containerSettings { return 0 }
+        if Section.allCases[indexPath.section] == .diagnostics {
+            let row = DiagnosticsRow.allCases[indexPath.row]
+            if row == .containerSettings || row == .userCustomizations { return 0 }
+        }
         if Section.allCases[indexPath.section] == .account && indexPath.row >= 3 {
             return 0
         }
@@ -980,6 +984,8 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .advancedSettings {
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
+        } else if Section.allCases[indexPath.section] == .diagnostics {
+            effectiveIndexPath = IndexPath(row: DiagnosticsRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else if Section.allCases[indexPath.section] == .appRefresh {
             effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else {
@@ -1000,20 +1006,25 @@ extension SettingsViewController
         case .appRefresh: return AppRefreshRow.allCases.count
         case .techyThings: return TechyThingsRow.allCases.count + 1
         case .advancedSettings: return AdvancedSettingsRow.allCases.count
+        case .diagnostics: return DiagnosticsRow.allCases.count
         default: return super.tableView(tableView, numberOfRowsInSection: section.rawValue)
         }
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
-        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .containerSettings {
-            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
-            cell.isSelectable = true
-            cell.textLabel?.text = "Container-Einstellungen"
-            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
-            cell.accessoryType = .disclosureIndicator
-            decorateSettingsCell(cell)
-            return cell
+        if Section.allCases[indexPath.section] == .diagnostics {
+            let row = DiagnosticsRow.allCases[indexPath.row]
+            if row == .containerSettings || row == .userCustomizations {
+                let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+                cell.isSelectable = true
+                cell.textLabel?.text = row == .containerSettings ? "Container-Einstellungen" : NSLocalizedString("User Customizations", comment: "")
+                cell.accessibilityIdentifier = row == .containerSettings ? "settings-container" : "settings-user-customizations"
+                cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+                cell.accessoryType = .disclosureIndicator
+                decorateSettingsCell(cell)
+                return cell
+            }
         }
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count {
             let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
@@ -1083,12 +1094,18 @@ extension SettingsViewController
         if Section.allCases[indexPath.section] == .advancedSettings {
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             effectiveIndexPath = IndexPath(row: row.rawValue, section: indexPath.section)
+        } else if Section.allCases[indexPath.section] == .diagnostics {
+            effectiveIndexPath = IndexPath(row: DiagnosticsRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else if Section.allCases[indexPath.section] == .appRefresh {
             effectiveIndexPath = IndexPath(row: AppRefreshRow.allCases[indexPath.row].rawValue, section: indexPath.section)
         } else {
             effectiveIndexPath = indexPath
         }
         let cell = super.tableView(tableView, cellForRowAt: effectiveIndexPath)
+        if Section.allCases[indexPath.section] == .diagnostics {
+            cell.accessibilityIdentifier = DiagnosticsRow.allCases[indexPath.row] == .developerOptions
+                ? "settings-developer-options" : "settings-experimental-features"
+        }
         
         if Section.allCases[indexPath.section] == .account {
             if indexPath.row == 2 {
@@ -1293,8 +1310,6 @@ extension SettingsViewController
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             switch row
             {
-            case .containerSettings:
-                navigationController?.pushViewController(ContainerSettingsViewController(), animated: true)
             case .sendFeedback:
                 let alertController = UIAlertController(title: "Send Feedback", message: "Choose a method to send feedback:", preferredStyle: .actionSheet)
                 
@@ -1386,13 +1401,6 @@ extension SettingsViewController
                 vc.title = NSLocalizedString("Backup & Restore", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
                 
-            case .userCustomizations:
-                let userCustomizationsView = UserCustomizationsView()
-                let vc = ZLoaderHostingController(rootView: userCustomizationsView, usesGlass: false)
-                vc.view.backgroundColor = .settingsBackground
-                vc.title = NSLocalizedString("User Customizations", comment: "")
-                self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
-                
             case .refreshAttempts: break
             }
         
@@ -1405,6 +1413,13 @@ extension SettingsViewController
                 hostingController.view.backgroundColor = .settingsBackground
                 hostingController.title = NSLocalizedString("Developer Options", comment: "")
                 self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: hostingController), sender: nil)
+            case .containerSettings:
+                navigationController?.pushViewController(ContainerSettingsViewController(), animated: true)
+            case .userCustomizations:
+                let vc = ZLoaderHostingController(rootView: UserCustomizationsView(), usesGlass: false)
+                vc.view.backgroundColor = .settingsBackground
+                vc.title = NSLocalizedString("User Customizations", comment: "")
+                self.prepare(for: UIStoryboardSegue(identifier: "diagnostics", source: self, destination: vc), sender: nil)
             case .experimentalFeatures:
                 let experimentalFeaturesView = ExperimentalFeaturesView()
                 let hostingController = ZLoaderHostingController(rootView: experimentalFeaturesView, usesGlass: false)
