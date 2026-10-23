@@ -1,0 +1,38 @@
+{
+  "releaseURL": "https://github.com/zynthec-dev/zloader-altsource/releases/tag/app-zloader-v0.8.1-20261023T081716Z-5693bb68",
+  "tag": "app-zloader-v0.8.1-20261023T081716Z-5693bb68",
+  "assetsVerified": [
+    "zLoader-0.8.1-resignable.ipa",
+    "zLoader-0.8.1-source.zip"
+  ],
+  "ipaSHA256": "5693bb6888410c4d85b7abd9899940997192c3eb53b35b8bdf8a4ef04d3807c9",
+  "sourceSHA256": "7ee4b923d9c17d13902e74275fc653c61f16e84e4d9a857900e03be93bc5d858",
+  "sourceURL": "https://source.zloader.de/source.json",
+  "feedVerified": true,
+  "appCommit": "056c1e91047804ae391651c3af60b40ea5cf47df",
+  "publishingCommit": "8a85fc4f22e66b044ced609ddf938300f1dbbc0b",
+  "workflowRun": 39924052355,
+  "localTestsPassed": true,
+  "physicalDeviceValidation": "pending",
+  "cloudflareDeployment": "867e7624-bcc6-4ce3-9af8-1370c6e6b9f9",
+  "cloudflareDeploymentStatus": "success",
+  "catalogFinalCommit": "1c594a417b12f144e4ba72520c852ea4c62c5b9a",
+  "sourceRootVerified": true,
+  "publicWebsiteVerified": true,
+  "shellRegressionScripts": 28,
+  "pythonChecks": 4,
+  "simulatorUITestsPassed": 7,
+  "simulatorTests": {
+    "test001OnboardingAndContainerPages": "passed",
+    "test002IPAChoiceAndContainerImport": "passed",
+    "test003VirtualIdentityAndInternalBrowserCallbacks": "passed",
+    "test004HomeScreenShortcutActions": "passed",
+    "test005SharedPlusAndURLField": "passed",
+    "test006VirtualMultitasking": "passed",
+    "test007LegacyWrappedBrowserCallback": "passed"
+  },
+  "dhlRealAccountValidation": "pending physical-device test",
+  "deviceLiveProcessJITValidation": "pending physical-device test",
+  "sourceSize": 67383656,
+  "ipaSize": 35863738
+}
