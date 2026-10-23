@@ -203,6 +203,9 @@ final class LaunchViewController: UIViewController {
     private func transitionToMainInterface() {
         let destinationVC = destinationViewController!
 
+        // The fade temporarily ignores touches. Expose the tab controls to
+        // accessibility only when they can actually accept navigation.
+        destinationVC.view.accessibilityElementsHidden = true
         embed(child: destinationVC)
 
         // Set initial alpha for fade-in
@@ -221,6 +224,7 @@ final class LaunchViewController: UIViewController {
                 child.view.removeFromSuperview()
                 child.removeFromParent()
             }
+            destinationVC.view.accessibilityElementsHidden = false
             self.destinationViewController = destinationVC
             
             Task.detached { @MainActor [weak self] in

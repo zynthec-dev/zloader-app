@@ -118,7 +118,7 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
         }
     }
 
-    private func runApp(multitask: Bool? = nil) async {
+    private func runApp(multitask: Bool? = nil, forceJIT: Bool? = nil) async {
         if configuration.model.appInfo.isLocked && !DataManager.shared.model.isHiddenAppUnlocked {
             do {
                 if !(try await LCUtils.authenticateUser()) {
@@ -131,7 +131,7 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
         }
 
         do {
-            try await configuration.model.runApp(multitask: multitask)
+            try await configuration.model.runApp(multitask: multitask, forceJIT: forceJIT)
         } catch {
             showError(error.localizedDescription)
         }
@@ -177,6 +177,12 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
                 Task { [weak self] in
                     await self?.runApp(multitask: !shouldLaunchInMultitaskMode)
                 }
+            })
+        }
+
+        if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+            sectionChildren.append(UIAction(title: "Mit JIT starten", image: UIImage(systemName: "bolt.fill")) { [weak self] _ in
+                Task { await self?.runApp(multitask: true, forceJIT: true) }
             })
         }
 

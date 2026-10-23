@@ -83,11 +83,16 @@ bool sideStoreExist = false;
 }
 @end
 
+static BOOL isZLoaderIntegratedHost(void) {
+    return [lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue] ||
+        [lcUserDefaults boolForKey:@"ZLoaderIntegratedHost"];
+}
+
 static BOOL checkJITEnabled() {
 #if TARGET_OS_MACCATALYST || TARGET_OS_SIMULATOR
     return YES;
 #else
-    if([lcUserDefaults boolForKey:@"LCIgnoreJITOnLaunch"]) {
+    if([lcUserDefaults boolForKey:@"LCIgnoreJITOnLaunch"] && !isZLoaderIntegratedHost()) {
         return NO;
     }
     // check if jailbroken
@@ -251,12 +256,13 @@ static void *getAppEntryPoint(void *handle) {
 
 static NSString* invokeAppMain(NSString *selectedApp, NSString *selectedContainer, int argc, char *argv[]) {
     NSString *appError = nil;
-    if([[lcUserDefaults objectForKey:@"LCWaitForDebugger"] boolValue]) {
+    if([[lcUserDefaults objectForKey:@"LCWaitForDebugger"] boolValue] && !isZLoaderIntegratedHost()) {
         sleep(100);
     }
     if (!LCSharedUtils.certificatePassword && !isSideStore) {
 #if !TARGET_OS_SIMULATOR
         if(@available(iOS 26.0 ,*))  {
+            if (isZLoaderIntegratedHost()) return @"Für Container wird eine gültige aktive Signieridentität benötigt, die auch die installierte zLoader-App signiert hat. Wähle diese in zLoader oder signiere zLoader mit der aktiven Identität neu.";
             return @"JITLess mode is required since iOS 26. Please set it up in settings. \nPlease go to LiveContainer settings -> tap \"Import Certificate from SideStore\" / \"Import Certificate\"";
         }
 #endif
@@ -363,6 +369,17 @@ static NSString* invokeAppMain(NSString *selectedApp, NSString *selectedContaine
         }
         NSString *target = [bundlePath stringByAppendingPathComponent:@"Frameworks/TweakLoader.dylib"];
         symlink(target.UTF8String, tweakLoaderPath.UTF8String);
+    }
+
+    // The host attaches to this extension's PID, not the soon-to-be-replaced
+    // foreground process. Wait before entering a guest that requires JIT.
+    if (isLiveProcess && [lcUserDefaults boolForKey:@"ZLoaderAwaitJIT"]) {
+        [lcUserDefaults removeObjectForKey:@"ZLoaderAwaitJIT"];
+        NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:30];
+        while (!checkJITEnabled() && deadline.timeIntervalSinceNow > 0) {
+            [NSThread sleepForTimeInterval:0.05];
+        }
+        if (!checkJITEnabled()) return @"Container-JIT konnte nicht rechtzeitig aktiviert werden. Prüfe die Geräteverbindung und die Pairing-Datei.";
     }
 
     // If JIT is enabled, bypass library validation so we can load arbitrary binaries

@@ -37,6 +37,9 @@ container installation. General Container settings select the host's identity or
 one shared virtual identity for all guests. See [container setup, provenance and
 acceptance testing](docs/zloader/CONTAINERS.md). Device signing, JIT availability,
 Apple permissions and physical-device lifecycle remain separate acceptance checks.
+The [0.8.1 integration notes](docs/zloader/CONTAINER-081.md) describe automatic
+signing identity selection, integrated JIT launching, window ownership and legacy
+browser callbacks, including the remaining device validation.
 
 ## Build
 

@@ -62,3 +62,12 @@ BOOL ZLoaderSetContainerSigningIdentity(NSData *data, NSString *password, NSErro
     if (error) *error = [NSError errorWithDomain:@"zLoader.ContainerSigning" code:1 userInfo:@{NSLocalizedDescriptionKey: message}];
     return NO;
 }
+
+BOOL ZLoaderContainerSigningAvailable(void) {
+    Class ui = containerUI();
+    return ui && ((BOOL (*)(id, SEL))objc_msgSend)(ui, NSSelectorFromString(@"signingAvailable"));
+}
+void ZLoaderClearContainerSigningIdentity(void) {
+    Class ui = containerUI();
+    if (ui) ((void (*)(id, SEL))objc_msgSend)(ui, NSSelectorFromString(@"clearSigningIdentity"));
+}

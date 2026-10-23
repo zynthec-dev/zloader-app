@@ -11,6 +11,31 @@
 @property ASWebAuthenticationSession *authentication;
 @end
 
+// Match legacy OAuth wrappers: leaving the browser cancels an unfinished flow.
+static FixtureController *activeController;
+static BOOL wrapperPending;
+@interface FixtureSafariWrapper : UIViewController
+@property NSURL *url;
+@end
+@implementation FixtureSafariWrapper
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    SFSafariViewController *browser = [[SFSafariViewController alloc] initWithURL:self.url];
+    [self addChildViewController:browser];
+    browser.view.frame = self.view.bounds;
+    browser.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:browser.view];
+    [browser didMoveToParentViewController:self];
+}
+- (void)viewDidDisappear:(BOOL)animated {
+    [super viewDidDisappear:animated];
+    if (wrapperPending) {
+        wrapperPending = NO;
+        activeController.callbackLabel.text = @"cancelled-before-callback";
+    }
+}
+@end
+
 @implementation FixtureController
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -25,6 +50,7 @@
         [stack.trailingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor constant:-24],
         [stack.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:24]
     ]];
+    activeController = self;
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
     UILabel *title = [UILabel new];
     title.text = info[@"CFBundleDisplayName"];
@@ -49,7 +75,7 @@
     [NSUserDefaults.standardUserDefaults setInteger:launches forKey:@"fixture-launches"];
     UILabel *counter = [UILabel new]; counter.text = [NSString stringWithFormat:@"%ld", (long)launches];
     counter.accessibilityIdentifier = @"fixture-launch-count"; [stack addArrangedSubview:counter];
-    for (NSString *kind in @[@"WK", @"Safari", @"ASSession", @"ASCallback"]) {
+    for (NSString *kind in @[@"WK", @"Safari", @"ASSession", @"ASCallback", @"Wrapper"]) {
         UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
         [button setTitle:[kind stringByAppendingString:@" login"] forState:UIControlStateNormal];
         button.accessibilityIdentifier = [@"fixture-login-" stringByAppendingString:kind];
@@ -69,6 +95,10 @@
         WKWebView *web = [[WKWebView alloc] initWithFrame:self.view.bounds];
         web.accessibilityIdentifier = @"fixture-web"; browser.view = web;
         [self presentViewController:browser animated:YES completion:^{ [web loadRequest:[NSURLRequest requestWithURL:url]]; }];
+    } else if ([kind isEqualToString:@"Wrapper"]) {
+        wrapperPending = YES;
+        FixtureSafariWrapper *wrapper = [FixtureSafariWrapper new]; wrapper.url = url;
+        [self presentViewController:wrapper animated:YES completion:nil];
     } else if ([kind isEqualToString:@"Safari"]) {
         SFSafariViewController *browser = [[SFSafariViewController alloc] initWithURL:url];
         NSLog(@"Fixture Safari class: %@", NSStringFromClass(browser.class));
@@ -95,15 +125,28 @@
     return self.view.window;
 }
 - (void)receiveURL:(NSURL *)url {
-    [self dismissViewControllerAnimated:YES completion:nil];
+    if ([self.presentedViewController isKindOfClass:FixtureSafariWrapper.class] && !wrapperPending) return;
+    wrapperPending = NO;
     self.callbackLabel.text = url.absoluteString;
+    [self dismissViewControllerAnimated:YES completion:nil];
 }
 @end
 
 @interface FixtureDelegate : UIResponder <UIApplicationDelegate>
+@property(nonatomic, strong) UIWindow *window;
 @end
 @implementation FixtureDelegate
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options { return YES; }
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    if (!NSBundle.mainBundle.infoDictionary[@"UIApplicationSceneManifest"]) {
+        self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
+        self.window.rootViewController = [FixtureController new];
+        [self.window makeKeyAndVisible];
+    }
+    return YES;
+}
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary *)options {
+    [activeController receiveURL:url]; return YES;
+}
 @end
 
 @interface FixtureSceneDelegate : UIResponder <UIWindowSceneDelegate>

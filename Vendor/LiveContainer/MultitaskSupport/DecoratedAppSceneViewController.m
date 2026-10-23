@@ -18,16 +18,26 @@
 @end
 
 @implementation DecoratedAppSceneViewController
-- (instancetype)initWindowName:(NSString*)windowName bundleId:(NSString*)bundleId dataUUID:(NSString*)dataUUID rootVC:(UIViewController*)rootVC {
+- (instancetype)initWindowName:(NSString*)windowName bundleId:(NSString*)bundleId dataUUID:(NSString*)dataUUID rootVC:(UIViewController*)rootVC pidHandler:(void (^)(NSNumber *, NSError *))pidHandler {
     self = [super initWithNibName:nil bundle:nil];
+    self.pidAvailableHandler = pidHandler;
     self.view = [[UIStackView alloc] initWithFrame:self.view.frame];
-    [MultitaskDockManager.shared.windowHostingView addSubview:self.view];
+    // Containment and view ownership must use the same controller. zLoader
+    // wraps its tab controller in a launch controller, unlike the upstream UI.
     [rootVC addChildViewController:self];
+    [MultitaskDockManager.shared.windowHostingView addSubview:self.view];
+    [self didMoveToParentViewController:rootVC];
     
     _dataUUID = dataUUID;
     _scaleRatio = 1.0;
     _isMaximized = [NSUserDefaults.lcUserDefaults boolForKey:@"LCLaunchMultitaskMaximized"];
     _appSceneVC = [[AppSceneViewController alloc] initWithBundleId:bundleId dataUUID:dataUUID delegate:self];
+    if (!_appSceneVC) {
+        [self willMoveToParentViewController:nil];
+        [self.view removeFromSuperview];
+        [self removeFromParentViewController];
+        return nil;
+    }
     self.title = windowName;
     [self setupDecoratedView];
     
@@ -64,6 +74,7 @@
     UIImageConfiguration *minimizeConfig = [UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIImageSymbolWeightMedium];
     minimizeImage = [minimizeImage imageWithConfiguration:minimizeConfig];
     UIBarButtonItem *minimizeButton = [[UIBarButtonItem alloc] initWithImage:minimizeImage style:UIBarButtonItemStylePlain target:self action:@selector(minimizeWindow)];
+    minimizeButton.accessibilityLabel = @"Container minimieren";
     minimizeButton.tintColor = [UIColor systemYellowColor];
     
     NSString *maximizeImageName = _isMaximized ? @"arrow.down.right.and.arrow.up.left.circle" : @"arrow.up.left.and.arrow.down.right.circle";
@@ -71,12 +82,14 @@
     UIImageConfiguration *maximizeConfig = [UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIImageSymbolWeightMedium];
     maximizeImage = [maximizeImage imageWithConfiguration:maximizeConfig];
     self.maximizeButton = [[UIBarButtonItem alloc] initWithImage:maximizeImage style:UIBarButtonItemStylePlain target:self action:@selector(maximizeWindow)];
+    self.maximizeButton.accessibilityLabel = @"Container-Fenstergröße ändern";
     self.maximizeButton.tintColor = [UIColor systemGreenColor];
     
     UIImage *closeImage = [UIImage systemImageNamed:@"xmark.circle"];
     UIImageConfiguration *closeConfig = [UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIImageSymbolWeightMedium];
     closeImage = [closeImage imageWithConfiguration:closeConfig];
     UIBarButtonItem *closeButton = [[UIBarButtonItem alloc] initWithImage:closeImage style:UIBarButtonItemStylePlain target:self action:@selector(closeWindow)];
+    closeButton.accessibilityLabel = @"Container schließen";
     closeButton.tintColor = [UIColor systemRedColor];
     
     NSArray *barButtonItems = @[closeButton, self.maximizeButton, minimizeButton];
@@ -355,6 +368,16 @@
 - (void)appSceneVC:(AppSceneViewController*)vc didInitializeWithError:(NSError *)error {
     dispatch_async(dispatch_get_main_queue(), ^{
         if(error) {
+            if (self.pidAvailableHandler) {
+                self.pidAvailableHandler(nil, error);
+                self.pidAvailableHandler = nil;
+                [MultitaskDockManager.shared removeRunningApp:self.dataUUID];
+                [vc appTerminationCleanUp];
+                [self willMoveToParentViewController:nil];
+                [self.view removeFromSuperview];
+                [self removeFromParentViewController];
+                return;
+            }
             [vc appTerminationCleanUp];
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"lc.common.error".loc message:error.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
             [alert addAction:[UIAlertAction actionWithTitle:@"lc.common.ok".loc style:UIAlertActionStyleCancel handler:nil]];
@@ -367,6 +390,7 @@
             [self updateOriginalFrame];
             if (self.pidAvailableHandler) {
                 self.pidAvailableHandler(@(self.pid), nil);
+                self.pidAvailableHandler = nil;
             }
         }
     });

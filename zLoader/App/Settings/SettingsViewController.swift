@@ -86,6 +86,7 @@ extension SettingsViewController
         case certificateManagement  // row 9 - Certificate Management
         case backupAndRestore       // row 10 - Backup & Restore
         case userCustomizations     // row 11 - User Customizations
+        case containerSettings
 
         static var allCases: [AdvancedSettingsRow] {
             var rows: [AdvancedSettingsRow] = [.sendFeedback, .refreshAttempts, .refreshSideJITServer, .pairingFileManagement]
@@ -98,6 +99,7 @@ extension SettingsViewController
                 .backupAndRestore,
                 .userCustomizations
             ])
+            if UIDevice.current.userInterfaceIdiom != .tv { rows.append(.containerSettings) }
             return rows
         }
     }
@@ -970,6 +972,7 @@ extension SettingsViewController
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row >= TechyThingsRow.allCases.count { return 0 }
+        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .containerSettings { return 0 }
         if Section.allCases[indexPath.section] == .account && indexPath.row >= 3 {
             return 0
         }
@@ -995,7 +998,7 @@ extension SettingsViewController
         case .account: return (self.activeTeam == nil) ? 0 : (self.accountStatus == .completed ? 5 : 6)
         case .display: return 1
         case .appRefresh: return AppRefreshRow.allCases.count
-        case .techyThings: return TechyThingsRow.allCases.count + (UIDevice.current.userInterfaceIdiom == .tv ? 1 : 2)
+        case .techyThings: return TechyThingsRow.allCases.count + 1
         case .advancedSettings: return AdvancedSettingsRow.allCases.count
         default: return super.tableView(tableView, numberOfRowsInSection: section.rawValue)
         }
@@ -1003,10 +1006,10 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
-        if Section.allCases[indexPath.section] == .techyThings && indexPath.row == TechyThingsRow.allCases.count + 1 {
+        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .containerSettings {
             let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
             cell.isSelectable = true
-            cell.textLabel?.text = "Container"
+            cell.textLabel?.text = "Container-Einstellungen"
             cell.textLabel?.font = .preferredFont(forTextStyle: .body)
             cell.accessoryType = .disclosureIndicator
             decorateSettingsCell(cell)
@@ -1223,10 +1226,6 @@ extension SettingsViewController
             }
             
         case .techyThings:
-            if indexPath.row == TechyThingsRow.allCases.count + 1 {
-                navigationController?.pushViewController(ContainerSettingsViewController(), animated: true)
-                return
-            }
             if indexPath.row == TechyThingsRow.allCases.count {
                 navigationController?.pushViewController(ZLoaderHostingController(rootView: ShortcutsSettingsView(), usesGlass: false), animated: true)
                 return
@@ -1294,6 +1293,8 @@ extension SettingsViewController
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             switch row
             {
+            case .containerSettings:
+                navigationController?.pushViewController(ContainerSettingsViewController(), animated: true)
             case .sendFeedback:
                 let alertController = UIAlertController(title: "Send Feedback", message: "Choose a method to send feedback:", preferredStyle: .actionSheet)
                 

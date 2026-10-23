@@ -72,6 +72,7 @@ struct LCSettingsView: View {
     
     @State private var isViewAppeared = false
     
+    private let isHost = Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true
     let storeName = LCUtils.getStoreName()
     
     init() {
@@ -80,53 +81,54 @@ struct LCSettingsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+                if isHost {
                     Section("Container in zLoader") {
                         NavigationLink("Geräteidentität") { LCVirtualDeviceSettingsView() }
                             .accessibilityIdentifier("container-device-identity-settings")
                         NavigationLink("Tweaks verwalten") { LCTweaksView() }
-                        NavigationLink("Container-Quellen") { LCSourcesView() }
                     }
                 }
                 if sharedModel.multiLCStatus != 2 {
                     Section{
-                        if !certificateDataFound {
-                            Button {
-                                Task{ await importCertificate() }
-                            } label: {
-                                Text("lc.settings.importCertificate".loc)
+                        if !isHost {
+                            if !certificateDataFound {
+                                Button {
+                                    Task{ await importCertificate() }
+                                } label: {
+                                    Text("lc.settings.importCertificate".loc)
+                                }
+                            } else {
+                                Button {
+                                    Task{ await removeCertificate() }
+                                } label: {
+                                    Text("lc.settings.removeCertificate".loc)
+                                }
                             }
-                        } else {
-                            Button {
-                                Task{ await removeCertificate() }
-                            } label: {
-                                Text("lc.settings.removeCertificate".loc)
-                            }
-                        }
-                        if store == .AltStore || store == .SideStore {
-                            Button {
-                                Task{ await importCertificateFromSideStore() }
-                            } label: {
-                                if certificateDataFound {
-                                    Text("lc.settings.refreshCertificateFromStore %@".localizeWithFormat(storeName))
-                                } else {
-                                    Text("lc.settings.importCertificateFromStore %@".localizeWithFormat(storeName))
+                            if store == .AltStore || store == .SideStore {
+                                Button {
+                                    Task{ await importCertificateFromSideStore() }
+                                } label: {
+                                    if certificateDataFound {
+                                        Text("lc.settings.refreshCertificateFromStore %@".localizeWithFormat(storeName))
+                                    } else {
+                                        Text("lc.settings.importCertificateFromStore %@".localizeWithFormat(storeName))
+                                    }
                                 }
                             }
                         }
-                        
                         NavigationLink {
                             LCJITLessDiagnoseView()
                         } label: {
                             Text("lc.settings.jitlessDiagnose".loc)
                         }
+                        .accessibilityIdentifier("container-jitless-diagnostics")
 
                     } header: {
                         Text("lc.settings.jitLess".loc)
                     } footer: {
-                        Text("lc.settings.jitLessDesc".loc)
+                        Text(isHost ? "Container verwenden automatisch die aktive Signieridentität von zLoader. Diese muss auch die installierte zLoader-App signiert haben." : "lc.settings.jitLessDesc".loc)
                     }
                 }
                 if (store != .Unknown && store != .ADP) || LCUtils.isAppGroupAltStoreLike() {
@@ -167,48 +169,50 @@ struct LCSettingsView: View {
                     }
                 }
                 
-                Section {
-                    if JITEnabler == .SideJITServer || JITEnabler == .JITStreamerEBLegacy {
-                        HStack {
-                            Text("lc.settings.JitAddress".loc)
-                            Spacer()
-                            TextField(JITEnabler == .SideJITServer ? "http://x.x.x.x:8080" : "http://[fd00::]:9172", text: $sideJITServerAddress)
-                                .multilineTextAlignment(.trailing)
+                if !isHost {
+                    Section {
+                        if JITEnabler == .SideJITServer || JITEnabler == .JITStreamerEBLegacy {
+                            HStack {
+                                Text("lc.settings.JitAddress".loc)
+                                Spacer()
+                                TextField(JITEnabler == .SideJITServer ? "http://x.x.x.x:8080" : "http://[fd00::]:9172", text: $sideJITServerAddress)
+                                    .multilineTextAlignment(.trailing)
+                            }
                         }
-                    }
-                    if JITEnabler == .SideJITServer {
-                        HStack {
-                            Text("lc.settings.JitUDID".loc)
-                            Spacer()
-                            TextField("", text: $deviceUDID)
-                                .multilineTextAlignment(.trailing)
+                        if JITEnabler == .SideJITServer {
+                            HStack {
+                                Text("lc.settings.JitUDID".loc)
+                                Spacer()
+                                TextField("", text: $deviceUDID)
+                                    .multilineTextAlignment(.trailing)
+                            }
                         }
-                    }
-                    Picker(selection: $JITEnabler) {
-                        ForEach(JITEnablerType.allCases) { enablerType in
-                            Text(enablerType.displayName).tag(enablerType)
+                        Picker(selection: $JITEnabler) {
+                            ForEach(JITEnablerType.allCases) { enablerType in
+                                Text(enablerType.displayName).tag(enablerType)
+                            }
+                        } label: {
+                            Text("lc.settings.jitEnabler".loc)
                         }
-                    } label: {
-                        Text("lc.settings.jitEnabler".loc)
-                    }
 
-                } header: {
-                    Text("JIT")
-                } footer: {
-                    Text("lc.settings.JitDesc".loc)
-                }
-                
-                Section {
-                    Picker(selection: $selected32BitEmulator) {
-                        ForEach(sharedModel.arm32EmuApps, id: \.self) { app in
-                            Text("lc.common.none".loc).tag("")
-                            Text(app.appInfo.displayName()).tag(app.appInfo.relativeBundlePath!)
-                        }
-                    } label: {
-                        Text("lc.settings.selected32BitEmulator".loc)
+                    } header: {
+                        Text("JIT")
+                    } footer: {
+                        Text("lc.settings.JitDesc".loc)
                     }
-                }
                 
+                    Section {
+                        Picker(selection: $selected32BitEmulator) {
+                            ForEach(sharedModel.arm32EmuApps, id: \.self) { app in
+                                Text("lc.common.none".loc).tag("")
+                                Text(app.appInfo.displayName()).tag(app.appInfo.relativeBundlePath!)
+                            }
+                        } label: {
+                            Text("lc.settings.selected32BitEmulator".loc)
+                        }
+                    }
+                
+                }
                 Section{
                     Toggle(isOn: $dynamicColors) {
                         Text("lc.settings.dynamicColors".loc)
@@ -294,7 +298,7 @@ struct LCSettingsView: View {
                 Section {
                     HStack {
                         Image("GitHub", bundle: LCSharedUtils.resourceBundle())
-                        Button("LiveContainer/LiveContainer") {
+                        Button("Container-Laufzeit (Originalprojekt)") {
                             openGitHub()
                         }
                     }
@@ -332,14 +336,18 @@ struct LCSettingsView: View {
                         Toggle(isOn: $injectToLCItelf) {
                             Text("lc.settings.injectLCItself".loc)
                         }
-                        Toggle(isOn: $ignoreJITOnLaunch) {
-                            Text("Ignore JIT on Launching App")
+                        if !isHost {
+                            Toggle(isOn: $ignoreJITOnLaunch) {
+                                Text("Ignore JIT on Launching App")
+                            }
                         }
                         Toggle(isOn: $keepSelectedWhenQuit) {
                             Text("Keep Selected App when Quit")
                         }
-                        Toggle(isOn: $waitForDebugger) {
-                            Text("Wait For Debugger")
+                        if !isHost {
+                            Toggle(isOn: $waitForDebugger) {
+                                Text("Wait For Debugger")
+                            }
                         }
                         Toggle(isOn: $sharePrivateDataWithLiveProcess) {
                             Text("Allow Private Data access from LiveProcess")
@@ -347,10 +355,12 @@ struct LCSettingsView: View {
                         Toggle(isOn: $disableLiveProcessWatchdog) {
                             Text("Disable LiveProcess watchdog termination")
                         }
-                        Button {
-                            export()
-                        } label: {
-                            Text("Export Cert")
+                        if !isHost {
+                            Button {
+                                export()
+                            } label: {
+                                Text("Export Cert")
+                            }
                         }
                         Button {
                             exportDyld()
@@ -385,7 +395,8 @@ struct LCSettingsView: View {
                     }
                 }
             }
-            .navigationBarTitle("lc.tabView.settings".loc)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(isHost ? "Container-Einstellungen" : "lc.tabView.settings".loc)
             .alert("lc.common.error".loc, isPresented: $errorShow){
             } message: {
                 Text(errorInfo)

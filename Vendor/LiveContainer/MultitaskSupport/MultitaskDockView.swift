@@ -269,8 +269,10 @@ class AppInfoProvider {
         return calculateIconSize(for: dockWidth)
     }
 
-    public var keyWindow: UIWindow? {
-        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first
+    @objc public var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive }
+            .flatMap(\.windows).first { $0.isKeyWindow && $0.windowLevel == .normal }
     }
 
     public var safeAreaInsets: UIEdgeInsets {
@@ -281,12 +283,15 @@ class AppInfoProvider {
     }
 
     private var safeAreaHeight: CGFloat {
-        keyWindow!.bounds.height - safeAreaInsets.top - safeAreaInsets.bottom
+        (keyWindow?.bounds ?? .zero).height - safeAreaInsets.top - safeAreaInsets.bottom
     }
     
     override init() {
         super.init()
-        keyWindow!.rootViewController!.view.subviews.first!.addSubview(self.windowHostingView)
+        if let hostView = keyWindow?.rootViewController?.view {
+            windowHostingView.frame = hostView.bounds
+            hostView.addSubview(windowHostingView)
+        }
         setupDockView()
         NotificationCenter.default.addObserver(
             self,
@@ -338,7 +343,7 @@ class AppInfoProvider {
     private func updateDockFrame(animated: Bool = true) {
         guard let hostingController = hostingController else { return }
 
-        let screenBounds = keyWindow!.bounds
+        let screenBounds = (keyWindow?.bounds ?? .zero)
         let currentDockWidth = self.dockWidth
         
         let dockHeight = calculateTargetDockHeight(forWidth: currentDockWidth)
@@ -506,7 +511,7 @@ class AppInfoProvider {
                 let finalScale = Constants.initialScale
                 hostingController.view.transform = CGAffineTransform(scaleX: finalScale, y: finalScale)
                 // Move off-screen to hide, but keep in view hierarchy
-                let screenBounds = self.keyWindow!.bounds
+                let screenBounds = (self.keyWindow?.bounds ?? .zero)
                 let currentDockWidth = self.dockWidth
                 let targetX = self.calculateTargetX(isDockHidden: true, isOnRightSide: hostingController.view.frame.midX > screenBounds.width / 2, dockWidth: currentDockWidth, screenWidth: screenBounds.width)
                 let targetY = hostingController.view.frame.origin.y // Keep current Y
@@ -541,7 +546,7 @@ class AppInfoProvider {
     }
 
     func handleSwipeToHideOrShowGesture(for originalFrame: CGRect, translation: CGSize) -> Bool {
-        let screenWidth = keyWindow!.bounds.width
+        let screenWidth = (keyWindow?.bounds ?? .zero).width
         let isOnRightSide = originalFrame.origin.x > screenWidth / 2
         let isSwipingAway = (isOnRightSide && translation.width > 0) || (!isOnRightSide && translation.width < 0)
         
@@ -569,7 +574,7 @@ class AppInfoProvider {
             return false
         }
         
-        let screenWidth = keyWindow!.bounds.width
+        let screenWidth = (keyWindow?.bounds ?? .zero).width
         let isOnRightSide = originalFrame.origin.x > screenWidth / 2
         
         guard !self.isDockHidden else { return false }
@@ -889,7 +894,7 @@ public struct MultitaskDockSwiftView: View {
                 let currentPhysicalFrame = hcFrame.offsetBy(dx: self.dragOffset.width, dy: self.dragOffset.height)
                 
                 if dockManager.isPositionChangeGesture(for: hcFrame, translation: value.translation) {
-                    let screenBounds = dockManager.keyWindow!.bounds
+                    let screenBounds = (dockManager.keyWindow?.bounds ?? .zero)
                     let targetX = dockManager.calculateTargetX(isDockHidden: false, isOnRightSide: currentPhysicalFrame.midX > screenBounds.width / 2, dockWidth: dockManager.dockWidth, screenWidth: screenBounds.width)
                     
                     let safeAreaInsets = dockManager.safeAreaInsets
@@ -931,7 +936,7 @@ public struct MultitaskDockSwiftView: View {
                     return
                 }
                 
-                let screenBounds = dockManager.keyWindow!.bounds
+                let screenBounds = (dockManager.keyWindow?.bounds ?? .zero)
                 let safeAreaInsets = dockManager.safeAreaInsets
                 let dockVerticalMargin = MultitaskDockManager.Constants.dockVerticalMargin
                 let minY = safeAreaInsets.top + dockVerticalMargin

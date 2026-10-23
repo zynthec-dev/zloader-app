@@ -26,7 +26,7 @@ API_AVAILABLE(ios(16.0))
 @property(nonatomic) NSString* bundleId;
 @property(nonatomic) NSString* dataUUID;
 @property(nonatomic) int pid;
-@property(nonatomic) id<AppSceneViewControllerDelegate> delegate;
+@property(nonatomic, weak) id<AppSceneViewControllerDelegate> delegate;
 @property(nonatomic) BOOL isAppRunning;
 @property(nonatomic) BOOL shouldIgnoreSceneUpdates, shouldSkipDebounceOnce;
 @property(nonatomic) CGFloat scaleRatio;

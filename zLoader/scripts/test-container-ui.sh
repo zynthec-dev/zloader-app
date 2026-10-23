@@ -19,7 +19,7 @@ from pathlib import Path
 import plistlib,shutil,subprocess,sys
 root=Path(subprocess.check_output(['xcrun','simctl','get_app_container',sys.argv[1],'com.zynthec.zLoader','data'],text=True).strip())/'Documents'
 root.mkdir(exist_ok=True)
-for name in ('Alpha','Beta'):
+for name in ('Alpha','Beta','Legacy'):
     shutil.copy2(Path('.build/ContainerFixtures')/(name+'.ipa'),root/(name+'.ipa'))
     bundle=root/'Applications'/('de.zloader.acceptance.'+name.lower()+'.app')
     if bundle.exists():

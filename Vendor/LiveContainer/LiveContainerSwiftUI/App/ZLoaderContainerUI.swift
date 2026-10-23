@@ -66,6 +66,10 @@ import SwiftUI
         DataManager.shared.model.deepLink = components.url
     }
 
+    @objc public static func signingAvailable() -> Bool { LCSharedUtils.containerCertificateData() != nil }
+
+    @objc public static func clearSigningIdentity() { LCSharedUtils.removeContainerCertificate() }
+
     @objc public static func configureSigning(_ data: Data, password: String) -> String? {
         do {
             try LCSharedUtils.storeContainerCertificate(data, password: password)

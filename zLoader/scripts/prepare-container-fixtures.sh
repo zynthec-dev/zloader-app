@@ -11,7 +11,7 @@ xcrun clang -target arm64-apple-ios26.5-simulator -isysroot "$sdk" -fobjc-arc \
 python3 - "$out" <<'PY'
 import pathlib,plistlib,shutil,subprocess,sys,zipfile,struct,zlib
 out=pathlib.Path(sys.argv[1])
-for name in ('Alpha','Beta','NativeCollision'):
+for name in ('Alpha','Beta','Legacy','NativeCollision'):
     root=out/name
     if root.exists(): shutil.rmtree(root)
     app=root/'Payload'/(name+'.app'); app.mkdir(parents=True)
@@ -36,7 +36,13 @@ for name in ('Alpha','Beta','NativeCollision'):
         'CFBundleURLTypes':[{'CFBundleURLSchemes':['fixturecallback']}],
         'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True,'NSAllowsArbitraryLoads':True}
     }))
-    subprocess.run(['codesign','--force','--sign','-','--timestamp=none',str(app)],check=True,capture_output=True)
+    if name == 'Legacy':
+        info=plistlib.loads((app/'Info.plist').read_bytes())
+        del info['UIApplicationSceneManifest']
+        (app/'Info.plist').write_bytes(plistlib.dumps(info))
+        # A real pre-Scene app, matching the supplied DHL app's lifecycle.
+        subprocess.run(['xcrun','vtool','-set-build-version','7','15.0','18.0','-replace','-output',str(app/'Fixture'),str(app/'Fixture')],check=True)
+    subprocess.run(['codesign' ,'--force','--sign','-','--timestamp=none',str(app)],check=True,capture_output=True)
     with zipfile.ZipFile(out/(name+'.ipa'),'w',zipfile.ZIP_DEFLATED) as z:
         for p in sorted(root.rglob('*')):
             if p.is_file(): z.write(p,p.relative_to(root))

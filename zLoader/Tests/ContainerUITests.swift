@@ -15,6 +15,9 @@ final class ContainerUITests: XCTestCase {
             let labels = ["Open zLoader", "zLoader öffnen", "Continue Without Apple Account", "Ohne Apple-Account fortfahren",
                           "Ohne Apple-Konto fortfahren", "Set Up Later", "Später einrichten", "Get Started", "Los geht’s", "Los geht's", "Continue", "Weiter"]
             guard let button = labels.map({ app.buttons[$0] }).first(where: { $0.exists && $0.isHittable && $0.isEnabled }) else {
+                // Startup now correctly keeps inert tabs out of accessibility
+                // until the fade is finished. An onboarded app has no action.
+                if app.tabBars.buttons["Meine Apps"].waitForExistence(timeout: 15) { break }
                 attach("onboarding-blocked")
                 print("Visible buttons: " + app.buttons.allElementsBoundByIndex.map(\.label).joined(separator: " | "))
                 print(app.debugDescription)
@@ -44,10 +47,14 @@ final class ContainerUITests: XCTestCase {
         attach("discover-ipa-library")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Einstellungen"].tap()
-        let container = app.staticTexts["Container"].firstMatch
+        let container = app.staticTexts["Container-Einstellungen"].firstMatch
         for _ in 0..<8 where !container.isHittable { app.swipeUp() }
         XCTAssertTrue(container.waitForExistence(timeout: 5))
         container.tap()
+        XCTAssertFalse(app.buttons["Identität übernehmen"].exists)
+        XCTAssertFalse(app.buttons["Container-Quellen"].exists)
+        XCTAssertTrue(app.buttons["container-jitless-diagnostics"].waitForExistence(timeout: 5))
+        attach("container-settings-simplified")
         let identity = app.buttons["container-device-identity-settings"]
         XCTAssertTrue(identity.waitForExistence(timeout: 10))
         identity.tap()
@@ -57,8 +64,10 @@ final class ContainerUITests: XCTestCase {
 
     func test002IPAChoiceAndContainerImport() throws {
         app.tabBars.buttons["Meine Apps"].tap()
-        for name in ["Alpha", "Beta"] {
-            app.segmentedControls["my-apps-pages"].buttons["Apps in Containern"].tap()
+        for name in ["Alpha", "Beta", "Legacy"] {
+            let pages = app.segmentedControls["my-apps-pages"]
+            XCTAssertTrue(pages.waitForExistence(timeout: 15))
+            pages.buttons["Apps in Containern"].tap()
             if app.otherElements["container-app-info-de.zloader.acceptance." + name.lowercased()].exists { continue }
             let install = app.buttons.matching(NSPredicate(format: "label IN %@", ["Install App", "App installieren"])).firstMatch
             XCTAssertTrue(install.waitForExistence(timeout: 10))
@@ -101,7 +110,7 @@ final class ContainerUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["fixture-idfv"].label, sharedID)
         XCTAssertEqual(app.staticTexts["fixture-product-type"].label, "iPhone17,2")
         XCTAssertEqual(app.staticTexts["fixture-uname"].label, "iPhone17,2")
-        for browser in ["WK", "Safari", "ASSession", "ASCallback"] {
+        for browser in ["WK", "Safari", "ASSession", "ASCallback", "Wrapper"] {
             app.buttons["fixture-login-" + browser].tap()
             let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
             let allow = springboard.buttons.matching(NSPredicate(format: "label IN %@", ["Continue", "Fortfahren"])).firstMatch
@@ -141,7 +150,9 @@ final class ContainerUITests: XCTestCase {
 
     func test004HomeScreenShortcutActions() throws {
         app.tabBars.buttons["Meine Apps"].tap()
-        app.segmentedControls["my-apps-pages"].buttons["Apps in Containern"].tap()
+        let pages = app.segmentedControls["my-apps-pages"]
+        XCTAssertTrue(pages.waitForExistence(timeout: 15))
+        pages.buttons["Apps in Containern"].tap()
         let info = app.otherElements["container-app-info-de.zloader.acceptance.alpha"]
         XCTAssertTrue(info.waitForExistence(timeout: 10))
         info.press(forDuration: 1)
@@ -178,9 +189,51 @@ final class ContainerUITests: XCTestCase {
         XCTAssertTrue(pages.buttons["Apps in Containern"].isSelected)
     }
 
+    func test007LegacyWrappedBrowserCallback() throws {
+        launchContainer("legacy")
+        XCTAssertEqual(app.staticTexts["fixture-title"].label, "Legacy")
+        app.buttons["fixture-login-Wrapper"].tap()
+        let finish = app.links["Finish fixture login"].firstMatch
+        XCTAssertTrue(finish.waitForExistence(timeout: 15))
+        finish.tap()
+        let callback = app.staticTexts["fixture-callback"]
+        expectation(for: NSPredicate(format: "label CONTAINS %@", "state=acceptance"), evaluatedWith: callback)
+        waitForExpectations(timeout: 15)
+        XCTAssertTrue(callback.label.contains("code=synthetic"))
+        XCTAssertEqual(XCUIApplication(bundleIdentifier: "de.zloader.acceptance.nativecollision").state, .notRunning)
+        attach("legacy-wrapper-callback")
+    }
+
+    func test006VirtualMultitasking() throws {
+        app.tabBars.buttons["Meine Apps"].tap()
+        let pages = app.segmentedControls["my-apps-pages"]
+        XCTAssertTrue(pages.waitForExistence(timeout: 15))
+        pages.buttons["Apps in Containern"].tap()
+        let info = app.otherElements["container-app-info-de.zloader.acceptance.alpha"]
+        XCTAssertTrue(info.waitForExistence(timeout: 10))
+        info.press(forDuration: 1)
+        app.buttons["Multitasking"].tap()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.staticTexts["fixture-title"].waitForExistence(timeout: 20))
+        XCTAssertEqual(app.staticTexts["fixture-title"].label, "Alpha")
+        app.buttons["Container-Fenstergröße ändern"].firstMatch.tap()
+        app.buttons["Container-Fenstergröße ändern"].firstMatch.tap()
+        app.buttons["Container minimieren"].firstMatch.tap()
+        let beta = app.otherElements["container-app-info-de.zloader.acceptance.beta"]
+        XCTAssertTrue(beta.waitForExistence(timeout: 10))
+        beta.press(forDuration: 1)
+        XCTAssertTrue(app.buttons["Mit JIT starten"].exists)
+        app.buttons["Multitasking"].tap()
+        let betaTitle = app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label == %@", "fixture-title", "Beta")).firstMatch
+        XCTAssertTrue(betaTitle.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
+        attach("container-virtual-multitasking-two-guests")
+        app.buttons["Container schließen"].firstMatch.tap()
+    }
+
     @discardableResult private func selectIdentity(virtual: Bool) -> String {
         app.tabBars.buttons["Einstellungen"].tap()
-        let container = app.staticTexts["Container"].firstMatch
+        let container = app.staticTexts["Container-Einstellungen"].firstMatch
         for _ in 0..<8 where !container.isHittable { app.swipeUp() }
         container.tap()
         app.buttons["container-device-identity-settings"].tap()
@@ -195,7 +248,9 @@ final class ContainerUITests: XCTestCase {
 
     private func launchContainer(_ name: String) {
         app.tabBars.buttons["Meine Apps"].tap()
-        app.segmentedControls["my-apps-pages"].buttons["Apps in Containern"].tap()
+        let pages = app.segmentedControls["my-apps-pages"]
+        XCTAssertTrue(pages.waitForExistence(timeout: 15))
+        pages.buttons["Apps in Containern"].tap()
         let run = app.buttons["container-app-run-de.zloader.acceptance." + name]
         XCTAssertTrue(run.waitForExistence(timeout: 10))
         run.tap()

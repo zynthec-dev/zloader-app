@@ -339,7 +339,13 @@ class LCAppModel: ObservableObject, Hashable {
 #if targetEnvironment(simulator)
         jitNeeded = false
 #endif
-        if jitNeeded {
+        if jitNeeded && Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+            guard #available(iOS 16.0, *) else { throw "Container-JIT benötigt iOS 16 oder neuer." }
+            UserDefaults.standard.set(true, forKey: "ZLoaderAwaitJIT")
+            defer { UserDefaults.standard.removeObject(forKey: "ZLoaderAwaitJIT") }
+            let pid = try await LCUtils.launchMultitaskGuestApp(appInfo.displayName())
+            try await LCUtils.enableZLoaderJIT(forPID: pid)
+        } else if jitNeeded {
             if multitask, #available(iOS 17.4, *) {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     LCUtils.launchMultitaskGuestApp(appInfo.displayName()) { pidNumber, error in
@@ -403,6 +409,9 @@ class LCAppModel: ObservableObject, Hashable {
     }
     
     func signApp(force: Bool = false) async throws {
+        if Bundle.main.infoDictionary?["ZLoaderContainerHost"] as? Bool == true {
+            try await LCUtils.prepareZLoaderSigning()
+        }
         var signError : String? = nil
         var signSuccess = false
         defer {

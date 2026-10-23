@@ -33,6 +33,24 @@
 static NSMutableDictionary<NSString *, ZLoaderGuestAuthentication *> *authentications;
 static NSArray<NSString *> *guestSchemes;
 static BOOL browserHooksActive;
+static NSString *guestBundlePath;
+static NSSet<NSString *> *guestSceneDelegateNames;
+static BOOL guestDeclaresScenes;
+
+static BOOL isGuestSceneDelegate(id delegate) {
+    if (!delegate) return NO;
+    // Host scenes remain connected when a legacy UIApplicationDelegate guest
+    // runs. Never dispatch its callback to the host URL router.
+    const char *image = delegate ? class_getImageName([delegate class]) : NULL;
+    NSString *path = image ? [@(image) stringByResolvingSymlinksInPath] : nil;
+    if ([path hasPrefix:[guestBundlePath stringByAppendingString:@"/"]]) return YES;
+    // SwiftUI supplies platform-owned scene delegates for a guest's declared
+    // scene lifecycle. Preserve those without accepting the host's UIKit scene.
+    NSString *name = NSStringFromClass([delegate class]);
+    return guestDeclaresScenes && [path containsString:@"/System/Library/"] &&
+        ([guestSceneDelegateNames containsObject:name] || [name hasPrefix:@"SwiftUI."]);
+
+}
 
 static BOOL ownsURL(NSURL *url) {
     NSMutableArray *activeSchemes = [NSMutableArray new];
@@ -62,7 +80,7 @@ static void deliverURL(NSURL *url) {
     ZLoaderGuestURLContext *context = class_createInstance(ZLoaderGuestURLContext.class, 0);
     context.guestURL = url;
     for (UIScene *scene in application.connectedScenes) {
-        if (scene.activationState != UISceneActivationStateUnattached &&
+        if (isGuestSceneDelegate(scene.delegate) && scene.activationState != UISceneActivationStateUnattached &&
             [scene.delegate respondsToSelector:@selector(scene:openURLContexts:)]) {
             [scene.delegate scene:scene openURLContexts:[NSSet setWithObject:context]];
             return;
@@ -79,7 +97,8 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
     if (!ownsURL(url)) return NO;
     // No LaunchServices or UIApplication.open URL dispatch: another installed
     // app with this scheme must never receive this container's auth callback.
-    dispatch_async(dispatch_get_main_queue(), ^{ deliverURL(url); });
+    if (NSThread.isMainThread) deliverURL(url);
+    else dispatch_async(dispatch_get_main_queue(), ^{ deliverURL(url); });
     return YES;
 }
 
@@ -204,7 +223,12 @@ BOOL ZLoaderRouteOwnedGuestURL(NSURL *url) {
     self.guestNavigationBar.topItem.title = webView.URL.host;
 }
 - (void)finishWithOwnedCallback:(NSURL *)url {
-    [self dismissViewControllerAnimated:YES completion:^{ ZLoaderRouteOwnedGuestURL(url); }];
+    // A wrapper can cancel pending OAuth state in viewDidDisappear. Deliver
+    // first, while it is still alive, and let the guest close its own wrapper.
+    ZLoaderRouteOwnedGuestURL(url);
+    if (self.presentingViewController && !self.isBeingDismissed) {
+        [self dismissViewControllerAnimated:YES completion:nil];
+    }
 }
 @end
 @implementation SFSafariViewController (ZLoaderGuestCallbacks)
@@ -281,6 +305,22 @@ void ZLoaderGuestBrowserHooksInit(void) {
     for (NSDictionary *type in NSBundle.mainBundle.infoDictionary[@"CFBundleURLTypes"]) {
         for (NSString *scheme in type[@"CFBundleURLSchemes"]) if ([scheme isKindOfClass:NSString.class]) [schemes addObject:scheme.lowercaseString];
     }
+    guestBundlePath = NSBundle.mainBundle.bundlePath.stringByResolvingSymlinksInPath;
+    id rawManifest = NSBundle.mainBundle.infoDictionary[@"UIApplicationSceneManifest"];
+    NSDictionary *manifest = [rawManifest isKindOfClass:NSDictionary.class] ? rawManifest : nil;
+    guestDeclaresScenes = manifest != nil;
+    id rawRoles = manifest[@"UISceneConfigurations"];
+    NSDictionary *roles = [rawRoles isKindOfClass:NSDictionary.class] ? rawRoles : nil;
+    NSMutableSet *delegates = [NSMutableSet new];
+    for (NSArray *configurations in roles.allValues) {
+        if (![configurations isKindOfClass:NSArray.class]) continue;
+        for (NSDictionary *configuration in configurations) {
+            if (![configuration isKindOfClass:NSDictionary.class]) continue;
+            NSString *name = configuration[@"UISceneDelegateClassName"];
+            if ([name isKindOfClass:NSString.class]) [delegates addObject:name];
+        }
+    }
+    guestSceneDelegateNames = delegates;
     guestSchemes = schemes;
     swizzle(WKWebView.class, @selector(setNavigationDelegate:), @selector(zl_setNavigationDelegate:));
     swizzle(WKWebView.class, @selector(initWithFrame:configuration:), @selector(zl_initWithFrame:configuration:));

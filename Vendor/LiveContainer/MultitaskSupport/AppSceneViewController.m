@@ -49,7 +49,8 @@
     // init extension
     NSError* error = nil;
     _extension = [NSExtension extensionWithIdentifier:LCUtils.liveProcessBundleIdentifier error:&error];
-    if(error) {
+    if(error || !_extension) {
+        error = error ?: [NSError errorWithDomain:@"zLoader.Container" code:4 userInfo:@{NSLocalizedDescriptionKey: @"Der Container-Prozess ist nicht verfügbar. Installiere zLoader mit der LiveProcess-Erweiterung neu."}];
         [delegate appSceneVC:self didInitializeWithError:error];
         return nil;
     }
@@ -63,6 +64,7 @@
         @"selectedContainer": _dataUUID,
         @"bookmarks": bookmarks,
         @"lcHomePath": NSHomeDirectory(),
+        @"ZLoaderIntegratedHost": @([NSUserDefaults.lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue]),
     }.mutableCopy;
     
     NSString* launchAppUrlScheme = [NSUserDefaults.standardUserDefaults stringForKey:@"launchAppUrlScheme"];
@@ -72,23 +74,37 @@
     }
     
     NSURL *docURL = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].lastObject;
+    NSMutableArray<NSURL *> *locations = [NSMutableArray new];
     if ([NSUserDefaults.standardUserDefaults boolForKey:@"LCSharePrivateDataWithLiveProcess"]) {
-        NSData* bookmarkData = [docURL bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:0 relativeToURL:0 error:0];
-        [bookmarks addObject:bookmarkData];
+        [locations addObject:docURL];
     } else {
         bool isSharedApp = false;
-        NSBundle* bundle = [LCSharedUtils findBundleWithBundleId:bundleId isSharedAppOut:&isSharedApp];
-        // when mutlitask with private app, we can restrict its sandbox to only its own container
+        NSBundle *bundle = [LCSharedUtils findBundleWithBundleId:bundleId isSharedAppOut:&isSharedApp];
+        if (!bundle) {
+            [delegate appSceneVC:self didInitializeWithError:[NSError errorWithDomain:@"zLoader.Container" code:5 userInfo:@{NSLocalizedDescriptionKey: @"Die Container-App wurde nicht gefunden."}]];
+            return nil;
+        }
         if (!isSharedApp) {
             NSURL *dataURL = [docURL URLByAppendingPathComponent:[NSString stringWithFormat:@"Data/Application/%@", dataUUID]];
             NSURL *tweaksURL = [docURL URLByAppendingPathComponent:@"Tweaks"];
-            [bookmarks addObject:[bundle.bundleURL bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:0 relativeToURL:0 error:0]];
-            NSData* containerBookmark = [dataURL bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:0 relativeToURL:0 error:0];
-            if(containerBookmark) {
-                [bookmarks addObject:containerBookmark];
+            if (![NSFileManager.defaultManager createDirectoryAtURL:tweaksURL withIntermediateDirectories:YES attributes:nil error:&error]) {
+                [delegate appSceneVC:self didInitializeWithError:error];
+                return nil;
             }
-            [bookmarks addObject:[tweaksURL bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:0 relativeToURL:0 error:0]];
+            [locations addObjectsFromArray:@[bundle.bundleURL, dataURL, tweaksURL]];
         }
+    }
+    for (NSURL *location in locations) {
+        NSData *bookmark = [location bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:nil relativeToURL:nil error:&error];
+        if (!bookmark) {
+            [delegate appSceneVC:self didInitializeWithError:error ?: [NSError errorWithDomain:@"zLoader.Container" code:6 userInfo:@{NSLocalizedDescriptionKey: @"Container-Dateizugriff konnte nicht vorbereitet werden."}]];
+            return nil;
+        }
+        [bookmarks addObject:bookmark];
+    }
+    if ([NSUserDefaults.standardUserDefaults boolForKey:@"ZLoaderAwaitJIT"]) {
+        userInfo[@"ZLoaderAwaitJIT"] = @YES;
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:@"ZLoaderAwaitJIT"];
     }
     item.userInfo = userInfo;
     
@@ -123,6 +139,10 @@
     FBProcessManager *manager = [PrivClass(FBProcessManager) sharedInstance];
     // At this point, the process is spawned and we're ready to create a scene to render in our app
     RBSProcessHandle* processHandle = [PrivClass(RBSProcessHandle) handleForPredicate:predicate error:nil];
+    if (!processHandle) {
+        [self.delegate appSceneVC:self didInitializeWithError:[NSError errorWithDomain:@"zLoader.Container" code:10 userInfo:@{NSLocalizedDescriptionKey: @"Der Container-Prozess wurde vor dem Aufbau des Fensters beendet."}]];
+        return;
+    }
     [manager registerProcessForAuditToken:processHandle.auditToken];
     UIApplicationSceneSpecification *specification = [UIApplicationSceneSpecification specification];
     

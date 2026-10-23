@@ -81,7 +81,7 @@ struct LCEntitlementView : View {
                         .font(.system(.subheadline, design: .monospaced))
                 }
             }
-            .navigationTitle(isLiveProcess ? "LiveProcess Entitlements" : "LiveContainer Entitlements")
+            .navigationTitle(isLiveProcess ? "LiveProcess Entitlements" : "Container Entitlements")
             .navigationBarTitleDisplayMode(.inline)
         } else {
             Text("lc.common.loading".loc)
@@ -229,7 +229,7 @@ struct LCJITLessDiagnoseView : View {
                     NavigationLink {
                         LCEntitlementView(isLiveProcess: false)
                     } label: {
-                        Text("LiveContainer Entitlements".loc)
+                        Text("Container Entitlements".loc)
                     }
                     if sharedModel.multiLCStatus == 0 {
                         NavigationLink {

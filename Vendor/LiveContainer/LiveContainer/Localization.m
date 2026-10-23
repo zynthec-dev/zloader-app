@@ -6,6 +6,15 @@
 //
 #import "Localization.h"
 #import "LCSharedUtils.h"
+#import "utils.h"
+
+static NSString *containerBranding(NSString *text) {
+    if (![NSUserDefaults.lcMainBundle.infoDictionary[@"ZLoaderContainerHost"] boolValue]) return text;
+    for (NSString *name in @[@"LiveContainer", @"Live-Container", @"Live Container"]) {
+        text = [text stringByReplacingOccurrencesOfString:name withString:@"Container"];
+    }
+    return text;
+}
 
 @implementation NSString (Localization)
 
@@ -26,13 +35,13 @@
     NSString *message = [[NSClassFromString(@"LCSharedUtils") resourceBundle] localizedStringForKey:self value:@"" table:nil];
     
     if (![message isEqualToString:self]) {
-        return message;
+        return containerBranding(message);
     }
 
     NSString *forcedString = [[NSString enBundle] localizedStringForKey:self value:nil table:nil];
     
     if (forcedString) {
-        return forcedString;
+        return containerBranding(forcedString);
     } else {
         return self;
     }

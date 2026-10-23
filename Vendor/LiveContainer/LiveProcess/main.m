@@ -54,7 +54,7 @@ int LiveProcessMain(int argc, char *argv[]) {
         return payloadEntry(argc, argv, _envp, _apple);
     }
     
-    NSLog(@"Retrieved app info: %@", appInfo);
+    // Do not log security-scoped bookmark payloads or guest paths.
     // Set LiveContainer's home path
     setenv("LP_HOME_PATH", getenv("HOME"), 1);
     const char *overrideHomePath = [appInfo[@"lcHomePath"] fileSystemRepresentation];
@@ -66,14 +66,21 @@ int LiveProcessMain(int argc, char *argv[]) {
     [lcUserDefaults setObject:appInfo[@"selected"] forKey:@"selected"];
     [lcUserDefaults setObject:appInfo[@"selectedContainer"] forKey:@"selectedContainer"];
     
+    [lcUserDefaults setBool:[appInfo[@"ZLoaderAwaitJIT"] boolValue] forKey:@"ZLoaderAwaitJIT"];
+    [lcUserDefaults setBool:[appInfo[@"ZLoaderIntegratedHost"] boolValue] forKey:@"ZLoaderIntegratedHost"];
     bool access = false;
     NSArray* bookmarks = appInfo[@"bookmarks"];
     NSMutableArray<NSURL *>* bookmarkedUrls = [NSMutableArray array];
     for(int i = 0; i < bookmarks.count; i++) {
         bool isStale = false;
         NSError* error = nil;
-        bookmarkedUrls[i] = [NSURL URLByResolvingBookmarkData:bookmarks[i] options:0 relativeToURL:nil bookmarkDataIsStale:&isStale error:&error];
-        access = [bookmarkedUrls[i] startAccessingSecurityScopedResource];
+        NSURL *url = [NSURL URLByResolvingBookmarkData:bookmarks[i] options:0 relativeToURL:nil bookmarkDataIsStale:&isStale error:&error];
+        if (!url) {
+            [LiveProcessHandler.extensionContext cancelRequestWithError:error ?: [NSError errorWithDomain:@"zLoader.Container" code:9 userInfo:@{NSLocalizedDescriptionKey: @"Container-Dateizugriff konnte nicht wiederhergestellt werden."}]];
+            return EXIT_FAILURE;
+        }
+        [bookmarkedUrls addObject:url];
+        access = [url startAccessingSecurityScopedResource];
     }
     
     if ([appInfo[@"selected"] isEqualToString:@"builtinSideStore"]) {

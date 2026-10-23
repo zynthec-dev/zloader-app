@@ -20,7 +20,27 @@
 }
 @end
 
+@protocol ZLoaderContainerHostServices
++ (void)prepareSigningWithCompletion:(void (^)(NSError *))completion;
++ (void)enableJITForPID:(NSNumber *)pid completion:(void (^)(NSError *))completion;
+@end
+
 @implementation LCUtils
++ (void)prepareZLoaderSigningWithCompletionHandler:(void (^)(NSError *))completionHandler {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        Class<ZLoaderContainerHostServices> host = NSClassFromString(@"ZLoaderContainerHostServices");
+        if (host) [host prepareSigningWithCompletion:completionHandler];
+        else completionHandler([NSError errorWithDomain:@"zLoader.Container" code:7 userInfo:@{NSLocalizedDescriptionKey: @"Container-Signierdienst nicht verfügbar."}]);
+    });
+}
++ (void)enableZLoaderJITForPID:(NSNumber *)pid completionHandler:(void (^)(NSError *))completionHandler {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        Class<ZLoaderContainerHostServices> host = NSClassFromString(@"ZLoaderContainerHostServices");
+        if (host) [host enableJITForPID:pid completion:completionHandler];
+        else completionHandler([NSError errorWithDomain:@"zLoader.Container" code:8 userInfo:@{NSLocalizedDescriptionKey: @"Integrierter JIT-Dienst nicht verfügbar."}]);
+    });
+}
+
 #pragma mark Certificate & password
 
 + (NSData *)certificateData {
@@ -52,7 +72,7 @@
 
 + (void)launchMultitaskGuestApp:(NSString *)displayName completionHandler:(void (^)(NSNumber *pid, NSError *error))completionHandler {
     if(!self.liveProcessBundleIdentifier) {
-        NSError *error = [NSError errorWithDomain:displayName code:2 userInfo:@{NSLocalizedDescriptionKey: @"LiveProcess extension not found. Please reinstall LiveContainer and select Keep Extensions"}];
+        NSError *error = [NSError errorWithDomain:displayName code:2 userInfo:@{NSLocalizedDescriptionKey: @"Container-Erweiterung nicht gefunden. Installiere zLoader mit allen Erweiterungen neu."}];
         if (completionHandler) completionHandler(nil, error);
         return;
     }
@@ -74,10 +94,12 @@
             }
         }
         
-        UIViewController *rootVC = ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).keyWindow.rootViewController;
-        DecoratedAppSceneViewController *launcherView = [[DecoratedAppSceneViewController alloc] initWindowName:displayName bundleId:bundleId dataUUID:dataUUID rootVC:rootVC];
-        // Wire PID callback
-        launcherView.pidAvailableHandler = completionHandler;
+        UIViewController *rootVC = MultitaskDockManager.shared.keyWindow.rootViewController;
+        if (!rootVC || !bundleId.length || !dataUUID.length) {
+            completionHandler(nil, [NSError errorWithDomain:@"zLoader.Container" code:3 userInfo:@{NSLocalizedDescriptionKey: @"Kein aktives Container-Fenster oder keine gültige App-Auswahl vorhanden."}]);
+            return;
+        }
+        DecoratedAppSceneViewController *launcherView = [[DecoratedAppSceneViewController alloc] initWindowName:displayName bundleId:bundleId dataUUID:dataUUID rootVC:rootVC pidHandler:completionHandler];
         launcherView.view.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
         launcherView.view.center = rootVC.view.center;
     });

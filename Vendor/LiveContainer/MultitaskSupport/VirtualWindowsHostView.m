@@ -9,8 +9,8 @@
 
 @implementation VirtualWindowsHostView
 - (instancetype)init {
-    CGRect frame = ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).keyWindow.bounds;
-    self = [super initWithFrame:frame];
+    // The embedding controller supplies the bounds of its actual host view.
+    self = [super initWithFrame:CGRectZero];
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.shouldForwardTapAction = YES;
     return self;
