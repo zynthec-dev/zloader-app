@@ -1,0 +1,475 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Apple Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple-Account"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "Choose Certificate & Profiles": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zertifikat und Profile wählen"
+          }
+        }
+      }
+    },
+    "Choose Signing Identity": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signierungsidentität wählen"
+          }
+        }
+      }
+    },
+    "Choose a certificate and matching provisioning profiles in Signing Identities first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst unter „Signierungsidentitäten“ ein Zertifikat und passende Provisioning-Profile aus."
+          }
+        }
+      }
+    },
+    "Choose an installation method:": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine Installationsmethode:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an installation method:"
+          }
+        }
+      }
+    },
+    "Choose from Files": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Dateien wählen"
+          }
+        }
+      }
+    },
+    "Choose from Library": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus IPA-Bibliothek wählen"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "Do you want to continue? This will download and install from:\n%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Möchtest du fortfahren? Die App wird von dieser Adresse geladen und installiert:\n%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you want to continue? This will download and install from:\n%@"
+          }
+        }
+      }
+    },
+    "Do you want to continue? This will install \"%@\".": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Möchtest du fortfahren? „%@“ wird installiert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you want to continue? This will install \"%@\"."
+          }
+        }
+      }
+    },
+    "Do you want to continue? This will reinstall \"%@\".": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Möchtest du fortfahren? „%@“ wird erneut installiert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you want to continue? This will reinstall \"%@\"."
+          }
+        }
+      }
+    },
+    "Enter the URL of the .ipa file to install.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die URL der zu installierenden IPA-Datei ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the URL of the .ipa file to install."
+          }
+        }
+      }
+    },
+    "Import a profile that includes the selected certificate. Wildcard profiles are supported.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiere ein Profil, das das ausgewählte Zertifikat enthält. Wildcard-Profile werden unterstützt."
+          }
+        }
+      }
+    },
+    "Imported Certificate": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiertes Zertifikat"
+          }
+        }
+      }
+    },
+    "Install": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install"
+          }
+        }
+      }
+    },
+    "Install App": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App installieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install App"
+          }
+        }
+      }
+    },
+    "Install from URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über URL installieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install from URL"
+          }
+        }
+      }
+    },
+    "Invalid URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungültige URL"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid URL"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Please enter a valid HTTP or HTTPS URL.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine gültige HTTP- oder HTTPS-URL ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter a valid HTTP or HTTPS URL."
+          }
+        }
+      }
+    },
+    "Sign in to use an Apple Account, or choose Imported Certificate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich mit einem Apple-Account an oder wähle „Importiertes Zertifikat“."
+          }
+        }
+      }
+    },
+    "Upload via Web": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über Browser hochladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload via Web"
+          }
+        }
+      }
+    },
+    "Back": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        }
+      }
+    },
+    "Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        }
+      }
+    },
+    "Certificate": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zertifikat"
+          }
+        }
+      }
+    },
+    "Prompt User": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachfragen"
+          }
+        }
+      }
+    },
+    "Remove All": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle entfernen"
+          }
+        }
+      }
+    },
+    "Keep All": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle behalten"
+          }
+        }
+      }
+    },
+    "Use Main Profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hauptprofil verwenden"
+          }
+        }
+      }
+    },
+    "Sign IPA": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPA signieren"
+          }
+        }
+      }
+    },
+    "No active local certificate found.Import a .p12 file to sign your apps.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein aktives lokales Zertifikat vorhanden. Importiere eine P12-Datei, um deine Apps zu signieren."
+          }
+        }
+      }
+    },
+    "No active local certificate found.Create a new certificate or import a .p12 file to sign your apps.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein aktives lokales Zertifikat vorhanden. Erstelle ein Zertifikat oder importiere eine P12-Datei, um deine Apps zu signieren."
+          }
+        }
+      }
+    },
+    "The installed signing certificate has expired and cannot be activated automatically.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Zertifikat dieser Installation ist abgelaufen und kann nicht automatisch aktiviert werden."
+          }
+        }
+      }
+    },
+    "Installed signing identity detected. Its matching private key is missing. Import the corresponding .p12 from your installer or Mac; this certificate will then activate automatically.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Signierungsidentität dieser Installation wurde erkannt. Der passende private Schlüssel fehlt. Importiere die zugehörige P12-Datei aus deinem Installationsprogramm oder vom Mac. Das Zertifikat wird anschließend automatisch aktiviert."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

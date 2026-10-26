@@ -88,8 +88,8 @@ final class MyAppsPagesViewController: UIViewController, UIPageViewControllerDat
         } else {
             containerSearch.isActive = false
             navigationItem.searchController = nil
-            navigationItem.leftBarButtonItems = ([add] + Array(installed.navigationItem.leftBarButtonItems?.dropFirst() ?? [])).compactMap { $0 }
-            navigationItem.rightBarButtonItems = nil
+            navigationItem.leftBarButtonItems = [add].compactMap { $0 }
+            navigationItem.rightBarButtonItems = installed.navigationItem.rightBarButtonItems
         }
     }
 

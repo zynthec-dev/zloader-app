@@ -11,7 +11,7 @@ enum SelfRefreshPolicy {
         guard let installedTeam else { return false }
         let selectedID: String?
         if let signingTeamID { selectedID = signingTeamID }
-        else if UserDefaults.standard.string(forKey: SigningIdentityStore.pipelineIdentityKey) != nil {
+        else if UserDefaults.standard.string(forKey: SigningIdentityStore.pipelineMethodKey) == SigningMethod.importedCertificate.rawValue || UserDefaults.standard.string(forKey: SigningIdentityStore.pipelineIdentityKey) != nil {
             selectedID = UserDefaults.standard.string(forKey: SigningIdentityStore.pipelineTeamKey)
         } else { selectedID = DatabaseManager.shared.activeTeam(in: context)?.identifier }
         return selectedID == installedTeam

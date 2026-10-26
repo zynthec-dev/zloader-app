@@ -67,6 +67,7 @@ python3 zLoader/scripts/test-project-config.py
 sh zLoader/scripts/test-certificate-export.sh
 sh zLoader/scripts/test-codesignkit-export.sh
 sh zLoader/scripts/test-managed-signing.sh
+sh zLoader/scripts/test-imported-signing-selection.sh
 sh zLoader/scripts/test-watch-signing.sh
 sh zLoader/scripts/test-extensionkit-signing.sh
 sh zLoader/scripts/test-apple-login.sh
@@ -141,6 +142,9 @@ Apple login error -80046: [Mac Anisette migration and validation, 0.8.2](docs/zl
 UTM iOSHelper installation and ExtensionKit support: [signing correction and validation, 0.8.3](docs/zloader/EXTENSIONKIT-0.8.3.md).
 
 Container navigation and Settings order: [single back navigation and menu placement, 0.8.4](docs/zloader/SETTINGS-0.8.4.md).
+
+Imported signing without Apple login, German app actions and refreshed tab icons:
+[selection and validation, 0.8.5](docs/zloader/IMPORTED-SIGNING-0.8.5.md).
 
 Latest changes: [installation certificate recovery and Signed IPAs, 0.7.18](docs/zloader/CERTIFICATES-SIGNED-IPAS-0.7.18.md).
 

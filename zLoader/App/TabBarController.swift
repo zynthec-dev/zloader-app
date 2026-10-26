@@ -44,13 +44,13 @@ final class TabBarController: UITabBarController
         debugLog("[TabBarController] viewDidLoad()")
         
         let tabs: [(String, String, String)] = [
-            ("News", "newspaper", "newspaper.fill"),
-            ("Sources", "shippingbox", "shippingbox.fill"),
-            ("Browse", "square.grid.2x2", "square.grid.2x2.fill"),
-            ("My Apps", "a.square", "a.square.fill"),
-            ("Settings", "gearshape", "gearshape.fill")
+            ("News", "text.bubble", "text.bubble.fill"),
+            ("Sources", "square.stack.3d.up", "square.stack.3d.up.fill"),
+            ("Browse", "safari", "safari.fill"),
+            ("My Apps", "square.grid.2x2", "square.grid.2x2.fill"),
+            ("Settings", "slider.horizontal.3", "slider.horizontal.3")
         ]
-        let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+        let configuration = UIImage.SymbolConfiguration(pointSize: 19, weight: .regular, scale: .medium)
         for (index, controller) in (viewControllers ?? []).enumerated() where index < tabs.count {
             let (title, image, selected) = tabs[index]
             controller.tabBarItem.title = NSLocalizedString(title, comment: "")

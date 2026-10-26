@@ -291,6 +291,65 @@ final class ContainerUITests: XCTestCase {
         XCTAssertTrue(container.waitForExistence(timeout: 5))
     }
 
+    func test009OfflineSigningAndLocalizedAppActions() throws {
+        app.terminate()
+        app.launchArguments += ["-hasCompletedOnboarding", "YES"]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        let myApps = app.buttons["Meine Apps"].firstMatch
+        XCTAssertTrue(myApps.waitForExistence(timeout: 20))
+        myApps.tap()
+        let add = app.buttons["my-apps-add"]
+        let sign = app.buttons["my-apps-sign"]
+        XCTAssertTrue(add.waitForExistence(timeout: 10))
+        XCTAssertTrue(sign.exists)
+        XCTAssertLessThan(add.frame.midX, app.frame.midX)
+        XCTAssertGreaterThan(sign.frame.midX, app.frame.midX)
+        attach("signing085-tabs-and-toolbar")
+        add.tap()
+        XCTAssertTrue(app.buttons["Aus Dateien wählen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Über URL installieren"].exists)
+        XCTAssertTrue(app.buttons["Aus IPA-Bibliothek wählen"].exists)
+        XCTAssertFalse(app.buttons["Choose from Files"].exists)
+        attach("signing085-german-add-menu")
+        app.buttons["Über URL installieren"].tap()
+        XCTAssertTrue(app.alerts.staticTexts["Gib die URL der zu installierenden IPA-Datei ein."].waitForExistence(timeout: 5))
+        app.alerts.buttons["Abbrechen"].tap()
+        sign.tap()
+        let method = app.buttons["signing-method"]
+        XCTAssertTrue(method.waitForExistence(timeout: 10))
+        method.tap()
+        XCTAssertTrue(app.buttons["Importiertes Zertifikat"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Apple-Account"].exists)
+        app.buttons["Importiertes Zertifikat"].tap()
+        let configure = app.buttons["signing-import-identity"]
+        XCTAssertTrue(configure.waitForExistence(timeout: 5))
+        attach("signing085-imported-without-account")
+        configure.tap()
+        XCTAssertTrue(app.buttons["Import Certificate and Private Key"].exists || app.buttons["Zertifikat und privaten Schlüssel importieren"].exists)
+        XCTAssertTrue(app.buttons["Provisioning-Profile importieren"].exists)
+        XCTAssertTrue(app.buttons["Speichern"].exists)
+        XCTAssertFalse(app.buttons["Save"].exists)
+        XCTAssertEqual(app.navigationBars.count, 1)
+        attach("signing085-certificate-profile-editor")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["signing-root-back"].tap()
+        XCTAssertTrue(sign.waitForExistence(timeout: 5))
+        app.buttons["Einstellungen"].firstMatch.tap()
+        let identities = app.cells["settings-signing-identities"]
+        for _ in 0..<10 where !identities.isHittable { app.swipeUp() }
+        XCTAssertTrue(identities.isHittable)
+        identities.tap()
+        XCTAssertTrue(app.buttons["app-operations-signing-method"].waitForExistence(timeout: 10))
+        app.buttons["app-operations-signing-method"].tap()
+        app.buttons["Importiertes Zertifikat"].tap()
+        XCTAssertTrue(app.buttons["app-operations-import-identity"].waitForExistence(timeout: 5))
+        attach("signing085-imported-install-refresh")
+        // Leave the simulator's persistent operation selection as it was.
+        app.buttons["app-operations-signing-method"].tap()
+        app.buttons["Apple-Account"].tap()
+    }
+
     @discardableResult private func selectIdentity(virtual: Bool) -> String {
         app.tabBars.buttons["Einstellungen"].tap()
         let container = app.staticTexts["Container-Einstellungen"].firstMatch

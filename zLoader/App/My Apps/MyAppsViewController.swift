@@ -130,9 +130,12 @@ class MyAppsViewController: UICollectionViewController
 
         let add = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(sideloadApp(_:)))
         add.accessibilityLabel = NSLocalizedString("Install App", comment: "")
+        add.accessibilityIdentifier = "my-apps-add"
         let sign = UIBarButtonItem(image: UIImage(systemName: "signature"), style: .plain, target: self, action: #selector(openSigning(_:)))
-        sign.accessibilityLabel = NSLocalizedString("Sign IPA", comment: "")
-        navigationItem.leftBarButtonItems = [add, sign]
+        sign.accessibilityLabel = String(localized: "Sign IPA", table: "AppActions")
+        sign.accessibilityIdentifier = "my-apps-sign"
+        navigationItem.leftBarButtonItems = [add]
+        navigationItem.rightBarButtonItems = [sign]
         // Allows us to intercept delegate callbacks.
         self.updatesDataSource.fetchedResultsController.delegate = self
         self.activeAppsDataSource.fetchedResultsController.delegate = self
@@ -933,7 +936,7 @@ private extension MyAppsViewController
                     let apps = results.values.compactMap { try? $0.get() }
                     guard !apps.isEmpty else { return }
                     let detail: String
-                    if SigningIdentityStore.shared.pipelineIdentityID != nil {
+                    if SigningIdentityStore.shared.pipelineMethod == .importedCertificate {
                         detail = "Mit der importierten Identität neu signiert. Die von Apple festgelegte Ablaufzeit des Profils oder Zertifikats kann dadurch nicht verlängert werden."
                     } else if apps.contains(where: { $0.effectiveExpirationDate < $0.expirationDate }) {
                         detail = "Profile aktualisiert. Die verbleibenden Tage werden durch die frühere Ablaufzeit eines Zertifikats oder einer App-Erweiterung begrenzt."
@@ -1184,7 +1187,7 @@ private extension MyAppsViewController
     }
     
     @objc private func openSigning(_ sender: UIBarButtonItem) {
-        navigationController?.pushViewController(ZLoaderHostingController(rootView: SignIPAView(onInstall: { [weak self] url in self?.installFromLibrary(url) })), animated: true)
+        (importHost?.navigationController ?? navigationController)?.pushSigningView(SignIPAView(onInstall: { [weak self] url in self?.installFromLibrary(url) }))
     }
 
     @objc private func openIPALibrary(_ sender: UIBarButtonItem) { showIPALibrary() }
@@ -2091,7 +2094,7 @@ private extension MyAppsViewController
         #if !os(tvOS)
         let controller = ZLoaderHostingController(rootView: IPAInstallDestinationView(filename: url.lastPathComponent,
             checkDeviceAvailability: { [weak self] in
-                guard SigningIdentityStore.shared.pipelineIdentityID == nil,
+                guard SigningIdentityStore.shared.pipelineMethod == .appleAccount,
                       AuthManager.shared.isAuthenticated else { return false }
                 guard let team = (try? await AuthManager.shared.getAuthenticatedTeam()) ?? self?.activeTeam,
                       team.type == .free else { return false }

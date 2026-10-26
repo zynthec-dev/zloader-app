@@ -7,6 +7,7 @@ struct SignIPAView: View {
     @State private var preparation: SignIPAPreparation?
     @State private var customization = SigningCustomizationOptions()
     @State private var identityID: UUID?
+    @State private var method: SigningMethod = AuthManager.shared.isAuthenticated ? .appleAccount : .importedCertificate
     @State private var ipa: URL?
     @State private var importingIPA = false
     @State private var importingProfiles = false
@@ -15,13 +16,13 @@ struct SignIPAView: View {
     @State private var errorMessage: String?
 
     private var canUseSigningMethod: Bool {
-        if let identityID { return identities.identities.contains { $0.id == identityID } }
-        return AuthManager.shared.isAuthenticated
+        if method == .appleAccount { return AuthManager.shared.isAuthenticated }
+        return identityID.map { selected in identities.identities.contains { $0.id == selected } } ?? false
     }
 
     private func selectOfflineIdentityIfNeeded() {
-        if identityID == nil && !AuthManager.shared.isAuthenticated {
-            identityID = identities.identities.first?.id
+        if identityID == nil {
+            identityID = identities.pipelineIdentityID ?? identities.identities.first?.id
         }
     }
 
@@ -38,25 +39,41 @@ struct SignIPAView: View {
                 Toggle("Customize Provisioning Profile", isOn: $customization.profile)
                 Picker("Customize Extensions", selection: $customization.extensions) {
                     ForEach(AppExtensionCustomization.allCases) { option in
-                        Text(LocalizedStringKey(option.displayName)).tag(option)
+                        Text(LocalizedStringKey(option.displayName), tableName: "AppActions").tag(option)
                     }
                 }
                 SwiftUI.Button("Edit App") { Task { await editApp() } }.disabled(ipa == nil || !canUseSigningMethod)
                 if preparation != nil { Text("Changes ready for signing").foregroundStyle(.secondary) }
             }.zLoaderSettingsRows()
             Section("Sign With") {
-                Picker("Signing Method", selection: $identityID) {
-                    Text("Apple Account").tag(nil as UUID?).disabled(!AuthManager.shared.isAuthenticated)
-                    ForEach(identities.identities) { identity in
-                        Text(verbatim: identity.name).tag(Optional(identity.id))
+                Picker("Signing Method", selection: $method) {
+                    Text("Apple Account", tableName: "AppActions").tag(SigningMethod.appleAccount)
+                    Text("Imported Certificate", tableName: "AppActions").tag(SigningMethod.importedCertificate)
+                }
+                .accessibilityIdentifier("signing-method")
+                if method == .importedCertificate {
+                    if !identities.identities.isEmpty {
+                        Picker("Signing Identity", selection: $identityID) {
+                            Text("Choose Signing Identity", tableName: "AppActions").tag(nil as UUID?)
+                            ForEach(identities.identities) { identity in
+                                Text(verbatim: identity.name).tag(Optional(identity.id))
+                            }
+                        }
                     }
+                    NavigationLink {
+                        SigningIdentityEditor { identity in identityID = identity.id }
+                    } label: { Label { Text("Choose Certificate & Profiles", tableName: "AppActions") } icon: { Image(systemName: "person.badge.key") } }
+                        .accessibilityIdentifier("signing-import-identity")
                 }
                 NavigationLink { SigningIdentitiesView() } label: { SettingsEntryLabel(title: "Signing Identities") }
-                if !AuthManager.shared.isAuthenticated {
+                if method == .importedCertificate {
                     Text("No Apple Account is required when you use an imported certificate with its private key and matching profiles.")
                         .font(.footnote).foregroundStyle(.secondary)
+                } else if !AuthManager.shared.isAuthenticated {
+                    Text("Sign in to use an Apple Account, or choose Imported Certificate.", tableName: "AppActions")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-                if identityID != nil {
+                if method == .importedCertificate && identityID != nil {
                     SwiftUI.Button("Import Additional Profiles") { importingProfiles = true }
                 }
             }.zLoaderSettingsRows()
@@ -78,9 +95,13 @@ struct SignIPAView: View {
         .zLoaderSettingsPage()
         .labelStyle(.titleAndIcon)
         .disabled(isSigning)
-        .onAppear { selectOfflineIdentityIfNeeded() }
+        .onAppear {
+            if identities.pipelineMethod == .importedCertificate { method = .importedCertificate }
+            selectOfflineIdentityIfNeeded()
+        }
         .onChange(of: identities.identities) { _, _ in selectOfflineIdentityIfNeeded() }
         .onChange(of: identityID) { _, _ in preparation = nil; result = nil }
+        .onChange(of: method) { _, _ in preparation = nil; result = nil }
         .fileImporter(isPresented: $importingIPA, allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data]) { selection in
             do { ipa = try selection.get(); result = nil; preparation = nil } catch { errorMessage = error.localizedDescription }
         }
@@ -103,9 +124,8 @@ struct SignIPAView: View {
     }
 
     @MainActor private func editApp() async {
-        guard let ipa, !isSigning else { return }
-        let identity = identityID.flatMap { selected in identities.identities.first { $0.id == selected } }
-        guard identityID == nil || identity != nil else { return }
+        guard let ipa, !isSigning, canUseSigningMethod else { return }
+        let identity = method == .importedCertificate ? identityID.flatMap { selected in identities.identities.first { $0.id == selected } } : nil
         isSigning = true
         result = nil
         defer { isSigning = false }
@@ -115,9 +135,9 @@ struct SignIPAView: View {
 
     @MainActor private func sign() async {
         guard !isSigning, let ipa else { return }
-        let identity = identityID.flatMap { selected in identities.identities.first { $0.id == selected } }
+        let identity = method == .importedCertificate ? identityID.flatMap { selected in identities.identities.first { $0.id == selected } } : nil
         // A removed selection must never silently switch to Apple Account signing.
-        guard identityID == nil || identity != nil else {
+        guard method == .appleAccount || identity != nil else {
             errorMessage = NSLocalizedString("The selected signing identity is no longer available.", comment: "")
             return
         }

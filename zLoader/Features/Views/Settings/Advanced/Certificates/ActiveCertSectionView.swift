@@ -94,14 +94,14 @@ struct ActiveCertSectionView: View {
                 SettingsEntryLabel(title: "Installed zLoader Certificate", systemImage: "app.badge.checkmark")
                     .font(.body)
                 Text(installed.name)
-                Text(installed.expiryDate <= Date()
+                Text(LocalizedStringKey(installed.expiryDate <= Date()
                      ? "The installed signing certificate has expired and cannot be activated automatically."
-                     : "Installed signing identity detected. Its matching private key is missing. Import the corresponding .p12 from your installer or Mac; this certificate will then activate automatically.")
+                     : "Installed signing identity detected. Its matching private key is missing. Import the corresponding .p12 from your installer or Mac; this certificate will then activate automatically."), tableName: "AppActions")
                     .font(.body).foregroundStyle(.secondary)
             } else {
-                Text(viewModel.team == nil
+                Text(LocalizedStringKey(viewModel.team == nil
                      ? "No active local certificate found.Import a .p12 file to sign your apps."
-                     : "No active local certificate found.Create a new certificate or import a .p12 file to sign your apps.")
+                     : "No active local certificate found.Create a new certificate or import a .p12 file to sign your apps."), tableName: "AppActions")
                     .foregroundColor(.secondary)
                     .font(.body)
             }

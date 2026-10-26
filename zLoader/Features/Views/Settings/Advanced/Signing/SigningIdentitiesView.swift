@@ -2,6 +2,36 @@ import SwiftUI
 import SideSign
 import UniformTypeIdentifiers
 
+/// Give signing screens one SwiftUI stack so their profile/import links work
+/// when opened from the UIKit app shell.
+private struct SigningNavigationRoot<Content: View>: View {
+    let content: Content
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            content.toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    SwiftUI.Button(action: onClose) { Image(systemName: "chevron.left") }
+                        .accessibilityLabel(Text("Back", tableName: "AppActions"))
+                        .accessibilityIdentifier("signing-root-back")
+                }
+            }
+        }
+    }
+}
+
+extension UINavigationController {
+    func pushSigningView<Content: View>(_ content: Content) {
+        let root = SigningNavigationRoot(content: content, onClose: { [weak self] in
+            self?.popViewController(animated: true)
+        })
+        let controller = ZLoaderHostingController(rootView: root, usesGlass: false)
+        controller.ownsNavigation = true
+        pushViewController(controller, animated: true)
+    }
+}
+
 struct SigningIdentitiesView: View {
     @ObservedObject private var store = SigningIdentityStore.shared
     @StateObject private var certificates = CertificatesViewModel()
@@ -15,14 +45,26 @@ struct SigningIdentitiesView: View {
     var body: some View {
         List {
             Section {
-                Picker("Install & Refresh", selection: Binding(get: { store.pipelineIdentityID }, set: { store.selectForAppOperations($0) })) {
-                    Text("Apple Account").tag(nil as UUID?)
-                    ForEach(store.identities) { identity in
-                        Text(verbatim: identity.name).tag(Optional(identity.id))
+                Picker("Install & Refresh", selection: Binding(get: { store.pipelineMethod }, set: { store.selectMethodForAppOperations($0) })) {
+                    Text("Apple Account", tableName: "AppActions").tag(SigningMethod.appleAccount)
+                    Text("Imported Certificate", tableName: "AppActions").tag(SigningMethod.importedCertificate)
+                }
+                .accessibilityIdentifier("app-operations-signing-method")
+                if store.pipelineMethod == .importedCertificate {
+                    if !store.identities.isEmpty {
+                        Picker("Signing Identity", selection: Binding(get: { store.pipelineIdentityID }, set: { store.selectForAppOperations($0) })) {
+                            ForEach(store.identities) { identity in
+                                Text(verbatim: identity.name).tag(Optional(identity.id))
+                            }
+                            if let selected = store.pipelineIdentityID, !store.identities.contains(where: { $0.id == selected }) {
+                                Text("Unavailable Identity").tag(Optional(selected))
+                            }
+                        }
                     }
-                    if let selected = store.pipelineIdentityID, !store.identities.contains(where: { $0.id == selected }) {
-                        Text("Unavailable Identity").tag(Optional(selected))
-                    }
+                    NavigationLink {
+                        SigningIdentityEditor { identity in store.selectForAppOperations(identity.id) }
+                    } label: { Text("Choose Certificate & Profiles", tableName: "AppActions") }
+                        .accessibilityIdentifier("app-operations-import-identity")
                 }
             } footer: {
                 Text("An imported identity supports signing, installation and refresh without Apple login. Its profiles must authorize this device, the app and every extension. Refresh cannot extend their expiry dates.")
@@ -93,7 +135,7 @@ struct SigningIdentitiesView: View {
     }
 }
 
-private struct SigningIdentityEditor: View {
+struct SigningIdentityEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ImportedSigningIdentity
     @State private var certificates: [ALTCertificate] = CertificateManager.shared.getAllLocalCertificates()
@@ -104,28 +146,31 @@ private struct SigningIdentityEditor: View {
     @State private var password = ""
     @State private var showsPassword = false
     @State private var errorMessage: String?
+    private let onSave: ((ImportedSigningIdentity) -> Void)?
 
-    init(identity: ImportedSigningIdentity? = nil) {
+    init(identity: ImportedSigningIdentity? = nil, onSave: ((ImportedSigningIdentity) -> Void)? = nil) {
         _draft = State(initialValue: identity ?? ImportedSigningIdentity(name: "", certificateSerial: "", profileIDs: []))
+        self.onSave = onSave
     }
 
     var body: some View {
         List {
             Section("Identity") {
                 TextField("Name", text: $draft.name)
-                Picker("Certificate", selection: $draft.certificateSerial) {
+                Picker(selection: $draft.certificateSerial) {
                     Text("Choose Certificate").tag("")
                     ForEach(certificates, id: \.serialNumber) { certificate in
                         Text(verbatim: certificate.name + " · " + certificate.serialNumber).tag(certificate.serialNumber)
                     }
-                }
+                } label: { Text("Certificate", tableName: "AppActions") }
+                .accessibilityIdentifier("signing-identity-certificate")
                 SwiftUI.Button("Import Certificate and Private Key") {
                     importsCertificate = true
                     showsImporter = true
                 }
             }.zLoaderSettingsRows()
             Section {
-                ForEach(profiles, id: \.uuid) { profile in
+                ForEach(matchingProfiles, id: \.uuid) { profile in
                     Toggle(isOn: Binding(get: { draft.profileIDs.contains(profile.uuid) }, set: { enabled in
                         draft.profileIDs.removeAll { $0 == profile.uuid }
                         if enabled { draft.profileIDs.append(profile.uuid) }
@@ -135,6 +180,10 @@ private struct SigningIdentityEditor: View {
                             Text(verbatim: profile.bundleIdentifier).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                }
+                if matchingProfiles.isEmpty {
+                    Text("Import a profile that includes the selected certificate. Wildcard profiles are supported.", tableName: "AppActions")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 SwiftUI.Button("Import Provisioning Profiles") {
                     importsCertificate = false
@@ -151,12 +200,29 @@ private struct SigningIdentityEditor: View {
         .labelStyle(.titleAndIcon)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                SwiftUI.Button("Save") {
-                    do { try SigningIdentityStore.shared.save(draft); dismiss() }
+                SwiftUI.Button {
+                    do {
+                        try SigningIdentityStore.shared.save(draft)
+                        onSave?(draft)
+                        dismiss()
+                    }
                     catch { errorMessage = error.localizedDescription }
-                }.disabled(draft.name.isEmpty || draft.certificateSerial.isEmpty || draft.profileIDs.isEmpty)
+                } label: { Text("Save", tableName: "AppActions") }
+                    .disabled(draft.name.isEmpty || draft.certificateSerial.isEmpty || draft.profileIDs.isEmpty)
             }
         }
+        .onAppear {
+            certificates = CertificateManager.shared.getAllLocalCertificates()
+            profiles = ProfileManager.shared.getAllLocalProfiles()
+            if draft.certificateSerial.isEmpty,
+               let first = certificates.first(where: { certificate in
+                   profiles.contains { $0.certificates.contains { $0.rawDER == certificate.certificate.rawDER } }
+               }) {
+                draft.certificateSerial = first.serialNumber
+                selectMatchingProfiles()
+            }
+        }
+        .onChange(of: draft.certificateSerial) { _, _ in selectMatchingProfiles() }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.data], allowsMultipleSelection: !importsCertificate) { result in
             do {
                 let urls = try result.get()
@@ -172,6 +238,8 @@ private struct SigningIdentityEditor: View {
                         if !draft.profileIDs.contains(profile.uuid) { draft.profileIDs.append(profile.uuid) }
                     }
                     profiles = ProfileManager.shared.getAllLocalProfiles()
+                    let matchingIDs = Set(matchingProfiles.map(\.uuid))
+                    draft.profileIDs.removeAll { !matchingIDs.contains($0) }
                 }
             } catch { errorMessage = error.localizedDescription }
         }
@@ -183,6 +251,19 @@ private struct SigningIdentityEditor: View {
         .alert("Signing Identity", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             SwiftUI.Button("OK", role: .cancel) { errorMessage = nil }
         } message: { Text(verbatim: errorMessage ?? "") }
+    }
+
+    private var matchingProfiles: [ALTProvisioningProfile] {
+        guard let certificate = certificates.first(where: { $0.serialNumber == draft.certificateSerial }) else { return [] }
+        return profiles.filter { $0.certificates.contains { $0.rawDER == certificate.certificate.rawDER } }
+    }
+
+    private func selectMatchingProfiles() {
+        draft.profileIDs = matchingProfiles.filter { $0.expirationDate > Date() }.map(\.uuid)
+        if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let certificate = certificates.first(where: { $0.serialNumber == draft.certificateSerial }) {
+            draft.name = certificate.name
+        }
     }
 
     private func importCertificate() {

@@ -85,6 +85,7 @@ extension SettingsViewController
         case profileManagement      // row 8 - Profile Management
         case certificateManagement  // row 9 - Certificate Management
         case backupAndRestore       // row 10 - Backup & Restore
+        case signingIdentities
 
         static var allCases: [AdvancedSettingsRow] {
             var rows: [AdvancedSettingsRow] = [.sendFeedback, .refreshAttempts, .refreshSideJITServer, .pairingFileManagement]
@@ -94,6 +95,7 @@ extension SettingsViewController
             rows.append(contentsOf: [
                 .connectionConfig,
                 .networkDiscovery,
+                .signingIdentities,
                 .backupAndRestore
             ])
             return rows
@@ -972,6 +974,7 @@ extension SettingsViewController
 
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int
     {
+        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .signingIdentities { return 0 }
         if Section.allCases[indexPath.section] == .techyThings && indexPath.row >= TechyThingsRow.allCases.count { return 0 }
         if Section.allCases[indexPath.section] == .diagnostics {
             let row = DiagnosticsRow.allCases[indexPath.row]
@@ -1013,6 +1016,16 @@ extension SettingsViewController
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
+        if Section.allCases[indexPath.section] == .advancedSettings && AdvancedSettingsRow.allCases[indexPath.row] == .signingIdentities {
+            let cell = InsetGroupTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.isSelectable = true
+            cell.textLabel?.text = NSLocalizedString("Signing Identities", comment: "")
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+            cell.accessibilityIdentifier = "settings-signing-identities"
+            cell.accessoryType = .disclosureIndicator
+            decorateSettingsCell(cell)
+            return cell
+        }
         if Section.allCases[indexPath.section] == .diagnostics {
             let row = DiagnosticsRow.allCases[indexPath.row]
             if row == .containerSettings || row == .userCustomizations {
@@ -1222,7 +1235,7 @@ extension SettingsViewController
         case .account:
             tableView.deselectRow(at: indexPath, animated: true)
             if indexPath.row == 3 {
-                navigationController?.pushViewController(ZLoaderHostingController(rootView: SigningIdentitiesView(), usesGlass: false), animated: true)
+                navigationController?.pushSigningView(SigningIdentitiesView())
             } else if indexPath.row == 4, self.activeTeam?.type.isPaid == true {
                 navigationController?.pushViewController(ZLoaderHostingController(rootView: DeveloperServicesView(presentingViewController: self), usesGlass: false), animated: true)
             } else if indexPath.row == 5 {
@@ -1310,6 +1323,8 @@ extension SettingsViewController
             let row = AdvancedSettingsRow.allCases[indexPath.row]
             switch row
             {
+            case .signingIdentities:
+                navigationController?.pushSigningView(SigningIdentitiesView())
             case .sendFeedback:
                 let alertController = UIAlertController(title: "Send Feedback", message: "Choose a method to send feedback:", preferredStyle: .actionSheet)
                 
